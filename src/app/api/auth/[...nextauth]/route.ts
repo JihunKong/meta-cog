@@ -6,11 +6,39 @@ import { UserRole } from "@/types";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 
 // 개발 환경에서 사용할 URL을 설정합니다.
-const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+// URL 형식이 올바른지 확인하고 콜론 누락 등 일반적인 오류를 수정
+const getBaseUrl = () => {
+  let url = process.env.NEXTAUTH_URL;
+  
+  // 프로덕션 환경에서 NEXTAUTH_URL이 설정되지 않은 경우 Vercel URL을 사용
+  if (!url && process.env.VERCEL_URL) {
+    url = `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // 기본값 설정
+  if (!url) {
+    url = "http://localhost:3000";
+  }
+  
+  // URL 형식 검증 (필요 시 콜론 추가)
+  if (url.includes('https//')) {
+    url = url.replace('https//', 'https://');
+  }
+  
+  // URL 앞에 추가된 텍스트가 있는지 확인
+  if (url.includes('nextauth_url=')) {
+    url = url.split('nextauth_url=')[1];
+  }
+  
+  return url;
+};
+
+const baseUrl = getBaseUrl();
 
 // 디버깅을 위한 환경 변수 로깅
 console.log("NextAuth 환경 변수 확인:", {
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  ORIGINAL_NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  CORRECTED_NEXTAUTH_URL: baseUrl,
   VERCEL_URL: process.env.VERCEL_URL,
   NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
   NODE_ENV: process.env.NODE_ENV,
@@ -137,6 +165,7 @@ export const authOptions: NextAuthOptions = {
         baseUrl, 
         vercelUrl,
         NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        CORRECTED_URL: getBaseUrl(),
         VERCEL_URL: process.env.VERCEL_URL
       });
       
@@ -147,10 +176,10 @@ export const authOptions: NextAuthOptions = {
       
       // 상대 URL인 경우 현재 환경에 맞는 baseUrl과 결합
       if (url.startsWith("/")) {
-        return process.env.VERCEL_URL ? `${vercelUrl}${url}` : `${baseUrl}${url}`;
+        return `${getBaseUrl()}${url}`;
       }
       
-      return process.env.VERCEL_URL ? vercelUrl : baseUrl;
+      return getBaseUrl();
     }
   },
   events: {
@@ -196,5 +225,15 @@ export const authOptions: NextAuthOptions = {
   debug: process.env.NODE_ENV === "development",
 };
 
-const handler = NextAuth(authOptions);
+const handler = NextAuth({
+  ...authOptions,
+  // 런타임에 직접 설정 (secret만 설정)
+  secret: process.env.NEXTAUTH_SECRET || authOptions.secret,
+  // 디버깅 모드 활성화 
+  debug: true,
+});
+
+// 디버깅용 로그 추가
+console.log("NextAuth 핸들러 초기화 완료. 베이스 URL:", getBaseUrl());
+
 export { handler as GET, handler as POST }; 
