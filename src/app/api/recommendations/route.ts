@@ -1,0 +1,137 @@
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { ApiError, successResponse, errorResponse, validateRequest } from "@/lib/api-utils";
+import { generateClaudeRecommendations } from "@/lib/claude";
+
+// AI 추천 목록 조회 API
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      throw new ApiError(401, "인증이 필요합니다");
+    }
+
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+    const subject = searchParams.get("subject");
+
+    let where: any = {
+      userId: session.user.id
+    };
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (subject) {
+      where.subject = subject;
+    }
+
+    const recommendations = await prisma.aIRecommendation.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc'
+      },
+    });
+
+    return successResponse(recommendations);
+  } catch (error) {
+    return errorResponse(error as Error);
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new ApiError(401, "인증이 필요합니다");
+    }
+
+    // 최근 학습 계획 데이터를 가져옵니다
+    const recentStudyPlans = await prisma.studyPlan.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        date: "desc",
+      },
+      take: 30,
+    });
+
+    // 과목별 진도 데이터 처리
+    const curriculumProgress = await prisma.curriculumProgress.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      include: {
+        curriculum: true,
+      },
+    });
+
+    // 과목별로 진도 데이터 그룹화
+    const subjectProgressMap: Record<string, { completedUnits: number; totalUnits: number }> = {};
+    
+    // 각 과목별 총 단원 수 계산
+    const subjectUnits: Record<string, number> = {};
+    
+    const allCurriculum = await prisma.curriculum.findMany();
+    allCurriculum.forEach((curr: { subject: string }) => {
+      if (!subjectUnits[curr.subject]) {
+        subjectUnits[curr.subject] = 0;
+      }
+      subjectUnits[curr.subject]++;
+    });
+
+    // 완료된 단원 계산 (진도율 80% 이상인 경우 완료로 간주)
+    curriculumProgress.forEach((progress: { curriculum: { subject: string }, progress: number }) => {
+      const subject = progress.curriculum.subject;
+      
+      if (!subjectProgressMap[subject]) {
+        subjectProgressMap[subject] = {
+          completedUnits: 0,
+          totalUnits: subjectUnits[subject] || 0,
+        };
+      }
+      
+      if (progress.progress >= 80) {
+        subjectProgressMap[subject].completedUnits++;
+      }
+    });
+
+    // 각 과목별 진행 상황 배열 생성
+    const subjectProgress = Object.entries(subjectProgressMap).map(([subject, data]) => ({
+      subject,
+      completedUnits: data.completedUnits,
+      totalUnits: data.totalUnits,
+    }));
+
+    // Claude API를 통해 AI 추천을 생성합니다
+    const recommendations = await generateClaudeRecommendations(
+      session.user.id,
+      {
+        recentStudyPlans,
+        subjectProgress,
+        user: {
+          name: session.user.name || '학생',
+          email: session.user.email || ''
+        }
+      }
+    );
+
+    // 추천 결과를 저장합니다
+    const savedRecommendations = await Promise.all(
+      recommendations.map((recommendation) =>
+        prisma.aIRecommendation.create({
+          data: recommendation,
+        })
+      )
+    );
+
+    return successResponse(savedRecommendations, 201);
+  } catch (error) {
+    return errorResponse(error as Error);
+  }
+} 
