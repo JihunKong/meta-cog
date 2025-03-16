@@ -170,11 +170,21 @@ export const authOptions: NextAuthOptions = {
           console.log("VERCEL_URL 사용:", finalBaseUrl);
         }
         
+        // 로그인 후 항상 대시보드로 리디렉션
+        if (url?.includes('/api/auth/signin') || 
+            url?.includes('/api/auth/callback') || 
+            url === '/' || 
+            !url) {
+          const dashboardUrl = `${finalBaseUrl}/dashboard`;
+          console.log("로그인 후 대시보드로 리디렉션:", dashboardUrl);
+          return dashboardUrl;
+        }
+        
         // 최종 리디렉션 URL 결정
         let finalUrl;
         
         if (!url) {
-          finalUrl = finalBaseUrl;
+          finalUrl = `${finalBaseUrl}/dashboard`; // 기본값을 대시보드로 변경
         }
         else if (url.startsWith("/")) {
           // 상대 경로
@@ -218,6 +228,10 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
+    // 로그인 성공 후 리디렉션될 기본 페이지 지정
+    newUser: "/dashboard",
+    // 기본 페이지도 설정
+    signOut: "/auth/signout",
   },
   session: {
     strategy: "jwt",

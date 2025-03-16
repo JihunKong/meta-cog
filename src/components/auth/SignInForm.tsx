@@ -16,7 +16,7 @@ interface SignInFormProps {
 export default function SignInForm({ providers }: SignInFormProps) {
   // useSearchParams를 사용하되, 항상 안전하게 처리
   const searchParams = useSearchParams?.() || null;
-  const callbackUrl = searchParams?.get("callbackUrl") || "/";
+  const callbackUrl = searchParams?.get("callbackUrl") || "/dashboard";
   const error = searchParams?.get("error") || null;
   
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -61,12 +61,16 @@ export default function SignInForm({ providers }: SignInFormProps) {
       // 브라우저 캐시 문제를 해결하기 위해 타임스탬프 추가
       const timestamp = new Date().getTime();
       
+      // 대시보드로 리디렉션되도록 설정
+      const finalCallbackUrl = callbackUrl || "/dashboard";
+      console.log("리디렉션 URL:", finalCallbackUrl);
+      
       // 구글 로그인으로 직접 리디렉션 (두 가지 방법 모두 시도)
       // 방법 1: NextAuth의 signIn 함수 사용
       try {
         console.log("signIn 함수로 로그인 시도");
         await signIn(providerId, { 
-          callbackUrl,
+          callbackUrl: finalCallbackUrl,
           redirect: true
         });
       } catch (signInError) {
@@ -74,7 +78,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
         
         // 방법 2: 직접 URL로 리디렉션 (signIn 함수가 실패한 경우 백업)
         console.log("직접 URL 리디렉션으로 로그인 시도");
-        window.location.href = `/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}&t=${timestamp}`;
+        window.location.href = `/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(finalCallbackUrl)}&t=${timestamp}`;
       }
     } catch (err) {
       console.error("로그인 중 오류 발생:", err);
@@ -83,7 +87,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       // 모든 시도가 실패한 경우 최종 대안으로 직접 URL 구성
       try {
         const baseUrl = window.location.origin;
-        window.location.href = `${baseUrl}/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+        window.location.href = `${baseUrl}/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(finalCallbackUrl)}`;
       } catch (finalError) {
         console.error("최종 로그인 시도 실패:", finalError);
       }
