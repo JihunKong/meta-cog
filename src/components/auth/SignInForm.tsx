@@ -58,21 +58,35 @@ export default function SignInForm({ providers }: SignInFormProps) {
       console.log(`${providerId} 프로바이더로 로그인 시도 중...`);
       setLoading(prev => ({ ...prev, [providerId]: true }));
       
-      // 직접 Google 로그인 URL로 리디렉션
-      window.location.href = `/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      // 브라우저 캐시 문제를 해결하기 위해 타임스탬프 추가
+      const timestamp = new Date().getTime();
       
-      // 기존 signIn 함수 주석 처리 (직접 리디렉션 사용)
-      /*
-      const result = await signIn(providerId, { 
-        callbackUrl,
-        redirect: true
-      });
-      
-      console.log("로그인 결과:", result);
-      */
+      // 구글 로그인으로 직접 리디렉션 (두 가지 방법 모두 시도)
+      // 방법 1: NextAuth의 signIn 함수 사용
+      try {
+        console.log("signIn 함수로 로그인 시도");
+        await signIn(providerId, { 
+          callbackUrl,
+          redirect: true
+        });
+      } catch (signInError) {
+        console.error("signIn 함수 오류:", signInError);
+        
+        // 방법 2: 직접 URL로 리디렉션 (signIn 함수가 실패한 경우 백업)
+        console.log("직접 URL 리디렉션으로 로그인 시도");
+        window.location.href = `/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}&t=${timestamp}`;
+      }
     } catch (err) {
       console.error("로그인 중 오류 발생:", err);
       setLoading(prev => ({ ...prev, [providerId]: false }));
+      
+      // 모든 시도가 실패한 경우 최종 대안으로 직접 URL 구성
+      try {
+        const baseUrl = window.location.origin;
+        window.location.href = `${baseUrl}/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      } catch (finalError) {
+        console.error("최종 로그인 시도 실패:", finalError);
+      }
     }
   };
 
@@ -82,15 +96,17 @@ export default function SignInForm({ providers }: SignInFormProps) {
     
     console.log("로그인 오류 코드:", error);
     
-    if (error === "OAuthSignin") return "OAuth 로그인 시작 중 오류가 발생했습니다.";
-    if (error === "OAuthCallback") return "OAuth 콜백 처리 중 오류가 발생했습니다.";
-    if (error === "OAuthCreateAccount") return "OAuth 계정 생성 중 오류가 발생했습니다.";
-    if (error === "EmailCreateAccount") return "이메일 계정 생성 중 오류가 발생했습니다.";
-    if (error === "Callback") return "콜백 처리 중 오류가 발생했습니다.";
-    if (error === "AccessDenied") return "접근이 거부되었습니다. 허용된 이메일 도메인인지 확인하세요.";
-    if (error === "OAuthAccountNotLinked") return "이미 다른 방식으로 가입된 계정입니다.";
-    if (error === "google") return "구글 로그인에 실패했습니다. 계정 또는 권한을 확인해주세요.";
-    return "로그인에 실패했습니다. 이메일 도메인을 확인해주세요.";
+    if (error === "OAuthSignin") return "OAuth 로그인 시작 중 오류가 발생했습니다. 브라우저 설정을 확인해주세요.";
+    if (error === "OAuthCallback") return "OAuth 콜백 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+    if (error === "OAuthCreateAccount") return "OAuth 계정 생성 중 오류가 발생했습니다. 관리자에게 문의하세요.";
+    if (error === "EmailCreateAccount") return "이메일 계정 생성 중 오류가 발생했습니다. 관리자에게 문의하세요.";
+    if (error === "Callback") return "콜백 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+    if (error === "AccessDenied") return "접근이 거부되었습니다. 허용된 이메일 도메인(@e.jne.go.kr 또는 @h.jne.go.kr)인지 확인하세요.";
+    if (error === "OAuthAccountNotLinked") return "이미 다른 방식으로 가입된 계정입니다. 관리자에게 문의하세요.";
+    if (error === "google") return "구글 로그인에 실패했습니다. 허용된 계정인지 확인하거나 브라우저 쿠키를 초기화해보세요.";
+    if (error === "Verification") return "인증 토큰 검증에 실패했습니다. 다시 시도해주세요.";
+    if (error === "Configuration") return "서버 설정 오류가 발생했습니다. 관리자에게 문의하세요.";
+    return "로그인에 실패했습니다. 허용된 이메일(@e.jne.go.kr 또는 @h.jne.go.kr)인지 확인하거나 관리자에게 문의하세요.";
   };
 
   return (
