@@ -10,10 +10,22 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 다시 �
 // postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
 // 비밀번호는 Supabase 대시보드에서 확인 가능합니다.
 
+// 데이터베이스 연결 상태 추적을 위한 변수
+let isDatabaseConnected = false;
+
 // 데이터베이스 연결 확인 로그
 prisma.$connect()
-  .then(() => console.log("데이터베이스 연결 성공!"))
-  .catch((e) => console.error("데이터베이스 연결 실패:", e));
+  .then(() => {
+    console.log("데이터베이스 연결 성공!");
+    isDatabaseConnected = true;
+  })
+  .catch((e) => {
+    console.error("데이터베이스 연결 실패:", e);
+    console.log("대체 URL 형식 시도를 권장합니다:");
+    console.log("1. Session pooler: postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres");
+    console.log("2. Direct connection: postgresql://postgres:[비밀번호]@db.ljrrinokzegzjbovssjy.supabase.co:5432/postgres");
+    isDatabaseConnected = false;
+  });
 
 // 개발 환경에서 사용할 URL을 설정합니다.
 // URL 형식이 올바른지 확인하고 콜론 누락 등 일반적인 오류를 수정
@@ -76,7 +88,25 @@ console.log("NextAuth 환경 변수 확인:", {
 });
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma), // 어댑터 활성화
+  // 데이터베이스 연결 상태에 따라 어댑터 조건부 설정
+  ...(isDatabaseConnected 
+    ? { adapter: PrismaAdapter(prisma) } 
+    : { 
+        // 데이터베이스 연결 실패 시 JWT 모드로 폴백
+        // adapter 없이 JWT 모드만 사용
+        logger: {
+          error: (code, ...message) => {
+            console.error(code, ...message);
+          },
+          warn: (code, ...message) => {
+            console.warn(code, ...message);
+          },
+          debug: (code, ...message) => {
+            console.debug(code, ...message);
+          },
+        }
+      }
+  ),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -324,7 +354,9 @@ const API_URL = `${BASE_URL}/api/auth`;
 console.log("NextAuth 핸들러 초기화 완료. URL 정보:", {
   BASE_URL,
   API_URL,
-  CALLBACK_URL: `${API_URL}/callback/google`
+  CALLBACK_URL: `${API_URL}/callback/google`,
+  DATABASE_CONNECTED: isDatabaseConnected,
+  MODE: isDatabaseConnected ? "DATABASE_MODE" : "JWT_MODE"
 });
 
 export { handler as GET, handler as POST }; 
