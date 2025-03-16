@@ -8,6 +8,17 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 // 개발 환경에서 사용할 URL을 설정합니다.
 const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
+// 디버깅을 위한 환경 변수 로깅
+console.log("NextAuth 환경 변수 확인:", {
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  VERCEL_URL: process.env.VERCEL_URL,
+  NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
+  NODE_ENV: process.env.NODE_ENV,
+  // 중요: 실제 값은 로그에 출력하지 않고 존재 여부만 확인
+  GOOGLE_CLIENT_ID_EXISTS: !!process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET_EXISTS: !!process.env.GOOGLE_CLIENT_SECRET,
+});
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -119,6 +130,15 @@ export const authOptions: NextAuthOptions = {
       const vercelUrl = process.env.VERCEL_URL 
         ? `https://${process.env.VERCEL_URL}` 
         : baseUrl;
+      
+      // 디버깅 로그 추가
+      console.log("리다이렉트 콜백:", { 
+        url, 
+        baseUrl, 
+        vercelUrl,
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        VERCEL_URL: process.env.VERCEL_URL
+      });
       
       // 현재 URL이 Vercel URL이나 baseUrl로 시작하는 경우 해당 URL 반환
       if (url.startsWith(baseUrl) || (process.env.VERCEL_URL && url.startsWith(vercelUrl))) {
