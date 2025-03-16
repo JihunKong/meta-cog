@@ -111,17 +111,42 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ account, profile, user }) {
+      console.log("로그인 시도:", { 
+        provider: account?.provider,
+        email: profile?.email,
+        env: process.env.NODE_ENV
+      });
+      
       if (account?.provider === "google" && profile?.email) {
         const email = profile.email;
+        console.log(`로그인 이메일: ${email}`);
 
         // 이메일 도메인 확인 - 허용된 도메인만 접근 가능
         const isDevelopment = process.env.NODE_ENV === "development";
-        const isAdmin = email === "purusil55@gmail.com";
+        
+        // 관리자 이메일 목록을 환경 변수에서 가져오기
+        const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()) || ['purusil55@gmail.com'];
+        const isAdmin = adminEmails.includes(email);
+        
         const isStudent = email.endsWith("@e.jne.go.kr");
         const isTeacher = email.endsWith("@h.jne.go.kr");
         
-        // 개발 환경이거나 허용된 도메인만 로그인 가능
-        const isValidDomain = isDevelopment || isAdmin || isStudent || isTeacher;
+        // 로컬 개발 환경에서는 모든 사용자 허용 옵션 추가
+        const allowAllInDev = isDevelopment && process.env.ALLOW_ALL_EMAILS === "true";
+        
+        // 개발 환경에서는 모든 이메일 허용 (테스트용)
+        const isValidDomain = allowAllInDev || isAdmin || isStudent || isTeacher;
+        
+        console.log("도메인 검증 결과:", {
+          email,
+          isDevelopment,
+          allowAllInDev,
+          adminEmails,
+          isAdmin,
+          isStudent, 
+          isTeacher,
+          isValidDomain
+        });
         
         if (!isValidDomain) {
           console.error(`허용되지 않은 도메인: ${email}`);
