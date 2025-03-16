@@ -8,22 +8,31 @@ import { useState, useEffect } from "react";
 
 interface SignInFormProps {
   providers: Record<string, any>;
+  // URL 파라미터는 직접 전달받을 수도 있습니다(필요 시)
+  urlError?: string;
+  urlCallbackUrl?: string;
 }
 
 export default function SignInForm({ providers }: SignInFormProps) {
-  const searchParams = useSearchParams();
+  // useSearchParams를 사용하되, 항상 안전하게 처리
+  const searchParams = useSearchParams?.() || null;
   const callbackUrl = searchParams?.get("callbackUrl") || "/";
-  const error = searchParams?.get("error");
+  const error = searchParams?.get("error") || null;
+  
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [noProviders, setNoProviders] = useState(false);
   const [googleProvider, setGoogleProvider] = useState<any>(null);
 
   useEffect(() => {
+    // useSearchParams가 없는 환경에서도 안전하게 작동하도록 처리
+    const searchedError = error;
+    const searchedCallbackUrl = callbackUrl;
+    
     // 디버깅을 위한 로그 출력
     console.log("로그인 폼 렌더링:", { 
       providers, 
-      callbackUrl,
-      error,
+      callbackUrl: searchedCallbackUrl,
+      error: searchedError,
       providerExists: providers && Object.values(providers).some(provider => provider.id === "google")
     });
     
@@ -69,6 +78,8 @@ export default function SignInForm({ providers }: SignInFormProps) {
 
   // 오류 메시지 상세화
   const getErrorMessage = () => {
+    if (!error) return null;
+    
     if (error === "OAuthSignin") return "OAuth 로그인 시작 중 오류가 발생했습니다.";
     if (error === "OAuthCallback") return "OAuth 콜백 처리 중 오류가 발생했습니다.";
     if (error === "OAuthCreateAccount") return "OAuth 계정 생성 중 오류가 발생했습니다.";
