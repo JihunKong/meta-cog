@@ -5,9 +5,15 @@ import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
 import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 다시 활성화
 
-// 데이터베이스 연결 확인 - 실제 데이터베이스 사용 시 주석 해제 
-// DATABASE_URL을 Supabase Transaction pooler URL로 설정:
+// 데이터베이스 연결 확인
+// DATABASE_URL은 다음과 같은 형식으로 환경변수에 설정되어야 합니다:
 // postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
+// 비밀번호는 Supabase 대시보드에서 확인 가능합니다.
+
+// 데이터베이스 연결 확인 로그
+prisma.$connect()
+  .then(() => console.log("데이터베이스 연결 성공!"))
+  .catch((e) => console.error("데이터베이스 연결 실패:", e));
 
 // 개발 환경에서 사용할 URL을 설정합니다.
 // URL 형식이 올바른지 확인하고 콜론 누락 등 일반적인 오류를 수정
