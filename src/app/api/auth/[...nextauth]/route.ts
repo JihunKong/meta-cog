@@ -20,15 +20,26 @@ const getBaseUrl = () => {
     url = "http://localhost:3000";
   }
   
+  console.log("URL 정리 전:", url);
+  
   // URL 형식 검증 (필요 시 콜론 추가)
   if (url.includes('https//')) {
     url = url.replace('https//', 'https://');
   }
   
-  // URL 앞에 추가된 텍스트가 있는지 확인
-  if (url.includes('nextauth_url=')) {
-    url = url.split('nextauth_url=')[1];
+  // URL 앞에 추가된 텍스트가 있는지 확인 (대소문자 무시)
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('nextauth_url=')) {
+    const urlParts = url.split(/nextauth_url=/i);
+    url = urlParts.length > 1 ? urlParts[1] : url;
   }
+  
+  // 환경 변수 이름이 값에 포함된 경우(대소문자 구분)
+  if (url.startsWith('NEXTAUTH_URL=')) {
+    url = url.substring('NEXTAUTH_URL='.length);
+  }
+  
+  console.log("URL 정리 후:", url);
   
   return url;
 };
@@ -227,13 +238,21 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth({
   ...authOptions,
-  // 런타임에 직접 설정 (secret만 설정)
+  // 직접 환경 변수를 설정하여 문제 해결
   secret: process.env.NEXTAUTH_SECRET || authOptions.secret,
   // 디버깅 모드 활성화 
   debug: true,
 });
 
+// 최종 URL을 확인하여 문제 진단
+const BASE_URL = getBaseUrl();
+const API_URL = `${BASE_URL}/api/auth`;
+
 // 디버깅용 로그 추가
-console.log("NextAuth 핸들러 초기화 완료. 베이스 URL:", getBaseUrl());
+console.log("NextAuth 핸들러 초기화 완료. URL 정보:", {
+  BASE_URL,
+  API_URL,
+  CALLBACK_URL: `${API_URL}/callback/google`
+});
 
 export { handler as GET, handler as POST }; 

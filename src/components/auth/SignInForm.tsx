@@ -16,6 +16,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
   const error = searchParams?.get("error");
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [noProviders, setNoProviders] = useState(false);
+  const [googleProvider, setGoogleProvider] = useState<any>(null);
 
   useEffect(() => {
     // 디버깅을 위한 로그 출력
@@ -26,10 +27,20 @@ export default function SignInForm({ providers }: SignInFormProps) {
       providerExists: providers && Object.values(providers).some(provider => provider.id === "google")
     });
     
-    // 구글 프로바이더가 없는 경우 상태 설정
-    if (!providers || !Object.values(providers).some(provider => provider.id === "google")) {
-      console.error("구글 인증 프로바이더가 없습니다!");
+    // providers에서 Google 프로바이더 찾기
+    if (providers && Object.values(providers).some(provider => provider.id === "google")) {
+      const googleProv = Object.values(providers).find(provider => provider.id === "google");
+      setGoogleProvider(googleProv);
+      console.log("구글 프로바이더 발견:", googleProv);
+    } else {
+      // 프로바이더가 없거나 Google 프로바이더가 없는 경우 하드코딩된 값 사용
+      console.log("구글 프로바이더가 없어 기본값 사용");
       setNoProviders(true);
+      setGoogleProvider({
+        id: "google",
+        name: "Google",
+        type: "oauth"
+      });
     }
   }, [providers, callbackUrl, error]);
 
@@ -38,12 +49,18 @@ export default function SignInForm({ providers }: SignInFormProps) {
       console.log(`${providerId} 프로바이더로 로그인 시도 중...`);
       setLoading(prev => ({ ...prev, [providerId]: true }));
       
+      // 직접 Google 로그인 URL로 리디렉션
+      window.location.href = `/api/auth/signin/${providerId}?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      
+      // 기존 signIn 함수 주석 처리 (직접 리디렉션 사용)
+      /*
       const result = await signIn(providerId, { 
         callbackUrl,
         redirect: true
       });
       
       console.log("로그인 결과:", result);
+      */
     } catch (err) {
       console.error("로그인 중 오류 발생:", err);
       setLoading(prev => ({ ...prev, [providerId]: false }));
@@ -72,7 +89,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
       
       {noProviders && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative">
-          구글 로그인 제공자를 불러오지 못했습니다. 관리자에게 문의하세요.
+          구글 로그인 제공자를 불러오지 못했습니다. 직접 로그인을 시도합니다.
         </div>
       )}
       
@@ -81,29 +98,28 @@ export default function SignInForm({ providers }: SignInFormProps) {
           @e.jne.go.kr 학생 계정 또는 @h.jne.go.kr 교사 계정으로 로그인해주세요
         </p>
         
-        {providers &&
-          Object.values(providers).filter(provider => provider.id === "google").map((provider) => (
-            <Button
-              key={provider.id}
-              onClick={() => handleOAuthSignIn(provider.id)}
-              className="w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded-md flex justify-center items-center"
-              disabled={loading[provider.id]}
-            >
-              {loading[provider.id] ? (
-                <>
-                  <Icons.spinner className="animate-spin mr-2 h-4 w-4" />
-                  로그인 중...
-                </>
-              ) : (
-                <>
-                  <Icons.google className="mr-2 h-4 w-4" />
-                  {`${provider.name}로 로그인하기`}
-                </>
-              )}
-            </Button>
-          ))}
+        {googleProvider && (
+          <Button
+            key={googleProvider.id}
+            onClick={() => handleOAuthSignIn(googleProvider.id)}
+            className="w-full bg-red-600 hover:bg-red-700 text-white p-2 rounded-md flex justify-center items-center"
+            disabled={loading[googleProvider.id]}
+          >
+            {loading[googleProvider.id] ? (
+              <>
+                <Icons.spinner className="animate-spin mr-2 h-4 w-4" />
+                로그인 중...
+              </>
+            ) : (
+              <>
+                <Icons.google className="mr-2 h-4 w-4" />
+                {`Google로 로그인하기`}
+              </>
+            )}
+          </Button>
+        )}
           
-        {(!providers || Object.keys(providers).length === 0) && (
+        {!googleProvider && (
           <div className="text-center text-gray-500 mt-4">
             인증 제공자를 불러오는 중에 문제가 발생했습니다.
           </div>

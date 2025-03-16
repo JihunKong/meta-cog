@@ -8,8 +8,29 @@ export const metadata: Metadata = {
   description: "청해FLAME 시스템에 로그인하세요.",
 };
 
+// 프로바이더 가져오기를 시도하고 실패 시 기본값 사용
+async function getAuthProviders() {
+  try {
+    const providers = await getProviders();
+    console.log("인증 프로바이더 가져오기 성공:", providers);
+    return providers;
+  } catch (error) {
+    console.error("인증 프로바이더 가져오기 실패:", error);
+    // 실패 시 Google 프로바이더 기본값 제공
+    return {
+      google: {
+        id: "google",
+        name: "Google",
+        type: "oauth",
+        signinUrl: "/api/auth/signin/google",
+        callbackUrl: "/api/auth/callback/google"
+      }
+    };
+  }
+}
+
 export default async function SignInPage() {
-  const providers = await getProviders();
+  const providers = await getAuthProviders();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
