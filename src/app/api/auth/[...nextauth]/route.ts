@@ -3,7 +3,11 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
-// import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 임시 제거
+import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 다시 활성화
+
+// 데이터베이스 연결 확인 - 실제 데이터베이스 사용 시 주석 해제 
+// DATABASE_URL을 Supabase Transaction pooler URL로 설정:
+// postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
 
 // 개발 환경에서 사용할 URL을 설정합니다.
 // URL 형식이 올바른지 확인하고 콜론 누락 등 일반적인 오류를 수정
@@ -66,7 +70,7 @@ console.log("NextAuth 환경 변수 확인:", {
 });
 
 export const authOptions: NextAuthOptions = {
-  // adapter: PrismaAdapter(prisma), // 어댑터 비활성화
+  adapter: PrismaAdapter(prisma), // 어댑터 활성화
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -86,9 +90,26 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       // 초기 로그인 시 user 객체가 전달됨
       if (user) {
+        console.log("JWT 콜백 - 사용자 정보:", {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role || "STUDENT"
+        });
+        
         token.id = user.id;
-        token.role = user.role;
+        // 역할이 없으면 기본값으로 STUDENT 사용
+        token.role = user.role || "STUDENT";
       }
+      
+      // 토큰 내용 로깅 (중요 정보 제외)
+      console.log("JWT 토큰 정보:", {
+        userId: token.id,
+        name: token.name,
+        email: token.email,
+        role: token.role || "STUDENT"
+      });
+      
       return token;
     },
     async session({ session, token }) {
@@ -96,6 +117,13 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         // 역할이 없으면 STUDENT로 기본 설정
         session.user.role = (token.role || "STUDENT") as UserRole;
+        
+        console.log("세션 정보:", {
+          userId: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role
+        });
       }
       return session;
     },
@@ -137,6 +165,44 @@ export const authOptions: NextAuthOptions = {
         }
         
         console.log(`이메일 ${email} 로그인 허용`);
+        
+        // 사용자 역할 설정 (데이터베이스 어댑터 활성화 시 작동)
+        if (user) {
+          try {
+            // 관리자 이메일 목록
+            const adminEmails = [
+              "purusil55@gmail.com",
+              "jihun.kong@gmail.com",
+              "kong.jihun@gmail.com"
+            ];
+            
+            // 교사 도메인 확인
+            const isTeacher = email.endsWith("@h.jne.go.kr");
+            
+            // 역할 결정
+            let role: UserRole = "STUDENT"; // 기본값
+            
+            if (adminEmails.includes(email)) {
+              role = "ADMIN";
+            } else if (isTeacher) {
+              role = "TEACHER";
+            }
+            
+            console.log(`사용자 ${email}에게 역할 할당: ${role}`);
+            
+            // 데이터베이스에서 사용자 역할 업데이트
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { role }
+            });
+            
+            console.log(`사용자 역할 성공적으로 업데이트: ${role}`);
+          } catch (dbError) {
+            console.error("사용자 역할 업데이트 중 오류:", dbError);
+            // 데이터베이스 오류가 있어도 로그인은 허용
+          }
+        }
+        
         return true;
       } catch (error) {
         console.error("로그인 과정에서 오류 발생:", error);
@@ -170,18 +236,20 @@ export const authOptions: NextAuthOptions = {
           console.log("VERCEL_URL 사용:", finalBaseUrl);
         }
         
-        // 로그인 후 항상 대시보드로 리디렉션
+        // 최종 리디렉션 URL 결정
+        let finalUrl;
+
+        // 로그인 후 또는 기본 경로일 때 역할별 대시보드로 리디렉션
         if (url?.includes('/api/auth/signin') || 
             url?.includes('/api/auth/callback') || 
             url === '/' || 
             !url) {
+          // token이 없는 환경에서는 기본 대시보드로 리디렉션
+          // 역할별 리디렉션은 클라이언트 측에서 처리할 수 있도록 기본 대시보드로 우선 이동
           const dashboardUrl = `${finalBaseUrl}/dashboard`;
           console.log("로그인 후 대시보드로 리디렉션:", dashboardUrl);
           return dashboardUrl;
         }
-        
-        // 최종 리디렉션 URL 결정
-        let finalUrl;
         
         if (!url) {
           finalUrl = `${finalBaseUrl}/dashboard`; // 기본값을 대시보드로 변경
