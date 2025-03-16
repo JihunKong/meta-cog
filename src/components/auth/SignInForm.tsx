@@ -80,6 +80,8 @@ export default function SignInForm({ providers }: SignInFormProps) {
   const getErrorMessage = () => {
     if (!error) return null;
     
+    console.log("로그인 오류 코드:", error);
+    
     if (error === "OAuthSignin") return "OAuth 로그인 시작 중 오류가 발생했습니다.";
     if (error === "OAuthCallback") return "OAuth 콜백 처리 중 오류가 발생했습니다.";
     if (error === "OAuthCreateAccount") return "OAuth 계정 생성 중 오류가 발생했습니다.";
@@ -87,6 +89,7 @@ export default function SignInForm({ providers }: SignInFormProps) {
     if (error === "Callback") return "콜백 처리 중 오류가 발생했습니다.";
     if (error === "AccessDenied") return "접근이 거부되었습니다. 허용된 이메일 도메인인지 확인하세요.";
     if (error === "OAuthAccountNotLinked") return "이미 다른 방식으로 가입된 계정입니다.";
+    if (error === "google") return "구글 로그인에 실패했습니다. 계정 또는 권한을 확인해주세요.";
     return "로그인에 실패했습니다. 이메일 도메인을 확인해주세요.";
   };
 

@@ -66,6 +66,13 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       // Vercel 프리뷰 환경 URL을 처리하기 위해 빈 문자열 사용
       // 리디렉션 URI는 구글 클라우드 콘솔에서 여러 개 설정해야 함
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
   ],
   callbacks: {
@@ -116,7 +123,8 @@ export const authOptions: NextAuthOptions = {
         email: profile?.email,
         env: process.env.NODE_ENV,
         userId: user?.id, // 사용자 ID 로깅 추가
-        userExists: !!user // 사용자 객체 존재 여부 확인
+        userExists: !!user, // 사용자 객체 존재 여부 확인
+        profileInfo: profile // 프로필 정보 전체 로깅
       });
       
       if (account?.provider === "google" && profile?.email) {
@@ -138,20 +146,32 @@ export const authOptions: NextAuthOptions = {
         // 관리자 이메일 목록을 환경 변수에서 가져오기
         const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()) || ['purusil55@gmail.com'];
         // 임시: 개발자 이메일 추가 (필요 시 수정)
-        if (!adminEmails.includes('jihun.kong@gmail.com')) {
-          adminEmails.push('jihun.kong@gmail.com');
-        }
+        const developerEmails = ['jihun.kong@gmail.com', 'kong.jihun@gmail.com'];
+        developerEmails.forEach(devEmail => {
+          if (!adminEmails.includes(devEmail)) {
+            adminEmails.push(devEmail);
+          }
+        });
         
+        console.log("관리자 이메일 목록:", adminEmails);
+        
+        // 추가 검증: 현재 로그인 이메일이 관리자 목록에 있는지 확인
         const isAdmin = adminEmails.includes(email);
         const isStudent = email.endsWith("@e.jne.go.kr");
         const isTeacher = email.endsWith("@h.jne.go.kr");
+        
+        console.log(`이메일 ${email}의 유형:`, {
+          isAdmin,
+          isStudent,
+          isTeacher
+        });
         
         // ✨ 임시: 모든 이메일 허용 (배포 후 테스트 용도) ✨
         // 실제 운영 시에는 이 줄을 제거하고 원래 조건으로 돌아가야 합니다.
         const allowAllEmails = true; // 임시 설정
         
         // 로컬 개발 환경에서는 모든 사용자 허용 옵션 추가
-        const allowAllInDev = isDevelopment && process.env.ALLOW_ALL_EMAILS === "true";
+        const allowAllInDev = isDevelopment && (process.env.ALLOW_ALL_EMAILS === "true");
         
         // 개발 환경에서는 모든 이메일 허용 (테스트용) + 임시로 모든 이메일 허용
         const isValidDomain = allowAllEmails || allowAllInDev || isAdmin || isStudent || isTeacher;
