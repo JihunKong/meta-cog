@@ -114,32 +114,52 @@ export const authOptions: NextAuthOptions = {
       console.log("로그인 시도:", { 
         provider: account?.provider,
         email: profile?.email,
-        env: process.env.NODE_ENV
+        env: process.env.NODE_ENV,
+        userId: user?.id, // 사용자 ID 로깅 추가
+        userExists: !!user // 사용자 객체 존재 여부 확인
       });
       
       if (account?.provider === "google" && profile?.email) {
         const email = profile.email;
         console.log(`로그인 이메일: ${email}`);
 
+        // DB 연결 테스트
+        try {
+          await prisma.$connect();
+          console.log("Prisma 데이터베이스 연결 성공");
+        } catch (dbError) {
+          console.error("Prisma 데이터베이스 연결 실패:", dbError);
+          // 데이터베이스 연결 실패지만 로그인은 계속 진행
+        }
+
         // 이메일 도메인 확인 - 허용된 도메인만 접근 가능
         const isDevelopment = process.env.NODE_ENV === "development";
         
         // 관리자 이메일 목록을 환경 변수에서 가져오기
         const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()) || ['purusil55@gmail.com'];
-        const isAdmin = adminEmails.includes(email);
+        // 임시: 개발자 이메일 추가 (필요 시 수정)
+        if (!adminEmails.includes('jihun.kong@gmail.com')) {
+          adminEmails.push('jihun.kong@gmail.com');
+        }
         
+        const isAdmin = adminEmails.includes(email);
         const isStudent = email.endsWith("@e.jne.go.kr");
         const isTeacher = email.endsWith("@h.jne.go.kr");
+        
+        // ✨ 임시: 모든 이메일 허용 (배포 후 테스트 용도) ✨
+        // 실제 운영 시에는 이 줄을 제거하고 원래 조건으로 돌아가야 합니다.
+        const allowAllEmails = true; // 임시 설정
         
         // 로컬 개발 환경에서는 모든 사용자 허용 옵션 추가
         const allowAllInDev = isDevelopment && process.env.ALLOW_ALL_EMAILS === "true";
         
-        // 개발 환경에서는 모든 이메일 허용 (테스트용)
-        const isValidDomain = allowAllInDev || isAdmin || isStudent || isTeacher;
+        // 개발 환경에서는 모든 이메일 허용 (테스트용) + 임시로 모든 이메일 허용
+        const isValidDomain = allowAllEmails || allowAllInDev || isAdmin || isStudent || isTeacher;
         
         console.log("도메인 검증 결과:", {
           email,
           isDevelopment,
+          allowAllEmails, // 임시 설정 로그
           allowAllInDev,
           adminEmails,
           isAdmin,
@@ -168,11 +188,13 @@ export const authOptions: NextAuthOptions = {
           }
           
           // 사용자가 이미 존재하는지 확인
+          console.log("데이터베이스에서 사용자 조회 시도:", email);
           const existingUser = await prisma.user.findUnique({
             where: { email },
           });
           
           if (existingUser) {
+            console.log(`기존 사용자 발견: ${email}, ID: ${existingUser.id}, 현재 역할: ${existingUser.role}`);
             // 사용자 역할 업데이트
             await prisma.user.update({
               where: { email },
@@ -180,10 +202,37 @@ export const authOptions: NextAuthOptions = {
             });
             console.log(`사용자 ${email}의 역할이 ${role}로 업데이트되었습니다.`);
           } else {
-            console.log(`사용자 ${email}가 존재하지 않습니다. 새로 생성될 예정입니다.`);
+            console.log(`사용자 ${email}가 존재하지 않습니다. PrismaAdapter가 새로 생성할 예정입니다.`);
+            
+            // 직접 사용자 생성 테스트 (이 코드는 보통 PrismaAdapter에 의해 처리됨)
+            try {
+              const newUser = await prisma.user.create({
+                data: {
+                  email,
+                  name: profile.name || email.split('@')[0],
+                  role: role as any,
+                  emailVerified: new Date()
+                }
+              });
+              console.log(`사용자를 직접 생성했습니다: ID=${newUser.id}, 이메일=${email}`);
+            } catch (createError: any) {
+              if (createError.code === 'P2002') {
+                console.log("사용자 이미 존재함 (경합 조건): ", createError);
+              } else {
+                console.error("사용자 생성 실패:", createError);
+              }
+              // 실패해도 계속 진행 (PrismaAdapter에서 처리할 수 있음)
+            }
           }
-        } catch (error) {
-          console.error("사용자 역할 업데이트 실패:", error);
+        } catch (error: any) {
+          console.error("사용자 정보 조회/업데이트 실패:", error);
+          // 진단을 위해 오류 세부 정보 로깅
+          if (error.code) {
+            console.error(`Prisma 오류 코드: ${error.code}`);
+          }
+          if (error.message) {
+            console.error(`오류 메시지: ${error.message}`);
+          }
           // 실패해도 로그인 진행
         }
       }
