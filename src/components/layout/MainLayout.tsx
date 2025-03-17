@@ -173,7 +173,7 @@ export default function MainLayout({
             )}
             <button
               onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/30 rounded-md"
+              className="flex items-center w-full px-3 py-2 mt-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
             >
               <Icons.logout className="mr-3 h-5 w-5" />
               로그아웃
