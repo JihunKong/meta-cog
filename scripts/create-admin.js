@@ -4,9 +4,9 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 // 환경 변수 확인
-if (!process.env.POSTGRES_PRISMA_URL) {
-  console.error('환경 변수 POSTGRES_PRISMA_URL이 설정되지 않았습니다.');
-  console.error('Vercel에 환경 변수가, 로컬에는 .env.local 파일이 있어야 합니다.');
+if (!process.env.DATABASE_URL) {
+  console.error('환경 변수 DATABASE_URL이 설정되지 않았습니다.');
+  console.error('Netlify에 환경 변수가, 로컬에는 .env.local 파일이 있어야 합니다.');
   process.exit(1);
 }
 
@@ -14,6 +14,8 @@ const prisma = new PrismaClient();
 
 async function main() {
   try {
+    console.log('관리자 계정 생성 시작...');
+    
     // 비밀번호 해시
     const hashedPassword = await bcrypt.hash('Admin123!', 10);
     

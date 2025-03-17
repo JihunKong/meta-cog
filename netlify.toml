@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_USE_NETLIFY_EDGE = "true"
+  NEXT_NETLIFY_EXPERIMENTAL_TRACE = "true"
+
+[functions]
+  included_files = [".next/standalone/**"]
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 

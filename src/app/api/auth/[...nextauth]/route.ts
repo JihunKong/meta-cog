@@ -13,53 +13,43 @@ prisma.$connect()
   })
   .catch((e) => {
     console.error("데이터베이스 연결 실패:", e);
-    console.log("대체 URL 형식 시도를 권장합니다:");
-    console.log("1. Session pooler: postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres");
-    console.log("2. Direct connection: postgresql://postgres:[비밀번호]@db.ljrrinokzegzjbovssjy.supabase.co:5432/postgres");
+    console.log("데이터베이스 연결 문자열을 확인하세요");
   });
 
-// 개발 환경에서 사용할 URL을 설정합니다.
-// URL 형식이 올바른지 확인하고 콜론 누락 등 일반적인 오류를 수정
+// URL 설정 로직 업데이트
 const getBaseUrl = () => {
-  let url = process.env.NEXTAUTH_URL;
+  let url;
   
-  // 프로덕션 환경에서 NEXTAUTH_URL이 설정되지 않은 경우 Vercel URL을 사용
-  if (!url && process.env.VERCEL_URL) {
-    url = `https://${process.env.VERCEL_URL}`;
-    console.log("Vercel URL 감지:", url);
+  // Netlify 환경 변수 확인
+  if (process.env.NETLIFY && process.env.URL) {
+    url = process.env.URL;
+    console.log("Netlify URL 감지:", url);
   }
-  
+  // Netlify 개발 URL
+  else if (process.env.NETLIFY_DEV && process.env.NETLIFY_DEV_URL) {
+    url = process.env.NETLIFY_DEV_URL;
+    console.log("Netlify Dev URL 감지:", url);
+  }
+  // 명시적으로 설정된 URL 사용
+  else if (process.env.NEXTAUTH_URL) {
+    url = process.env.NEXTAUTH_URL;
+    console.log("NEXTAUTH_URL 사용:", url);
+  }
   // 기본값 설정
-  if (!url) {
+  else {
     url = "http://localhost:3000";
     console.log("기본 URL 사용:", url);
   }
   
-  console.log("URL 정리 전:", url);
+  // URL 정리
+  url = url.trim();
   
-  // URL 형식 검증 (필요 시 콜론 추가)
-  if (url.includes('https//')) {
-    url = url.replace('https//', 'https://');
-  }
-  
-  // URL 앞에 추가된 텍스트가 있는지 확인 (대소문자 무시)
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes('nextauth_url=')) {
-    const urlParts = url.split(/nextauth_url=/i);
-    url = urlParts.length > 1 ? urlParts[1] : url;
-  }
-  
-  // 환경 변수 이름이 값에 포함된 경우(대소문자 구분)
-  if (url.startsWith('NEXTAUTH_URL=')) {
-    url = url.substring('NEXTAUTH_URL='.length);
-  }
-  
-  // 맨 끝에 슬래시가 있으면 제거
+  // URL 유효성 검사
   if (url.endsWith('/')) {
     url = url.slice(0, -1);
   }
   
-  console.log("URL 정리 후:", url);
+  console.log("최종 BASE URL:", url);
   
   return url;
 };
@@ -68,9 +58,7 @@ const baseUrl = getBaseUrl();
 
 // 디버깅을 위한 환경 변수 로깅
 console.log("NextAuth 환경 변수 확인:", {
-  ORIGINAL_NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  CORRECTED_NEXTAUTH_URL: baseUrl,
-  DATABASE_URL: process.env.DATABASE_URL?.substring(0, 20) + '...',
+  BASE_URL: baseUrl,
   NODE_ENV: process.env.NODE_ENV,
 });
 
