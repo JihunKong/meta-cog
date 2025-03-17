@@ -18,18 +18,21 @@ const studentNavItems: NavItem[] = [
   { title: "대시보드", href: "/dashboard", icon: "chart" },
   { title: "학습 계획", href: "/study-plans", icon: "book" },
   { title: "AI 추천", href: "/recommendations", icon: "help" },
+  { title: "계정 설정", href: "/settings", icon: "settings" },
 ];
 
 const teacherNavItems: NavItem[] = [
   { title: "교사 대시보드", href: "/teacher", icon: "chart" },
   { title: "학생 현황", href: "/teacher/students", icon: "user" },
   { title: "학습 통계", href: "/teacher/stats", icon: "pieChart" },
+  { title: "계정 설정", href: "/settings", icon: "settings" },
 ];
 
 const adminNavItems: NavItem[] = [
   { title: "관리자 대시보드", href: "/admin", icon: "chart" },
   { title: "사용자 관리", href: "/admin/users", icon: "user" },
   { title: "시스템 설정", href: "/admin/settings", icon: "settings" },
+  { title: "계정 설정", href: "/settings", icon: "settings" },
 ];
 
 export default function MainLayout({

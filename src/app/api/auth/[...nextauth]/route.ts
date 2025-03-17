@@ -1,9 +1,10 @@
 import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
 import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 다시 활성화
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
 
 // 데이터베이스 연결 확인
 // DATABASE_URL은 다음과 같은 형식으로 환경변수에 설정되어야 합니다:
@@ -82,9 +83,6 @@ console.log("NextAuth 환경 변수 확인:", {
   VERCEL_URL: process.env.VERCEL_URL,
   NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
   NODE_ENV: process.env.NODE_ENV,
-  // 중요: 실제 값은 로그에 출력하지 않고 존재 여부만 확인
-  GOOGLE_CLIENT_ID_EXISTS: !!process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET_EXISTS: !!process.env.GOOGLE_CLIENT_SECRET,
 });
 
 export const authOptions: NextAuthOptions = {
@@ -108,20 +106,44 @@ export const authOptions: NextAuthOptions = {
       }
   ),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      // 기본 설정으로 단순화
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          response_type: "code"
+    CredentialsProvider({
+      name: "이메일/비밀번호",
+      credentials: {
+        email: { label: "이메일", type: "email" },
+        password: { label: "비밀번호", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("이메일과 비밀번호를 입력해주세요");
         }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
+
+        if (!user || !user.password) {
+          throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
+        }
+
+        const isPasswordValid = await compare(credentials.password, user.password);
+
+        if (!isPasswordValid) {
+          throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        };
       }
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET || 'META_COG_DEFAULT_SECRET',
+  session: {
+    strategy: "jwt"
+  },
   callbacks: {
     async jwt({ token, user }) {
       // 초기 로그인 시 user 객체가 전달됨
@@ -163,185 +185,40 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async signIn({ account, profile, user }) {
-      try {
-        // 디버깅을 위한 상세 로그
-        console.log("===== 로그인 시도 - 상세 정보 =====");
-        console.log("profile:", JSON.stringify(profile, null, 2));
-        console.log("account:", JSON.stringify(account, null, 2));
-        console.log("user:", user ? JSON.stringify(user, null, 2) : "사용자 정보 없음");
-        console.log("환경 변수:", {
-          NODE_ENV: process.env.NODE_ENV,
-          NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-          VERCEL_URL: process.env.VERCEL_URL,
-        });
-        
-        // 프로필이 없는 경우 처리
-        if (!profile || !profile.email) {
-          console.error("프로필 정보가 없습니다.");
-          return false;
-        }
-        
-        const email = profile.email;
-        
-        // 도메인 검증 간소화
-        const isAllowedDomain = 
-          email.endsWith("@e.jne.go.kr") || 
-          email.endsWith("@h.jne.go.kr") ||
-          email === "purusil55@gmail.com" ||
-          email === "jihun.kong@gmail.com" ||
-          email === "kong.jihun@gmail.com";
-        
-        // 개발 환경에서는 모든 이메일 허용 (논리 오류 수정)
-        const allowAnyEmail = process.env.NODE_ENV === "development" || process.env.ALLOW_ALL_EMAILS === "true";
-        
-        if (!isAllowedDomain && !allowAnyEmail) {
-          console.error(`허용되지 않은 이메일 도메인: ${email}`);
-          return false;
-        }
-        
-        console.log(`이메일 ${email} 로그인 허용`);
-        
-        // 사용자 역할 설정 (데이터베이스 어댑터 활성화 시 작동)
-        if (user) {
-          try {
-            // 관리자 이메일 목록
-            const adminEmails = [
-              "purusil55@gmail.com",
-              "jihun.kong@gmail.com",
-              "kong.jihun@gmail.com"
-            ];
-            
-            // 교사 도메인 확인
-            const isTeacher = email.endsWith("@h.jne.go.kr");
-            
-            // 역할 결정
-            let role: UserRole = "STUDENT"; // 기본값
-            
-            if (adminEmails.includes(email)) {
-              role = "ADMIN";
-            } else if (isTeacher) {
-              role = "TEACHER";
-            }
-            
-            console.log(`사용자 ${email}에게 역할 할당: ${role}`);
-            
-            // 데이터베이스에서 사용자 역할 업데이트
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role }
-            });
-            
-            console.log(`사용자 역할 성공적으로 업데이트: ${role}`);
-          } catch (dbError) {
-            console.error("사용자 역할 업데이트 중 오류:", dbError);
-            // 데이터베이스 오류가 있어도 로그인은 허용
-          }
-        }
-        
-        return true;
-      } catch (error) {
-        console.error("로그인 과정에서 오류 발생:", error);
-        // 스택 트레이스 로깅
-        if (error instanceof Error) {
-          console.error("오류 스택:", error.stack);
-        }
-        return false;
-      }
-    },
+    // 리디렉션 콜백 유지
     async redirect({ url, baseUrl }) {
-      try {
-        // 로깅 추가
-        console.log("===== 리디렉션 처리 =====");
-        console.log("url:", url);
-        console.log("baseUrl:", baseUrl);
-        console.log("NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
-        console.log("VERCEL_URL:", process.env.VERCEL_URL);
-        
-        // 사용할 기본 URL 결정
-        let finalBaseUrl = baseUrl;
-        
-        // 커스텀 도메인 사용
-        if (process.env.NEXTAUTH_URL) {
-          finalBaseUrl = process.env.NEXTAUTH_URL;
-          console.log("NEXTAUTH_URL 사용:", finalBaseUrl);
-        }
-        // Vercel URL 사용 (백업)
-        else if (process.env.VERCEL_URL) {
-          finalBaseUrl = `https://${process.env.VERCEL_URL}`;
-          console.log("VERCEL_URL 사용:", finalBaseUrl);
-        }
-        
-        // 최종 리디렉션 URL 결정
-        let finalUrl;
-
-        // 로그인 후 또는 기본 경로일 때 역할별 대시보드로 리디렉션
-        if (url?.includes('/api/auth/signin') || 
-            url?.includes('/api/auth/callback') || 
-            url === '/' || 
-            !url) {
-          // token이 없는 환경에서는 기본 대시보드로 리디렉션
-          // 역할별 리디렉션은 클라이언트 측에서 처리할 수 있도록 기본 대시보드로 우선 이동
-          const dashboardUrl = `${finalBaseUrl}/dashboard`;
-          console.log("로그인 후 대시보드로 리디렉션:", dashboardUrl);
-          return dashboardUrl;
-        }
-        
-        if (!url) {
-          finalUrl = `${finalBaseUrl}/dashboard`; // 기본값을 대시보드로 변경
-        }
-        else if (url.startsWith("/")) {
-          // 상대 경로
-          finalUrl = `${finalBaseUrl}${url}`;
-        }
-        else if (url.startsWith("http")) {
-          // 절대 URL
-          try {
-            const urlObj = new URL(url);
-            const baseUrlObj = new URL(finalBaseUrl);
-            
-            // 같은 도메인인 경우에만 허용
-            if (urlObj.hostname === baseUrlObj.hostname) {
-              finalUrl = url;
-            } else {
-              console.log("외부 도메인으로 리디렉션 차단:", url);
-              finalUrl = finalBaseUrl;
-            }
-          } catch (e) {
-            console.error("URL 파싱 오류:", e);
-            finalUrl = finalBaseUrl;
-          }
-        }
-        else {
-          // 기타 케이스
-          finalUrl = finalBaseUrl;
-        }
-        
-        console.log("최종 리디렉션 URL:", finalUrl);
-        return finalUrl;
-      } catch (error) {
-        console.error("리디렉션 처리 중 오류:", error);
-        if (error instanceof Error) {
-          console.error("오류 스택:", error.stack);
-        }
-        // 안전하게 홈으로 리디렉션
-        return baseUrl || '/';
+      // 디버깅을 위한 로그 추가
+      console.log("리디렉션 콜백:", { url, baseUrl });
+      
+      // 상대 URL인 경우 (예: "/dashboard")
+      if (url.startsWith("/")) {
+        console.log(`상대 URL 감지: ${url}, 기본 URL에 추가: ${baseUrl}${url}`);
+        return `${baseUrl}${url}`;
       }
+      // 이미 절대 URL인 경우 (예: "https://example.com/dashboard")
+      else if (url.startsWith("http")) {
+        // 같은 도메인인지 확인
+        const urlObj = new URL(url);
+        const baseUrlObj = new URL(baseUrl);
+        
+        if (urlObj.hostname === baseUrlObj.hostname) {
+          console.log(`같은 도메인 URL 감지: ${url}, 허용됨`);
+          return url;
+        } else {
+          console.log(`외부 도메인 URL 감지: ${url}, 기본 URL로 리디렉션: ${baseUrl}`);
+          return baseUrl;
+        }
+      }
+      
+      // 기본적으로 baseUrl로 리디렉션
+      console.log(`기본 리디렉션: ${baseUrl}`);
+      return baseUrl;
     }
   },
   pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
-    // 로그인 성공 후 리디렉션될 기본 페이지 지정
-    newUser: "/dashboard",
-    // 기본 페이지도 설정
-    signOut: "/auth/signout",
+    signIn: '/auth/signin',
+    error: '/auth/error',
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30일
-  },
-  debug: true, // 모든 환경에서 디버그 활성화
 };
 
 const handler = NextAuth(authOptions);
@@ -354,7 +231,6 @@ const API_URL = `${BASE_URL}/api/auth`;
 console.log("NextAuth 핸들러 초기화 완료. URL 정보:", {
   BASE_URL,
   API_URL,
-  CALLBACK_URL: `${API_URL}/callback/google`,
   DATABASE_CONNECTED: isDatabaseConnected,
   MODE: isDatabaseConnected ? "DATABASE_MODE" : "JWT_MODE"
 });

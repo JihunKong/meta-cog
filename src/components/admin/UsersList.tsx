@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Icons } from "@/components/ui/icons";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // User 타입 정의
 interface User {
@@ -27,6 +32,18 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
   const [roleChanging, setRoleChanging] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "STUDENT" as "ADMIN" | "STUDENT" | "TEACHER"
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     async function fetchUsers() {
@@ -141,6 +158,93 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
     }
   };
 
+  const handleCreateUser = async () => {
+    // 입력 검증
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      toast.error("모든 필드를 입력해주세요.");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newUser),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "사용자 생성에 실패했습니다.");
+      }
+      
+      const data = await response.json();
+      
+      // 사용자 목록에 새 사용자 추가
+      setUsers(prevUsers => [...prevUsers, data.data]);
+      
+      // 입력 필드 초기화
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        role: "STUDENT"
+      });
+      
+      // 다이얼로그 닫기
+      setIsAddUserDialogOpen(false);
+      
+      toast.success("사용자가 성공적으로 생성되었습니다.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedUserId || !newPassword) {
+      toast.error("사용자 ID와 새 비밀번호가 필요합니다.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("비밀번호는 최소 6자 이상이어야 합니다.");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    
+    try {
+      const response = await fetch(`/api/admin/users/${selectedUserId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "비밀번호 재설정에 실패했습니다.");
+      }
+      
+      // 다이얼로그 닫기 및 상태 초기화
+      setIsResetPasswordDialogOpen(false);
+      setSelectedUserId(null);
+      setNewPassword("");
+      
+      toast.success("비밀번호가 성공적으로 재설정되었습니다.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -182,16 +286,127 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
   return (
     <div>
       {showFilters && (
-        <div className="mb-4">
+        <div className="mb-4 flex justify-between items-center">
           <input
             type="text"
             placeholder="이름 또는 이메일로 검색..."
-            className="w-full p-2 border rounded-md font-medium text-gray-800"
+            className="w-full p-2 border rounded-md font-medium text-gray-800 mr-4"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
+          
+          <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Icons.add className="h-4 w-4 mr-2" />
+                사용자 추가
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>새 사용자 추가</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">이름</Label>
+                  <Input 
+                    id="name" 
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                    placeholder="사용자 이름"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">이메일</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    placeholder="사용자 이메일"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">비밀번호</Label>
+                  <Input 
+                    id="password" 
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                    placeholder="초기 비밀번호"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">역할</Label>
+                  <Select 
+                    value={newUser.role} 
+                    onValueChange={(value: "ADMIN" | "STUDENT" | "TEACHER") => 
+                      setNewUser({...newUser, role: value})
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="역할 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STUDENT">학생</SelectItem>
+                      <SelectItem value="TEACHER">교사</SelectItem>
+                      <SelectItem value="ADMIN">관리자</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end pt-4">
+                  <Button 
+                    onClick={handleCreateUser} 
+                    disabled={isCreatingUser}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isCreatingUser ? (
+                      <>
+                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                        생성 중...
+                      </>
+                    ) : "사용자 생성"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
+      
+      <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>비밀번호 재설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">새 비밀번호</Label>
+              <Input 
+                id="newPassword" 
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="새 비밀번호 (최소 6자)"
+              />
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button 
+                onClick={handleResetPassword} 
+                disabled={isResettingPassword || !newPassword || newPassword.length < 6}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                    재설정 중...
+                  </>
+                ) : "비밀번호 재설정"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200">
@@ -248,6 +463,17 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
                         데이터 초기화
                       </button>
                     )}
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedUserId(user.id);
+                        setNewPassword("");
+                        setIsResetPasswordDialogOpen(true);
+                      }}
+                      className="px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-bold text-xs"
+                    >
+                      비밀번호 재설정
+                    </button>
                     
                     {roleChanging[user.id] ? (
                       <span className="text-gray-400">변경 중...</span>
