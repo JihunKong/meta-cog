@@ -115,3 +115,10 @@ export function calculateAchievementRate(achievement: number): number {
   // 달성률은 이미 퍼센트(0-100) 값으로 저장되어 있으므로 그대로 반환
   return Math.round(achievement);
 }
+
+/**
+ * 애니메이션을 위한 easing 함수
+ */
+export function easeOutExpo(t: number): number {
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+}

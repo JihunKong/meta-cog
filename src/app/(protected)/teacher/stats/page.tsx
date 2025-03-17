@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CountUp } from "@/components/ui/CountUp";
 
 interface StatsData {
   totalStudents: number;
@@ -170,7 +171,11 @@ export default function StatsPage() {
             <CardTitle className="text-lg">전체 학생수</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{data?.totalStudents || 0}명</p>
+            <CountUp 
+              end={data?.totalStudents || 0} 
+              suffix="명" 
+              className="text-3xl font-bold"
+            />
           </CardContent>
         </Card>
         
@@ -179,7 +184,11 @@ export default function StatsPage() {
             <CardTitle className="text-lg">평균 달성률</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{data?.averageAchievement || 0}%</p>
+            <CountUp 
+              end={data?.averageAchievement || 0} 
+              suffix="%" 
+              className="text-3xl font-bold"
+            />
           </CardContent>
         </Card>
         
@@ -188,7 +197,11 @@ export default function StatsPage() {
             <CardTitle className="text-lg">평균 참여율</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{data?.averageParticipationRate || 0}%</p>
+            <CountUp 
+              end={data?.averageParticipationRate || 0} 
+              suffix="%" 
+              className="text-3xl font-bold"
+            />
           </CardContent>
         </Card>
         
@@ -197,7 +210,11 @@ export default function StatsPage() {
             <CardTitle className="text-lg">총 학습 계획</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{data?.totalStudyPlans || 0}개</p>
+            <CountUp 
+              end={data?.totalStudyPlans || 0} 
+              suffix="개" 
+              className="text-3xl font-bold"
+            />
           </CardContent>
         </Card>
       </div>
