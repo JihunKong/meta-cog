@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import { apiCall } from "@/lib/api-service";
 
 interface StudyPlanDetailProps {
   id: string;
@@ -62,16 +63,7 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
   useEffect(() => {
     async function fetchStudyPlan() {
       try {
-        const response = await fetch(`/api/study-plans/${id}`);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("학습 계획을 찾을 수 없습니다.");
-          }
-          throw new Error("학습 계획을 불러오는데 실패했습니다.");
-        }
-        
-        const result = await response.json();
+        const result = await apiCall<{success: boolean, data: StudyPlan}>(`/api/study-plans/${id}`);
         console.log("받은 학습 계획 데이터:", result);
         
         if (result.success && result.data) {
@@ -106,14 +98,8 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
     }
 
     try {
-      const response = await fetch(`/api/study-plans/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("학습 계획 삭제에 실패했습니다.");
-      }
-
+      await apiCall(`/api/study-plans/${id}`, { method: "DELETE" });
+      
       toast.success("학습 계획이 삭제되었습니다.");
       router.push("/study-plans");
     } catch (error) {
@@ -133,22 +119,14 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
     
     setSaving(true);
     try {
-      const response = await fetch(`/api/study-plans/${id}`, {
+      const result = await apiCall<{success: boolean, data: StudyPlan}>(`/api/study-plans/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        body: {
           achievement: achievementPercent, // 메타인지 달성률(0-100%)로 저장
           reflection: reflection,
-        }),
+        },
       });
-
-      if (!response.ok) {
-        throw new Error("학습 달성률 저장에 실패했습니다.");
-      }
-
-      const result = await response.json();
+      
       if (result.success && result.data) {
         setStudyPlan(result.data);
         setIsEditing(false);

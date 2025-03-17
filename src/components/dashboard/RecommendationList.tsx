@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { AIRecommendation } from "@/types";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "react-hot-toast";
+import { apiCall } from "@/lib/api-service";
 
 export default function RecommendationList() {
   const { data: session } = useSession();
@@ -18,13 +19,8 @@ export default function RecommendationList() {
 
     try {
       setLoading(true);
-      const response = await fetch("/api/recommendations");
+      const data = await apiCall<{success: boolean; data: AIRecommendation[]}>("/api/recommendations");
       
-      if (!response.ok) {
-        throw new Error("추천을 불러오는데 실패했습니다.");
-      }
-      
-      const data = await response.json();
       if (data.success) {
         setRecommendations(data.data);
       } else {
@@ -37,30 +33,24 @@ export default function RecommendationList() {
     }
   };
 
-  const generateRecommendations = async () => {
+  const generateRecommendation = async () => {
     if (!session?.user) return;
-
+    
     try {
       setGenerating(true);
-      const response = await fetch("/api/recommendations", {
-        method: "POST",
+      const data = await apiCall<{success: boolean; data: AIRecommendation}>("/api/recommendations/generate", {
+        method: "POST"
       });
       
-      if (!response.ok) {
-        throw new Error("추천 생성에 실패했습니다.");
-      }
-      
-      const data = await response.json();
       if (data.success) {
-        // 새로운 추천으로 목록 업데이트
+        toast.success("새로운 AI 추천이 생성되었습니다!");
         fetchRecommendations();
-        toast.success("새로운 AI 추천이 생성되었습니다.");
       } else {
         throw new Error(data.error?.message || "추천 생성에 실패했습니다.");
       }
     } catch (err) {
-      setError((err as Error).message);
-      toast.error((err as Error).message);
+      console.error("추천 생성 오류:", err);
+      toast.error((err as Error).message || "추천을 생성하는데 문제가 발생했습니다.");
     } finally {
       setGenerating(false);
     }
@@ -143,7 +133,7 @@ export default function RecommendationList() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <button
-          onClick={generateRecommendations}
+          onClick={generateRecommendation}
           disabled={generating}
           className="flex items-center text-sm px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 font-bold"
         >

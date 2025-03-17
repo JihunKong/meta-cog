@@ -6,6 +6,43 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * 사이트의 기본 URL을 반환합니다.
+ * 환경에 따라 적절한 URL을 사용합니다.
+ */
+export function getSiteUrl(): string {
+  let url;
+  
+  // 프로덕션 환경에서는 Netlify URL 사용
+  if (process.env.NODE_ENV === "production") {
+    url = "https://pure-ocean.netlify.app";
+  }
+  // Netlify 환경 변수 사용
+  else if (process.env.NETLIFY && process.env.URL) {
+    url = process.env.URL;
+  }
+  // Netlify 개발 URL
+  else if (process.env.NETLIFY_DEV && process.env.NETLIFY_DEV_URL) {
+    url = process.env.NETLIFY_DEV_URL;
+  }
+  // NextAuth URL 사용
+  else if (process.env.NEXTAUTH_URL) {
+    url = process.env.NEXTAUTH_URL;
+  }
+  // 기본값은 로컬호스트
+  else {
+    url = "http://localhost:3000";
+  }
+  
+  // URL 정리
+  url = url.trim();
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  
+  return url;
+}
+
+/**
  * 날짜를 YYYY-MM-DD 형식의 문자열로 포맷팅합니다.
  */
 export function formatDate(date: Date | string): string {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import { apiCall } from "@/lib/api-service";
 
 // 시간대 정의
 const TIME_SLOTS = [
@@ -126,38 +127,24 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
 
       console.log("전송할 데이터:", preparedData);
 
-      const response = await fetch(url, {
+      const responseData = await apiCall(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(preparedData),
+        body: preparedData,
         cache: 'no-store'
       });
-
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (e) {
-        console.error("응답 파싱 오류:", e);
-        throw new Error("서버 응답을 처리할 수 없습니다");
-      }
       
-      if (!response.ok) {
-        console.error("API 응답 에러:", responseData);
-        throw new Error(
-          responseData.error?.message || "학습 계획 저장에 실패했습니다."
-        );
-      }
-
       toast.success(
         initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
       );
       router.push("/study-plans");
       router.refresh();
     } catch (error) {
-      console.error("학습 계획 저장 오류:", error);
-      toast.error(error instanceof Error ? error.message : "학습 계획을 저장하는데 문제가 발생했습니다.");
+      console.error("저장 오류:", error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : "학습 계획을 저장하는데 문제가 발생했습니다."
+      );
     } finally {
       setLoading(false);
     }
