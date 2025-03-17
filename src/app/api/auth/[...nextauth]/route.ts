@@ -2,30 +2,20 @@ import { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
-import { PrismaAdapter } from "@next-auth/prisma-adapter"; // 어댑터 다시 활성화
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-
-// 데이터베이스 연결 확인
-// DATABASE_URL은 다음과 같은 형식으로 환경변수에 설정되어야 합니다:
-// postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
-// 비밀번호는 Supabase 대시보드에서 확인 가능합니다.
-
-// 데이터베이스 연결 상태 추적을 위한 변수
-let isDatabaseConnected = false;
 
 // 데이터베이스 연결 확인 로그
 prisma.$connect()
   .then(() => {
     console.log("데이터베이스 연결 성공!");
-    isDatabaseConnected = true;
   })
   .catch((e) => {
     console.error("데이터베이스 연결 실패:", e);
     console.log("대체 URL 형식 시도를 권장합니다:");
     console.log("1. Session pooler: postgresql://postgres.ljrrinokzegzjbovssjy:[비밀번호]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres");
     console.log("2. Direct connection: postgresql://postgres:[비밀번호]@db.ljrrinokzegzjbovssjy.supabase.co:5432/postgres");
-    isDatabaseConnected = false;
   });
 
 // 개발 환경에서 사용할 URL을 설정합니다.
@@ -80,31 +70,12 @@ const baseUrl = getBaseUrl();
 console.log("NextAuth 환경 변수 확인:", {
   ORIGINAL_NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   CORRECTED_NEXTAUTH_URL: baseUrl,
-  VERCEL_URL: process.env.VERCEL_URL,
-  NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
+  DATABASE_URL: process.env.DATABASE_URL?.substring(0, 20) + '...',
   NODE_ENV: process.env.NODE_ENV,
 });
 
 export const authOptions: NextAuthOptions = {
-  // 데이터베이스 연결 상태에 따라 어댑터 조건부 설정
-  ...(isDatabaseConnected 
-    ? { adapter: PrismaAdapter(prisma) } 
-    : { 
-        // 데이터베이스 연결 실패 시 JWT 모드로 폴백
-        // adapter 없이 JWT 모드만 사용
-        logger: {
-          error: (code, ...message) => {
-            console.error(code, ...message);
-          },
-          warn: (code, ...message) => {
-            console.warn(code, ...message);
-          },
-          debug: (code, ...message) => {
-            console.debug(code, ...message);
-          },
-        }
-      }
-  ),
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "이메일/비밀번호",
@@ -113,30 +84,44 @@ export const authOptions: NextAuthOptions = {
         password: { label: "비밀번호", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("이메일과 비밀번호를 입력해주세요");
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            throw new Error("이메일과 비밀번호를 입력해주세요");
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          }).catch(err => {
+            console.error("사용자 조회 중 데이터베이스 오류:", err);
+            throw new Error("로그인 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.");
+          });
+
+          if (!user || !user.password) {
+            console.log("사용자 없음 또는 비밀번호 없음:", credentials.email);
+            throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
+          }
+
+          const isPasswordValid = await compare(credentials.password, user.password).catch(err => {
+            console.error("비밀번호 비교 중 오류:", err);
+            throw new Error("로그인 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.");
+          });
+
+          if (!isPasswordValid) {
+            console.log("비밀번호 불일치:", credentials.email);
+            throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
+          }
+
+          console.log("로그인 성공:", user.email);
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+          };
+        } catch (error) {
+          console.error("인증 과정 오류:", error);
+          throw error;
         }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
-
-        if (!user || !user.password) {
-          throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
-        }
-
-        const isPasswordValid = await compare(credentials.password, user.password);
-
-        if (!isPasswordValid) {
-          throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        };
       }
     }),
   ],
@@ -219,20 +204,18 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
 
 // 최종 URL을 확인하여 문제 진단
-const BASE_URL = getBaseUrl();
-const API_URL = `${BASE_URL}/api/auth`;
+const API_URL = `${baseUrl}/api/auth`;
 
 // 디버깅용 로그 추가
 console.log("NextAuth 핸들러 초기화 완료. URL 정보:", {
-  BASE_URL,
+  BASE_URL: baseUrl,
   API_URL,
-  DATABASE_CONNECTED: isDatabaseConnected,
-  MODE: isDatabaseConnected ? "DATABASE_MODE" : "JWT_MODE"
 });
 
 export { handler as GET, handler as POST }; 
