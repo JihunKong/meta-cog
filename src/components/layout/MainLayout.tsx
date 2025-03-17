@@ -160,24 +160,26 @@ export default function MainLayout({
           {/* 사용자 정보 및 로그아웃 */}
           <div className="mt-auto border-t border-gray-200 dark:border-gray-700 pt-4">
             {session?.user && (
-              <div className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                <p className="font-semibold">{session.user.name || session.user.email}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {session.user.role === "ADMIN"
-                    ? "관리자"
-                    : session.user.role === "TEACHER"
-                    ? "교사"
-                    : "학생"}
-                </p>
+              <div className="px-3 py-2 flex justify-between items-center">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="font-semibold">{session.user.name || session.user.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {session.user.role === "ADMIN"
+                      ? "관리자"
+                      : session.user.role === "TEACHER"
+                      ? "교사"
+                      : "학생"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
+                >
+                  <Icons.logout className="mr-2 h-4 w-4" />
+                  로그아웃
+                </button>
               </div>
             )}
-            <button
-              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="flex items-center w-full px-3 py-2 mt-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
-            >
-              <Icons.logout className="mr-3 h-5 w-5" />
-              로그아웃
-            </button>
           </div>
         </div>
       </aside>

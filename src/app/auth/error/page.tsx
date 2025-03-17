@@ -3,9 +3,11 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import { Icons } from "@/components/ui/icons";
 
-export default function AuthErrorPage() {
+// 이 컴포넌트가 useSearchParams를 사용합니다
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams?.get("error") || null;
 
@@ -116,5 +118,18 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 메인 페이지 컴포넌트에서는 Suspense로 감싸줍니다
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 } 
