@@ -120,7 +120,7 @@ export default function MainLayout({
       {/* 사이드바 */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-64 transition-transform bg-white dark:bg-gray-800 shadow",
+          "fixed top-0 left-0 z-40 h-screen w-64 transition-transform bg-white dark:bg-gray-800 shadow flex flex-col",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
@@ -134,9 +134,10 @@ export default function MainLayout({
           </Link>
         </div>
 
-        {/* 사이드바 메뉴 */}
-        <div className="py-6 px-3 h-full flex flex-col overflow-y-auto">
-          <nav className="space-y-1 flex-1">
+        {/* 스크롤 가능한 내용 영역 */}
+        <div className="flex-1 overflow-y-auto">
+          {/* 사이드바 메뉴 */}
+          <nav className="py-6 px-3 space-y-1">
             {getNavItems().map((item) => {
               const Icon = Icons[item.icon];
               return (
@@ -156,31 +157,31 @@ export default function MainLayout({
               );
             })}
           </nav>
+        </div>
 
-          {/* 사용자 정보 및 로그아웃 */}
-          <div className="mt-auto border-t border-gray-200 dark:border-gray-700 pt-4">
-            {session?.user && (
-              <div className="px-3 py-2 flex justify-between items-center">
-                <div className="text-sm text-gray-700 dark:text-gray-300">
-                  <p className="font-semibold">{session.user.name || session.user.email}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {session.user.role === "ADMIN"
-                      ? "관리자"
-                      : session.user.role === "TEACHER"
-                      ? "교사"
-                      : "학생"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                  className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
-                >
-                  <Icons.logout className="mr-2 h-4 w-4" />
-                  로그아웃
-                </button>
+        {/* 사용자 정보 및 로그아웃 - 고정 위치 */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-3">
+          {session?.user && (
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="font-semibold">{session.user.name || session.user.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {session.user.role === "ADMIN"
+                    ? "관리자"
+                    : session.user.role === "TEACHER"
+                    ? "교사"
+                    : "학생"}
+                </p>
               </div>
-            )}
-          </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
+              >
+                <Icons.logout className="mr-2 h-4 w-4" />
+                로그아웃
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
