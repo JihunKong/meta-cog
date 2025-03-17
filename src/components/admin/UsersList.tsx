@@ -482,11 +482,11 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
                         <button className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-bold text-xs">
                           역할 변경
                         </button>
-                        <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg overflow-hidden z-20 hidden group-hover:block">
+                        <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg overflow-hidden z-50 hidden group-hover:block border border-gray-200">
                           {user.role !== 'ADMIN' && (
                             <button
                               onClick={() => handleRoleChange(user.id, 'ADMIN')}
-                              className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                              className="block w-full px-4 py-3 text-sm text-left text-gray-700 hover:bg-blue-50 font-medium"
                             >
                               관리자로
                             </button>
@@ -494,7 +494,7 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
                           {user.role !== 'TEACHER' && (
                             <button
                               onClick={() => handleRoleChange(user.id, 'TEACHER')}
-                              className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                              className="block w-full px-4 py-3 text-sm text-left text-gray-700 hover:bg-blue-50 font-medium"
                             >
                               교사로
                             </button>
@@ -502,7 +502,7 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
                           {user.role !== 'STUDENT' && (
                             <button
                               onClick={() => handleRoleChange(user.id, 'STUDENT')}
-                              className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
+                              className="block w-full px-4 py-3 text-sm text-left text-gray-700 hover:bg-blue-50 font-medium"
                             >
                               학생으로
                             </button>

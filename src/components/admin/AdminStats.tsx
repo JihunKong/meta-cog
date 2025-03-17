@@ -76,23 +76,25 @@ export default function AdminStats() {
       color: "bg-blue-50 text-blue-700",
     },
     {
-      title: "과목 수",
-      value: stats.totalSubjects,
-      icon: <Icons.book className="h-8 w-8 text-green-500" />,
-      color: "bg-green-50 text-green-700",
-    },
-    {
-      title: "교과서 단원 수",
-      value: stats.totalCurriculums,
-      icon: <Icons.book className="h-8 w-8 text-purple-500" />,
-      color: "bg-purple-50 text-purple-700",
-    },
-    {
       title: "학습 계획 수",
       value: stats.totalStudyPlans,
       icon: <Icons.calendar className="h-8 w-8 text-amber-500" />,
       color: "bg-amber-50 text-amber-700",
-      subtext: `${stats.completedStudyPlans}개 완료`,
+    },
+    {
+      title: "완료된 계획 수",
+      value: stats.completedStudyPlans,
+      icon: <Icons.check className="h-8 w-8 text-green-500" />,
+      color: "bg-green-50 text-green-700",
+    },
+    {
+      title: "완료율",
+      value: stats.totalStudyPlans > 0 
+        ? Math.round((stats.completedStudyPlans / stats.totalStudyPlans) * 100) 
+        : 0,
+      icon: <Icons.pieChart className="h-8 w-8 text-purple-500" />,
+      color: "bg-purple-50 text-purple-700",
+      suffix: "%",
     },
   ];
 
@@ -105,8 +107,9 @@ export default function AdminStats() {
         >
           <div>
             <h3 className="text-sm font-medium text-gray-500">{card.title}</h3>
-            <p className="text-2xl font-bold mt-1">{card.value.toLocaleString()}</p>
-            {card.subtext && <p className="text-xs text-gray-500 mt-1">{card.subtext}</p>}
+            <p className="text-2xl font-bold mt-1">
+              {card.value.toLocaleString()}{card.suffix || ''}
+            </p>
           </div>
           <div className={`p-3 rounded-full ${card.color.split(" ")[0]}`}>{card.icon}</div>
         </div>

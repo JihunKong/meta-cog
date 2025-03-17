@@ -20,8 +20,13 @@ prisma.$connect()
 const getBaseUrl = () => {
   let url;
   
+  // 고정 Netlify URL 사용 (배포된 환경에 맞게 수정)
+  if (process.env.NODE_ENV === "production") {
+    url = "https://pure-ocean.netlify.app";
+    console.log("프로덕션 고정 URL 사용:", url);
+  }
   // Netlify 환경 변수 확인
-  if (process.env.NETLIFY && process.env.URL) {
+  else if (process.env.NETLIFY && process.env.URL) {
     url = process.env.URL;
     console.log("Netlify URL 감지:", url);
   }
