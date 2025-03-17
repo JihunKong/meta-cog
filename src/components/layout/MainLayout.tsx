@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Icons } from "@/components/ui/icons";
-import { cn } from "@/lib/utils";
+import { cn, getSiteUrl } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 interface NavItem {
@@ -174,7 +174,9 @@ export default function MainLayout({
                 </p>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                onClick={() => signOut({ 
+                  callbackUrl: getSiteUrl() + "/auth/signin" 
+                })}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
                 <Icons.logout className="mr-2 h-4 w-4" />

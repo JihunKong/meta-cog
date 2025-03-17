@@ -163,34 +163,59 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    // 리디렉션 콜백 유지
+    // 리디렉션 콜백 개선
     async redirect({ url, baseUrl }) {
       // 디버깅을 위한 로그 추가
       console.log("리디렉션 콜백:", { url, baseUrl });
       
+      // 고정된 프로덕션 URL 사용
+      const siteUrl = process.env.NODE_ENV === "production" 
+        ? "https://pure-ocean.netlify.app" 
+        : baseUrl;
+      
+      // 로그인 성공 후 대시보드로 리디렉션
+      if (url.includes("/api/auth/signin") || url === baseUrl) {
+        const dashboardUrl = `${siteUrl}/dashboard`;
+        console.log(`로그인 성공, 대시보드로 리디렉션: ${dashboardUrl}`);
+        return dashboardUrl;
+      }
+      
+      // 로그아웃 후 로그인 페이지로 리디렉션
+      if (url.includes("/auth/signin")) {
+        const signinUrl = `${siteUrl}/auth/signin`;
+        console.log(`로그아웃 요청, 로그인 페이지로 리디렉션: ${signinUrl}`);
+        return signinUrl;
+      }
+      
       // 상대 URL인 경우 (예: "/dashboard")
       if (url.startsWith("/")) {
-        console.log(`상대 URL 감지: ${url}, 기본 URL에 추가: ${baseUrl}${url}`);
-        return `${baseUrl}${url}`;
+        console.log(`상대 URL 감지: ${url}, 사이트 URL에 추가: ${siteUrl}${url}`);
+        return `${siteUrl}${url}`;
       }
-      // 이미 절대 URL인 경우 (예: "https://example.com/dashboard")
-      else if (url.startsWith("http")) {
+      
+      // 이미 절대 URL인 경우
+      if (url.startsWith("http")) {
         // 같은 도메인인지 확인
-        const urlObj = new URL(url);
-        const baseUrlObj = new URL(baseUrl);
-        
-        if (urlObj.hostname === baseUrlObj.hostname) {
-          console.log(`같은 도메인 URL 감지: ${url}, 허용됨`);
-          return url;
-        } else {
-          console.log(`외부 도메인 URL 감지: ${url}, 기본 URL로 리디렉션: ${baseUrl}`);
-          return baseUrl;
+        try {
+          const urlObj = new URL(url);
+          const baseUrlObj = new URL(siteUrl);
+          
+          if (urlObj.hostname === baseUrlObj.hostname) {
+            console.log(`같은 도메인 URL 감지: ${url}, 허용됨`);
+            return url;
+          } else {
+            console.log(`외부 도메인 URL 감지: ${url}, 사이트 URL로 리디렉션: ${siteUrl}`);
+            return siteUrl;
+          }
+        } catch (error) {
+          console.error("URL 파싱 오류:", error);
+          return siteUrl;
         }
       }
       
-      // 기본적으로 baseUrl로 리디렉션
-      console.log(`기본 리디렉션: ${baseUrl}`);
-      return baseUrl;
+      // 기본적으로 사이트 URL로 리디렉션
+      console.log(`기본 리디렉션: ${siteUrl}`);
+      return siteUrl;
     }
   },
   pages: {
