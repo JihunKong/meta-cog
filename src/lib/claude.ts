@@ -99,7 +99,7 @@ ${JSON.stringify(progressSummary, null, 2)}
     // Claude API 호출
     try {
       const message = await anthropic.messages.create({
-        model: 'claude-3-7sonnet-20250229', // 모델 버전 변경
+        model: 'claude-3-7-sonnet-20250219', // 모델 버전 변경
         max_tokens: 2000,
         system: "당신은 청해FLAME 자기주도학습 관리 시스템의 AI 학습 조언자입니다. 학생의 학습 데이터를 분석하여 개인화된 학습 추천을 제공합니다.",
         messages: [
