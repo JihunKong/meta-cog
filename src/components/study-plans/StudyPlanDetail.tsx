@@ -268,6 +268,20 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
               </div>
             </div>
           </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => router.back()}
+              className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              뒤로 가기
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              삭제하기
+            </button>
+          </div>
         </div>
 
         <div>
