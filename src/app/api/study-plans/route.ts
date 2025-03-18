@@ -26,6 +26,14 @@ export async function GET(req: Request) {
       );
     }
 
+    // 디버그 로그 추가
+    console.log("학습 계획 조회 요청 - 사용자:", JSON.stringify({
+      userId: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      role: session.user.role
+    }, null, 2));
+
     const { searchParams } = new URL(req.url);
     const subject = searchParams.get("subject");
     const date = searchParams.get("date");
@@ -35,6 +43,8 @@ export async function GET(req: Request) {
     let where: any = {
       userId: session.user.id,
     };
+
+    console.log("학습 계획 조회 조건:", JSON.stringify(where, null, 2));
 
     if (subject) {
       where = {
@@ -72,6 +82,17 @@ export async function GET(req: Request) {
         date: "desc",
       },
     });
+
+    // 조회 결과 로그
+    console.log(`학습 계획 조회 결과: ${studyPlans.length}개의 항목이 검색됨`);
+    if (studyPlans.length > 0) {
+      console.log("첫 번째 학습 계획:", JSON.stringify({
+        id: studyPlans[0].id,
+        userId: studyPlans[0].userId,
+        subject: studyPlans[0].subject,
+        date: studyPlans[0].date
+      }, null, 2));
+    }
 
     // 응답 데이터 포맷팅
     const formattedPlans = studyPlans.map(plan => ({
