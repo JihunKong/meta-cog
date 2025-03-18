@@ -100,21 +100,9 @@ export async function PATCH(request: Request, context: Context) {
     let body: any; // body에 임의 속성을 추가할 수 있도록 any 타입 사용
     
     try {
-      // 요청 본문 직접 처리
-      const requestText = await request.text();
-      console.log("원본 요청 본문 (PATCH):", requestText);
-      
-      if (!requestText || requestText.trim() === '') {
-        throw new ApiError(400, "요청 본문이 비어 있습니다");
-      }
-      
-      try {
-        body = JSON.parse(requestText);
-        console.log("파싱된 요청 본문 (PATCH):", JSON.stringify(body, null, 2));
-      } catch (error) {
-        console.error("JSON 파싱 오류 (PATCH):", error);
-        throw new ApiError(400, "유효하지 않은 JSON 형식입니다");
-      }
+      // JSON 형식으로 직접 파싱
+      body = await request.json();
+      console.log("파싱된 요청 본문 (PATCH):", JSON.stringify(body, null, 2));
       
       if (!body || Object.keys(body).length === 0) {
         throw new ApiError(400, "요청 본문이 비어 있습니다");

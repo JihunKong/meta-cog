@@ -108,25 +108,13 @@ export async function POST(request: Request) {
     // 요청 본문 가져오기 및 기본 검증
     let body;
     try {
-      const requestText = await request.text();
-      console.log("원본 요청 본문:", requestText);
-      
-      if (!requestText || requestText.trim() === '') {
-        throw new ApiError(400, "요청 본문이 비어 있습니다");
-      }
-      
-      try {
-        body = JSON.parse(requestText);
-      } catch (error) {
-        console.error("JSON 파싱 오류:", error);
-        throw new ApiError(400, "유효하지 않은 JSON 형식입니다");
-      }
+      // JSON 형식으로 직접 파싱
+      body = await request.json();
+      console.log("파싱된 요청 본문:", JSON.stringify(body, null, 2));
       
       if (!body || Object.keys(body).length === 0) {
         throw new ApiError(400, "요청 본문이 비어 있습니다");
       }
-
-      console.log("파싱된 요청 본문:", JSON.stringify(body, null, 2));
     } catch (error) {
       console.error("요청 본문 처리 오류:", error);
       return errorResponse(error instanceof ApiError ? error : new ApiError(400, "요청 본문을 처리할 수 없습니다"));

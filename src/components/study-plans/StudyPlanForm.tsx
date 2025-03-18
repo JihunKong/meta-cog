@@ -8,7 +8,8 @@ import { apiCall } from "@/lib/api-service";
 
 // 시간대 정의
 const TIME_SLOTS = [
-  { id: "17-17:50", label: "17시 00분~17시 50분" },
+  { id: "7-8:15", label: "7시 00분~8시 15분" },
+  { id: "8:35-9:50", label: "8시 35분~9시 50분" },
   { id: "19-19:50", label: "19시 00분~19시 50분" },
   { id: "20-20:50", label: "20시 00분~20시 50분" },
   { id: "21-21:50", label: "21시 00분~21시 50분" },
@@ -127,11 +128,17 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
 
       console.log("전송할 데이터:", preparedData);
 
+      // Content-Type을 application/json으로 명시적으로 설정
       const responseData = await apiCall(url, {
         method,
         body: preparedData,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         cache: 'no-store'
       });
+      
+      console.log("API 응답:", responseData);
       
       toast.success(
         initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
