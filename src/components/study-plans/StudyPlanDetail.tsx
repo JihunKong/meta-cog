@@ -40,14 +40,12 @@ const ACHIEVEMENT_OPTIONS = [
 
 // 시간대 정의
 const TIME_SLOTS = [
-  { id: "17-17:50", label: "17시 00분~17시 50분" },
-  { id: "19-19:50", label: "19시 00분~19시 50분" },
-  { id: "20-20:50", label: "20시 00분~20시 50분" },
-  { id: "21-21:50", label: "21시 00분~21시 50분" },
+  { id: "19-20:15", label: "19시 00분~20시 15분" },
+  { id: "20:35-21:50", label: "20시 35분~21시 50분" },
 ];
 
 // 과목 목록 정의 (추가)
-const SUBJECTS = ["국어", "영어", "수학", "과학", "사회", "역사"];
+const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
 export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
   const { data: session } = useSession();
