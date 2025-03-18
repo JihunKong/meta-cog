@@ -345,7 +345,12 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
                 style={{ width: 'auto', minWidth: '100%' }}
               >
                 {ACHIEVEMENT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value} className="py-2 w-auto max-w-none">
+                  <option 
+                    key={option.value} 
+                    value={option.value} 
+                    className="py-2"
+                    style={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'clip' }}
+                  >
                     {option.label}
                   </option>
                 ))}
