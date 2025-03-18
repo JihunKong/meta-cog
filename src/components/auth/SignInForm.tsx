@@ -34,11 +34,23 @@ export default function SignInForm() {
         email: formData.email,
         password: formData.password,
         callbackUrl,
-        redirect: true
+        redirect: false
       });
       
-      // 리디렉션이 자동으로 처리되므로 여기에 도달하지 않을 수 있음
-      console.log("로그인 결과:", result);
+      if (result?.error) {
+        console.error("로그인 오류:", result.error);
+        // 로그인 페이지에서 오류 표시를 위해 URL에 오류 파라미터 추가
+        window.location.href = `/auth/signin?error=${result.error}`;
+        return;
+      }
+      
+      // 성공 시 리디렉션
+      if (result?.url) {
+        window.location.href = result.url;
+      } else {
+        window.location.href = callbackUrl;
+      }
+      
     } catch (err) {
       console.error("로그인 중 오류 발생:", err);
     } finally {
