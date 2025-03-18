@@ -17,7 +17,7 @@ export default function GenerateRecommendation() {
       setIsGenerating(true);
       setIsSuccess(false);
       
-      const response = await fetch("/api/recommendations", {
+      const response = await fetch("/api/recommendations/generate", {
         method: "POST",
       });
       
@@ -29,9 +29,10 @@ export default function GenerateRecommendation() {
       const data = await response.json();
       
       if (data.success) {
-        setRecommendations(data.data);
+        setRecommendations(data.data || []);
         setIsSuccess(true);
         toast.success("AI 학습 추천이 생성되었습니다");
+        console.log("생성된 추천:", data.data);
       } else {
         throw new Error(data.error?.message || "추천 생성에 실패했습니다");
       }
@@ -139,41 +140,52 @@ export default function GenerateRecommendation() {
         </div>
       )}
 
-      {isSuccess && recommendations.length > 0 && (
+      {isSuccess && (
         <div className="mt-8 space-y-4">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">생성된 AI 학습 추천</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recommendations.map((recommendation) => (
-              <div
-                key={recommendation.id}
-                className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="border-b px-4 py-3 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-md ${getRecommendationTypeColor(recommendation.type)}`}>
-                      {getRecommendationTypeText(recommendation.type)}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">
-                      {recommendation.subject}
+          {recommendations.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recommendations.map((recommendation) => (
+                <div
+                  key={recommendation.id}
+                  className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="border-b px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-md ${getRecommendationTypeColor(recommendation.type)}`}>
+                        {getRecommendationTypeText(recommendation.type)}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {recommendation.subject}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(recommendation.createdAt).toLocaleDateString('ko-KR')}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {new Date(recommendation.createdAt).toLocaleDateString('ko-KR')}
-                  </span>
+                  <div className="p-4">
+                    <p className="text-gray-700 whitespace-pre-line">
+                      {recommendation.content.split('\n').map((line, i) => (
+                        <span key={i}>
+                          {line}
+                          <br />
+                        </span>
+                      ))}
+                    </p>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <p className="text-gray-700 whitespace-pre-line">
-                    {recommendation.content.split('\n').map((line, i) => (
-                      <span key={i}>
-                        {line}
-                        <br />
-                      </span>
-                    ))}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-700 mb-4">
+                학습 데이터가 충분하지 않아 맞춤형 추천을 생성할 수 없습니다.
+              </p>
+              <p className="text-sm text-gray-600">
+                더 많은 학습 계획을 등록하고 진행 상황을 업데이트하면 개인화된 추천을 받을 수 있습니다.
+              </p>
+            </div>
+          )}
           <div className="mt-6 text-center">
             <button
               onClick={() => router.push("/recommendations")}
