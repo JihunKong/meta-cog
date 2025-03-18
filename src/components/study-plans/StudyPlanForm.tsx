@@ -13,7 +13,7 @@ const TIME_SLOTS = [
 ];
 
 // 과목 목록 정의
-const SUBJECTS = ["국어", "영어", "수학", "과학", "사회", "역사"];
+const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
 // 달성률 옵션
 const ACHIEVEMENT_OPTIONS = [
@@ -50,7 +50,6 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
     date: initialData?.date || new Date().toISOString().split("T")[0],
     timeSlot: initialData?.timeSlot || TIME_SLOTS[0].id,
     subject: initialData?.subject || "",
-    customSubject: "", // 직접 입력할 과목명
     content: initialData?.content || "",
     achievement: initialData?.achievement || 0,
     reflection: initialData?.reflection || "", // 학습 반성 및 정리
@@ -61,13 +60,7 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
   ) => {
     const { name, value } = e.target;
     
-    if (name === "subject" && value === "custom") {
-      // "직접 입력" 선택 시 처리
-      setFormData(prev => ({
-        ...prev,
-        subject: "custom"
-      }));
-    } else if (name === "achievement") {
+    if (name === "achievement") {
       // 달성률 변경 시 숫자로 변환
       const percent = parseInt(value);
       
@@ -85,22 +78,15 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
 
   // 폼 제출 전 데이터 정리
   const prepareFormData = () => {
-    const { customSubject, ...result } = formData;
-    
-    // 직접 입력한 과목이 있으면 subject 필드에 반영
-    if (formData.subject === "custom" && formData.customSubject) {
-      result.subject = formData.customSubject;
-    }
-    
-    return result;
+    return formData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // 과목 검증
-    if (formData.subject === "custom" && !formData.customSubject) {
-      toast.error("과목을 입력해주세요");
+    if (!formData.subject) {
+      toast.error("과목을 선택해주세요");
       return;
     }
     
@@ -112,23 +98,17 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
         : "/api/study-plans";
       const method = initialData ? "PATCH" : "POST";
 
-      const preparedData = prepareFormData();
-      // 데이터가 비어있는지 검증
-      if (!preparedData || Object.keys(preparedData).length === 0) {
-        throw new Error("전송할 데이터가 비어있습니다");
-      }
-
       // 필수 필드가 누락되었는지 확인
-      if (!preparedData.subject || !preparedData.content || !preparedData.date || !preparedData.timeSlot) {
+      if (!formData.subject || !formData.content || !formData.date || !formData.timeSlot) {
         throw new Error("필수 항목이 누락되었습니다. 모든 필드를 입력해주세요.");
       }
 
-      console.log("전송할 데이터:", preparedData);
+      console.log("전송할 데이터:", formData);
 
       // Content-Type을 application/json으로 명시적으로 설정
       const responseData = await apiCall(url, {
         method,
-        body: preparedData,
+        body: formData,
         headers: {
           'Content-Type': 'application/json'
         },
@@ -212,27 +192,8 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
                 {subject}
               </option>
             ))}
-            <option value="custom">직접 입력</option>
           </select>
         </div>
-
-        {formData.subject === "custom" && (
-          <div className="space-y-2">
-            <label htmlFor="customSubject" className="block text-sm font-medium text-gray-700">
-              과목명 직접 입력
-            </label>
-            <input
-              type="text"
-              id="customSubject"
-              name="customSubject"
-              value={formData.customSubject}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="과목명을 입력하세요"
-            />
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
