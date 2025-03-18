@@ -341,11 +341,11 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
                 id="achievement"
                 value={achievementPercent}
                 onChange={(e) => setAchievementPercent(parseInt(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-ellipsis"
-                style={{ textOverflow: 'ellipsis' }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                style={{ width: 'auto', minWidth: '100%' }}
               >
                 {ACHIEVEMENT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value} className="py-2 whitespace-normal overflow-visible">
+                  <option key={option.value} value={option.value} className="py-2 w-auto max-w-none">
                     {option.label}
                   </option>
                 ))}
