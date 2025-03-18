@@ -40,6 +40,8 @@ export async function GET(req: Request) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    // 사용자 ID는 항상 현재 로그인한 사용자의 ID로 제한
+    // 추가 필터링 없이 반드시 현재 사용자의 데이터만 조회하도록 함
     let where: any = {
       userId: session.user.id,
     };
@@ -74,6 +76,11 @@ export async function GET(req: Request) {
           lte: new Date(endDate),
         },
       };
+    }
+
+    // 쿼리에 항상 userId 조건이 있는지 확인
+    if (!where.userId) {
+      where.userId = session.user.id;
     }
 
     const studyPlans = await prisma.studyPlan.findMany({

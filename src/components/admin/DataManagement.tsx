@@ -24,18 +24,21 @@ export default function DataManagement() {
     try {
       setIsInitializing(true);
       const response = await fetch("/api/admin/data/initialize", {
-        method: "POST",
+        method: "GET",
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("데이터 초기화 중 오류가 발생했습니다.");
+        toast.error(`초기화 실패: ${data.error || '알 수 없는 오류'}`);
+        throw new Error(data.error || "데이터 초기화 중 오류가 발생했습니다.");
       }
 
       toast.success("데이터가 성공적으로 초기화되었습니다.");
       router.refresh();
     } catch (error) {
       console.error("데이터 초기화 오류:", error);
-      toast.error("데이터 초기화 중 오류가 발생했습니다.");
+      toast.error(`데이터 초기화 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setIsInitializing(false);
     }

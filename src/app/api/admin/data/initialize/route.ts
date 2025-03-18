@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+
+// POST와 GET 모두 동일한 초기화 기능을 수행합니다
+export async function GET() {
+  return handleInitialize();
+}
 
 export async function POST() {
+  return handleInitialize();
+}
+
+// 초기화 로직을 공통 함수로 분리
+async function handleInitialize() {
   try {
     // 인증 및 권한 확인
     const session = await getServerSession(authOptions);
@@ -21,7 +30,7 @@ export async function POST() {
       where: { email: session.user.email as string },
     });
 
-    if (!user || user.role !== UserRole.ADMIN) {
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "관리자 권한이 필요합니다." },
         { status: 403 }
@@ -42,7 +51,7 @@ export async function POST() {
     await prisma.user.deleteMany({
       where: {
         role: {
-          not: UserRole.ADMIN
+          not: "ADMIN"
         }
       }
     });
