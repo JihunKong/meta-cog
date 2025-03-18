@@ -38,6 +38,60 @@ const ACHIEVEMENT_OPTIONS = [
   { value: 100, label: "100% - 완벽하게 마쳤어요!" },
 ];
 
+// CustomSelect 컴포넌트 추가
+function CustomSelect({ 
+  value, 
+  options, 
+  onChange, 
+  label 
+}: { 
+  value: number, 
+  options: { value: number, label: string }[], 
+  onChange: (value: number) => void,
+  label: string
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // 현재 선택된 옵션의 레이블 찾기
+  const selectedOption = options.find(option => option.value === value);
+  
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-2 text-left border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+      >
+        <span>{selectedOption?.label || '선택하세요'}</span>
+        <svg className={`w-5 h-5 transition-transform ${isOpen ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
+        </svg>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${value === option.value ? 'bg-indigo-50 text-indigo-700 font-medium' : ''}`}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 시간대 정의
 const TIME_SLOTS = [
   { id: "19-20:15", label: "19시 00분~20시 15분" },
@@ -351,24 +405,12 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
               <label htmlFor="achievement" className="block text-sm font-medium text-gray-700 mb-1">
                 학습 달성률
               </label>
-              <select
-                id="achievement"
+              <CustomSelect
                 value={achievementPercent}
-                onChange={(e) => setAchievementPercent(parseInt(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                style={{ width: 'auto', minWidth: '100%' }}
-              >
-                {ACHIEVEMENT_OPTIONS.map((option) => (
-                  <option 
-                    key={option.value} 
-                    value={option.value} 
-                    className="py-2"
-                    style={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'clip' }}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                options={ACHIEVEMENT_OPTIONS}
+                onChange={(value) => setAchievementPercent(value)}
+                label="달성률"
+              />
               <p className="mt-1 text-sm text-gray-500">
                 메타인지 학습 진행도: {achievementPercent}%
               </p>
