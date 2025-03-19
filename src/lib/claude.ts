@@ -107,7 +107,6 @@ ${JSON.stringify(progressSummary, null, 2)}
       const apiRequestPromise = anthropic.messages.create({
         model: 'claude-3-7-sonnet-20250219',
         max_tokens: 2000,
-        temperature: 0.7, // 온도 값을 낮춰 더 결정적인 응답 생성
         system: "당신은 청해FLAME 자기주도학습 관리 시스템의 AI 학습 조언자입니다. 학생의 학습 데이터를 분석하여 개인화된 학습 추천을 제공합니다. 반드시 JSON 형식으로만 응답해야 합니다.",
         messages: [
           { role: 'user', content: prompt }
