@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // 기본 과목 목록 정의
-const DEFAULT_SUBJECTS = ["국어", "영어", "수학", "과학", "사회", "역사"];
+const DEFAULT_SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
 export default function RecommendationFilter() {
   const router = useRouter();

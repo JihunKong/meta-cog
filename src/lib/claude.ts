@@ -62,7 +62,7 @@ export async function generateClaudeRecommendations(
         Math.round((progress.completedUnits / progress.totalUnits) * 100) : 0
     }));
 
-    // 학생 학습 패턴 분석을 위한 프롬프트 생성
+    // 학생 학습 패턴 분석을 위한 프롬프트 생성 - 자연어 기반으로 변경
     const prompt = `
 당신은 청해FLAME 자기주도학습 관리 시스템의 AI 학습 조언자입니다. 
 학생 이름: ${user.name}
@@ -75,23 +75,22 @@ ${JSON.stringify(studyPlansSummary, null, 2)}
 ${JSON.stringify(progressSummary, null, 2)}
 
 위 데이터를 분석하여 다음 카테고리별로 학습 추천을 각각 1-2개씩 제공해 주세요:
-1. STRATEGY: 전반적인 학습 전략 추천
-2. SCHEDULE: 효과적인 학습 스케줄 추천
-3. SUBJECT: 특정 과목에 대한 학습 방법 추천
-4. UNIT: 특정 단원에 대한 집중 학습 방법
+
+## STRATEGY
+여기에 전반적인 학습 전략 추천을 작성해주세요. 학생의 학습 패턴을 고려한 구체적인 조언을 제공하세요.
+
+## SCHEDULE
+여기에 효과적인 학습 스케줄 추천을 작성해주세요. 시간 관리나 학습 계획에 대한 조언을 제공하세요.
+
+## SUBJECT
+여기에 특정 과목(들)에 대한 학습 방법 추천을 작성해주세요. 과목명을 명시하고 해당 과목에 대한 구체적인 학습 전략을 제안하세요.
+
+## UNIT
+여기에 특정 단원이나 주제에 대한 집중 학습 방법을 작성해주세요. 가능하다면 구체적인 단원명을 언급하고 학습 방법을 제안하세요.
 
 각 추천은 실제 학습 데이터에 기반하여 개인화된 내용이어야 합니다.
 실용적이고 구체적인 조언을 제공해주세요.
-추천은 다음과 같은 JSON 형식으로만 응답해주세요:
-
-[
-  {
-    "type": "STRATEGY",
-    "subject": "전체",
-    "content": "조언 내용"
-  },
-  ...
-]
+각 섹션을 명확히 구분하여 작성해주세요.
 `;
 
     console.log('Claude API 호출 시작...');
@@ -103,12 +102,11 @@ ${JSON.stringify(progressSummary, null, 2)}
         setTimeout(() => reject(new Error('API 요청 타임아웃')), 60000); // 60초 타임아웃
       });
 
-      // API 요청 Promise
+      // API 요청 Promise - JSON 형식 강제를 제거
       const apiRequestPromise = anthropic.messages.create({
-        model: 'claude-3-7-sonnet-20250219',
+        model: 'claude-3-5-sonnet-20241022', // 최신 모델로 변경
         max_tokens: 2000,
-        temperature: 0.7, // 온도 값을 낮춰 더 결정적인 응답 생성
-        system: "당신은 청해FLAME 자기주도학습 관리 시스템의 AI 학습 조언자입니다. 학생의 학습 데이터를 분석하여 개인화된 학습 추천을 제공합니다. 반드시 JSON 형식으로만 응답해야 합니다.",
+        system: "당신은 청해FLAME 자기주도학습 관리 시스템의 AI 학습 조언자입니다. 학생의 학습 데이터를 분석하여 개인화된 학습 추천을 제공합니다.",
         messages: [
           { role: 'user', content: prompt }
         ],
@@ -119,7 +117,7 @@ ${JSON.stringify(progressSummary, null, 2)}
       
       console.log('Claude API 응답 받음');
 
-      // API 응답에서 JSON 추출
+      // API 응답에서 텍스트 추출
       let responseText = '';
       for (const block of message.content) {
         if (block.type === 'text') {
@@ -137,68 +135,68 @@ ${JSON.stringify(progressSummary, null, 2)}
         throw new Error('API에서 빈 응답을 받았습니다.');
       }
       
-      // 응답에서 JSON 추출
-      const jsonRegex = /\[\s*\{[\s\S]*\}\s*\]/g;
-      const jsonMatch = responseText.match(jsonRegex);
+      // 자연어 응답에서 구조화된 데이터 추출
+      const recommendations: Recommendation[] = [];
       
-      if (!jsonMatch) {
-        console.error('API 응답에서 JSON을 찾을 수 없습니다:', responseText);
-        // JSON이 없는 경우 기본 추천 제공
+      // STRATEGY 섹션 추출
+      const strategyMatch = responseText.match(/## STRATEGY\s+([\s\S]*?)(?=##|$)/);
+      if (strategyMatch && strategyMatch[1].trim()) {
+        recommendations.push({
+          userId,
+          type: 'STRATEGY',
+          subject: '전체',
+          content: strategyMatch[1].trim()
+        });
+      }
+      
+      // SCHEDULE 섹션 추출
+      const scheduleMatch = responseText.match(/## SCHEDULE\s+([\s\S]*?)(?=##|$)/);
+      if (scheduleMatch && scheduleMatch[1].trim()) {
+        recommendations.push({
+          userId,
+          type: 'SCHEDULE',
+          subject: '전체',
+          content: scheduleMatch[1].trim()
+        });
+      }
+      
+      // SUBJECT 섹션 추출
+      const subjectMatch = responseText.match(/## SUBJECT\s+([\s\S]*?)(?=##|$)/);
+      if (subjectMatch && subjectMatch[1].trim()) {
+        // 과목 이름을 추출하려고 시도
+        const subjectNameMatch = subjectMatch[1].match(/(\w+)(?:\s*:|에 대한)/);
+        const subject = subjectNameMatch ? subjectNameMatch[1] : '전체';
+        
+        recommendations.push({
+          userId,
+          type: 'SUBJECT',
+          subject: subject,
+          content: subjectMatch[1].trim()
+        });
+      }
+      
+      // UNIT 섹션 추출
+      const unitMatch = responseText.match(/## UNIT\s+([\s\S]*?)(?=##|$)/);
+      if (unitMatch && unitMatch[1].trim()) {
+        recommendations.push({
+          userId,
+          type: 'UNIT',
+          subject: '전체',
+          content: unitMatch[1].trim()
+        });
+      }
+      
+      // 추천 항목이 없으면 기본 추천 제공
+      if (recommendations.length === 0) {
         return [
           {
             userId,
-            subject: '전체',
-            content: '학습 데이터를 분석하는 중 오류가 발생했습니다. 현재 데이터를 기반으로 균형 잡힌 학습 계획을 수립하고 규칙적으로 학습하는 것이 좋겠습니다.',
             type: 'STRATEGY',
-          },
-          {
-            userId,
             subject: '전체',
-            content: '각 과목별로 복습 시간을 따로 배정하고, 일일 학습 계획을 수립하여 꾸준히 진행하세요.',
-            type: 'SCHEDULE',
+            content: '학습 데이터를 분석한 결과, 현재 더 많은 학습 계획이 필요합니다. 규칙적으로 학습하고 계획을 기록해보세요.'
           }
         ];
       }
-      
-      // JSON 파싱
-      let recommendationsData;
-      try {
-        console.log('파싱할 JSON:', jsonMatch[0]);
-        recommendationsData = JSON.parse(jsonMatch[0]);
-        console.log('파싱된 추천 수:', recommendationsData.length);
-      } catch (parseError) {
-        console.error('JSON 파싱 오류:', parseError, '원본 텍스트:', jsonMatch[0]);
-        // 파싱 실패 시 기본 추천 제공
-        return [
-          {
-            userId,
-            subject: '전체',
-            content: '추천 데이터 처리 중 오류가 발생했습니다. 학습 내용을 복습하고 어려운 부분은 선생님께 질문하는 것이 좋겠습니다.',
-            type: 'STRATEGY',
-          }
-        ];
-      }
-      
-      // 빈 배열이거나 유효하지 않은 데이터인지 확인
-      if (!Array.isArray(recommendationsData) || recommendationsData.length === 0) {
-        console.error('유효하지 않은 추천 데이터:', recommendationsData);
-        return [
-          {
-            userId,
-            subject: '전체',
-            content: '추천을 생성할 데이터가 충분하지 않습니다. 더 많은 학습 계획을 등록한 후 다시 시도해 보세요.',
-            type: 'STRATEGY',
-          }
-        ];
-      }
-      
-      // Recommendation 객체로 변환
-      const recommendations: Recommendation[] = recommendationsData.map((rec: any) => ({
-        userId,
-        subject: rec.subject || '전체',
-        content: rec.content || '추천 내용이 제공되지 않았습니다.',
-        type: rec.type as RecommendationType || 'STRATEGY',
-      }));
       
       console.log('생성된 추천 항목 수:', recommendations.length);
       return recommendations;
@@ -215,15 +213,15 @@ ${JSON.stringify(progressSummary, null, 2)}
       return [
         {
           userId,
-          subject: '전체',
-          content: '현재 AI 추천 시스템에 일시적인 문제가 있습니다. 학습 계획에 따라 규칙적으로 학습하고, 복습을 충분히 하시기 바랍니다.',
           type: 'STRATEGY',
+          subject: '전체',
+          content: '현재 AI 추천 시스템에 일시적인 문제가 있습니다. 학습 계획에 따라 규칙적으로 학습하고, 복습을 충분히 하시기 바랍니다.'
         },
         {
           userId,
-          subject: '전체',
-          content: '효과적인 학습을 위해 각 과목별로 시간을 배분하고, 집중력이 높은 시간대에 어려운 과목을 공부하세요.',
           type: 'SCHEDULE',
+          subject: '전체',
+          content: '효과적인 학습을 위해 각 과목별로 시간을 배분하고, 집중력이 높은 시간대에 어려운 과목을 공부하세요.'
         }
       ];
     }
@@ -233,10 +231,16 @@ ${JSON.stringify(progressSummary, null, 2)}
     return [
       {
         userId,
-        subject: '전체',
-        content: '학습 데이터를 분석하는 중 오류가 발생했습니다. 균형 잡힌 학습 계획을 수립하고 규칙적으로 학습하세요. 자세한 내용은 선생님과 상담하는 것이 좋겠습니다.',
         type: 'STRATEGY',
+        subject: '전체',
+        content: '학습 데이터를 분석하는 중 오류가 발생했습니다. 균형 잡힌 학습 계획을 수립하고 규칙적으로 학습하세요. 자세한 내용은 선생님과 상담하는 것이 좋겠습니다.'
       },
+      {
+        userId,
+        type: 'SUBJECT',
+        subject: '전체',
+        content: '학습에 어려움이 있는 과목이 있다면, 해당 과목의 기초부터 천천히 다시 학습해보세요. 기초가 탄탄해야 응용 문제도 해결할 수 있습니다.'
+      }
     ];
   }
 } 
