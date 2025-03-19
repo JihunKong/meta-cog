@@ -120,8 +120,12 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
       toast.success(
         initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
       );
-      router.push("/study-plans");
-      router.refresh();
+      
+      // 약간의 지연 후 페이지 이동 (데이터가 반영될 시간 확보)
+      setTimeout(() => {
+        router.refresh(); // 먼저 데이터 새로고침
+        router.push("/study-plans"); // 그 다음 페이지 이동
+      }, 500);
     } catch (error) {
       console.error("저장 오류:", error);
       toast.error(

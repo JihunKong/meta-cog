@@ -66,7 +66,15 @@ export default function StudyPlansTable() {
           params.append("endDate", endDate);
         }
 
-        const response = await fetch(`/api/study-plans?${params.toString()}`);
+        // 캐시를 방지하기 위한 타임스탬프 추가
+        params.append("_t", Date.now().toString());
+
+        const response = await fetch(`/api/study-plans?${params.toString()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
         
         if (!response.ok) {
           throw new Error("학습 계획을 불러오는데 실패했습니다.");
@@ -87,7 +95,7 @@ export default function StudyPlansTable() {
     };
 
     fetchStudyPlans();
-  }, [session, searchParams]);
+  }, [session, searchParams, router]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("정말로 이 학습 계획을 삭제하시겠습니까?")) {
