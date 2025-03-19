@@ -40,6 +40,33 @@ export default function StudyPlansTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
+  // 데이터 갱신 트리거를 위한 상태
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
+
+  // 로컬 스토리지에서 학습 계획 업데이트를 감지하는 이벤트 리스너
+  useEffect(() => {
+    const checkForUpdates = () => {
+      const lastUpdate = localStorage.getItem('studyPlanUpdated');
+      if (lastUpdate) {
+        console.log('학습 계획 업데이트 감지:', lastUpdate);
+        // 갱신 신호가 있으면 트리거 업데이트
+        setRefreshTrigger(Date.now());
+        // 사용한 갱신 신호는 제거
+        localStorage.removeItem('studyPlanUpdated');
+      }
+    };
+    
+    // 초기 체크
+    checkForUpdates();
+    
+    // 포커스가 다시 페이지로 돌아올 때 체크
+    const handleFocus = () => checkForUpdates();
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchStudyPlans = async () => {
@@ -95,7 +122,7 @@ export default function StudyPlansTable() {
     };
 
     fetchStudyPlans();
-  }, [session, searchParams, router]);
+  }, [session, searchParams, router, refreshTrigger]); // refreshTrigger를 의존성 배열에 추가
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("정말로 이 학습 계획을 삭제하시겠습니까?")) {

@@ -183,6 +183,16 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
         setStudyPlan(result.data);
         setIsEditing(false);
         toast.success("학습 결과가 저장되었습니다.");
+        
+        // 저장 후 약간의 지연을 둔 뒤 페이지 새로고침
+        setTimeout(() => {
+          router.refresh(); // Next.js의 페이지 새로고침 기능
+          
+          // 대시보드 등 다른 페이지의 데이터 갱신을 위해 로컬 스토리지에 갱신 신호 추가
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('studyPlanUpdated', Date.now().toString());
+          }
+        }, 300);
       } else {
         throw new Error("학습 달성률 응답 데이터가 올바르지 않습니다.");
       }

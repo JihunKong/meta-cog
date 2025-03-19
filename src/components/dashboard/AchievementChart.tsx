@@ -16,19 +16,47 @@ export default function AchievementChart() {
   const [error, setError] = useState<string | null>(null);
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const checkForUpdates = () => {
+      const lastUpdate = localStorage.getItem('studyPlanUpdated');
+      if (lastUpdate) {
+        console.log('학습 계획 업데이트 감지:', lastUpdate);
+        setRefreshTrigger(Date.now());
+        localStorage.removeItem('studyPlanUpdated');
+      }
+    };
+    
+    checkForUpdates();
+    
+    const handleFocus = () => checkForUpdates();
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchStudyPlans = async () => {
       if (!session?.user) return;
 
       try {
-        // 지난 30일 간의 데이터를 가져옵니다
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
         
+        const timestamp = Date.now();
+        
         const response = await fetch(
-          `/api/study-plans?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+          `/api/study-plans?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&_t=${timestamp}`,
+          {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          }
         );
         
         if (!response.ok) {
@@ -49,7 +77,7 @@ export default function AchievementChart() {
     };
 
     fetchStudyPlans();
-  }, [session]);
+  }, [session, refreshTrigger]);
 
   useEffect(() => {
     if (loading || !studyPlans.length || !chartRef.current) return;
