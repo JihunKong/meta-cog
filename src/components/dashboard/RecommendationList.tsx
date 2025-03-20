@@ -21,10 +21,21 @@ export default function RecommendationList() {
 
     try {
       setLoading(true);
+      console.log('추천 조회 요청 - 사용자 ID:', session.user.id);
+      
       const data = await apiCall<{success: boolean; data: AIRecommendation[]}>("/api/recommendations");
       
       if (data.success) {
-        setRecommendations(data.data);
+        console.log('받은 추천 데이터:', data.data.length, '개 항목');
+        // 안전을 위해 클라이언트측에서도 한번 더 필터링
+        const filteredRecommendations = data.data.filter(rec => rec.userId === session.user.id);
+        console.log('필터링 후 추천 데이터:', filteredRecommendations.length, '개 항목');
+        
+        if (filteredRecommendations.length !== data.data.length) {
+          console.warn('다른 사용자의 추천이 포함되어 있었습니다. 필터링 적용됨.');
+        }
+        
+        setRecommendations(filteredRecommendations);
       } else {
         throw new Error(data.error?.message || "추천을 불러오는데 실패했습니다.");
       }
