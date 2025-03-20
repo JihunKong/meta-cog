@@ -11,25 +11,56 @@ export default function GenerateRecommendation() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [apiInfo, setApiInfo] = useState<any>(null);
 
   const handleGenerateRecommendations = async () => {
     try {
       setIsGenerating(true);
       setIsSuccess(false);
+      setErrorDetails(null);
+      setApiInfo(null);
       
       const response = await fetch("/api/recommendations/generate", {
         method: "POST",
       });
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || "추천 생성에 실패했습니다");
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        // JSON 파싱 시도
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("응답 파싱 오류:", parseError);
+        console.log("원본 응답:", responseText);
+        throw new Error("서버 응답을 처리할 수 없습니다. 관리자에게 문의하세요.");
       }
       
-      const data = await response.json();
+      if (!response.ok) {
+        let errorMessage = data.error?.message || "추천 생성에 실패했습니다";
+        
+        // API 키 관련 오류 메시지 추가
+        if (responseText.includes("API 키가 설정되지 않았습니다") || 
+            responseText.includes("ANTHROPIC_API_KEY")) {
+          errorMessage = "AI API 키가 설정되지 않았습니다. 관리자에게 문의하세요.";
+          setErrorDetails("서버에 Claude API 키가 올바르게 설정되어 있지 않습니다.");
+        }
+        
+        throw new Error(errorMessage);
+      }
       
       if (data.success) {
-        setRecommendations(data.data || []);
+        // 응답 형식 확인
+        if (data.data.recommendations) {
+          // 새로운 응답 형식 (추가 정보 포함)
+          setRecommendations(data.data.recommendations || []);
+          setApiInfo(data.data.info || null);
+        } else {
+          // 이전 응답 형식 (추천만 포함)
+          setRecommendations(data.data || []);
+        }
+        
         setIsSuccess(true);
         toast.success("AI 학습 추천이 생성되었습니다");
         console.log("생성된 추천:", data.data);
@@ -62,41 +93,26 @@ export default function GenerateRecommendation() {
   const getRecommendationTypeColor = (type: string) => {
     switch (type) {
       case "STRATEGY":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800";
       case "SCHEDULE":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800";
       case "SUBJECT":
-        return "bg-purple-100 text-purple-800 border-purple-200";
+        return "bg-purple-100 text-purple-800";
       case "UNIT":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-amber-100 text-amber-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   return (
-    <div className="space-y-8">
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-lg border border-indigo-100">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600 text-white">
-            <Icons.add className="h-5 w-5" />
-          </span>
-          <h2 className="text-xl font-semibold text-indigo-800">Claude 3.7 Sonnet AI 추천 시스템</h2>
-        </div>
-        <p className="text-indigo-700 mb-2">
-          이 시스템은 Anthropic의 Claude 3.7 Sonnet 모델을 사용하여 당신의 학습 데이터를 분석하고 
-          개인화된 학습 추천을 제공합니다.
-        </p>
-        <ul className="space-y-1 text-sm text-indigo-600 ml-4 list-disc mb-3">
-          <li>학습 계획, 과목 진도 및 학습 패턴 분석</li>
-          <li>효과적인 학습 전략 및 스케줄 추천</li>
-          <li>과목별 맞춤형 학습 조언</li>
-          <li>중요 단원과 학습 우선순위 제안</li>
-        </ul>
-        <p className="text-xs text-indigo-500">
-          이 기능은 API 호출을 통해 생성되며, 학습 데이터가 많을수록 더 정확한 추천이 제공됩니다.
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">AI 학습 추천 생성</h1>
+      
+      <p className="text-gray-600 mb-8">
+        학습 계획 데이터와 과목별 진도를 분석하여 개인화된 AI 학습 추천을 생성합니다.
+        생성된 추천은 대시보드와 추천 목록에서 확인할 수 있습니다.
+      </p>
 
       <div className="text-center">
         <button
@@ -121,8 +137,18 @@ export default function GenerateRecommendation() {
         </p>
       </div>
 
+      {errorDetails && (
+        <div className="mt-4 p-4 border border-red-300 bg-red-50 rounded-md">
+          <h3 className="text-red-700 font-medium">오류 세부 정보:</h3>
+          <p className="text-red-600">{errorDetails}</p>
+          <p className="text-sm mt-2 text-red-500">
+            관리자는 서버에 .env.local 파일에 ANTHROPIC_API_KEY가 올바르게 설정되어 있는지 확인하세요.
+          </p>
+        </div>
+      )}
+
       {isGenerating && (
-        <div className="flex flex-col items-center justify-center p-8 bg-indigo-50 rounded-lg border border-indigo-100">
+        <div className="flex flex-col items-center justify-center p-8 bg-indigo-50 rounded-lg border border-indigo-100 mt-6">
           <div className="relative">
             <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-indigo-600 animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
@@ -137,6 +163,18 @@ export default function GenerateRecommendation() {
             <li>• 과목별 진도 확인 중</li>
             <li>• 맞춤형 추천 생성 중</li>
           </ul>
+        </div>
+      )}
+
+      {isSuccess && apiInfo && (
+        <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200 text-sm">
+          <h4 className="font-medium text-blue-700">AI 분석 정보</h4>
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            <div className="flex justify-between"><span>학습 계획 수:</span> <span className="font-medium">{apiInfo.studyPlansCount}</span></div>
+            <div className="flex justify-between"><span>커리큘럼 진도 수:</span> <span className="font-medium">{apiInfo.progressCount}</span></div>
+            <div className="flex justify-between"><span>생성된 추천 수:</span> <span className="font-medium">{apiInfo.generatedCount}</span></div>
+            <div className="flex justify-between"><span>저장된 추천 수:</span> <span className="font-medium">{apiInfo.savedCount}</span></div>
+          </div>
         </div>
       )}
 
@@ -178,20 +216,16 @@ export default function GenerateRecommendation() {
             </div>
           ) : (
             <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-gray-700 mb-4">
-                학습 데이터가 충분하지 않아 맞춤형 추천을 생성할 수 없습니다.
-              </p>
-              <p className="text-sm text-gray-600">
-                더 많은 학습 계획을 등록하고 진행 상황을 업데이트하면 개인화된 추천을 받을 수 있습니다.
-              </p>
+              <p className="text-gray-600">추천이 생성되지 않았습니다. 다시 시도해 주세요.</p>
             </div>
           )}
-          <div className="mt-6 text-center">
+          
+          <div className="text-center mt-6">
             <button
               onClick={() => router.push("/recommendations")}
-              className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-blue-600 hover:text-blue-800 font-medium"
             >
-              모든 추천 보기
+              모든 추천 목록 보기
             </button>
           </div>
         </div>

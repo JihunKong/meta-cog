@@ -43,6 +43,20 @@ export async function generateClaudeRecommendations(
 
     const { recentStudyPlans, subjectProgress, user } = studyData;
 
+    console.log('학습 계획 데이터 수:', recentStudyPlans.length);
+    console.log('과목별 진도 데이터 수:', subjectProgress.length);
+
+    // 학습 데이터가 없으면 기본 메시지 반환
+    if (recentStudyPlans.length === 0 && subjectProgress.length === 0) {
+      console.log('학습 데이터가 없어 기본 추천을 생성합니다.');
+      return [{
+        userId,
+        subject: '전체',
+        content: '아직 학습 데이터가 충분하지 않습니다. 학습 계획을 등록하고 과목별 진도를 기록하면 맞춤형 AI 추천을 받을 수 있습니다.',
+        type: 'STRATEGY',
+      }];
+    }
+
     // 학습 계획 데이터 가공
     const studyPlansSummary = recentStudyPlans.map(plan => ({
       subject: plan.subject,
@@ -94,15 +108,16 @@ ${JSON.stringify(progressSummary, null, 2)}
 `;
 
     console.log('Claude API 호출 시작...');
+    console.log('사용 모델: claude-3-5-sonnet-20241022');
     
     // Claude API 호출
     try {
-      // 5초 후에 타임아웃되는 Promise 생성
+      // 타임아웃 설정
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('API 요청 타임아웃')), 60000); // 60초 타임아웃
       });
 
-      // API 요청 Promise - JSON 형식 강제를 제거
+      // API 요청 준비
       const apiRequestPromise = anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022', // 최신 모델로 변경
         max_tokens: 2000,
@@ -112,10 +127,12 @@ ${JSON.stringify(progressSummary, null, 2)}
         ],
       });
 
+      console.log('API 요청 시작 시간:', new Date().toISOString());
+
       // 둘 중 먼저 완료되는 Promise를 사용
       const message = await Promise.race([apiRequestPromise, timeoutPromise]);
       
-      console.log('Claude API 응답 받음');
+      console.log('Claude API 응답 받음 -', new Date().toISOString());
 
       // API 응답에서 텍스트 추출
       let responseText = '';
@@ -135,67 +152,112 @@ ${JSON.stringify(progressSummary, null, 2)}
         throw new Error('API에서 빈 응답을 받았습니다.');
       }
       
-      // 자연어 응답에서 구조화된 데이터 추출
+      // 자연어 응답에서 구조화된 데이터 추출 - 강화된 정규식 사용
       const recommendations: Recommendation[] = [];
       
+      console.log('응답 텍스트에서 추천 추출 시작');
+      
+      // 섹션 추출 함수를 강화
+      const extractSection = (text: string, sectionName: string): string | null => {
+        const patterns = [
+          new RegExp(`## ${sectionName}\\s+((?:.|\\s)*?)(?=^##|$)`, 'mi'),
+          new RegExp(`${sectionName}:\\s*((?:.|\\s)*?)(?=^[A-Z]+:|$)`, 'mi'),
+          new RegExp(`${sectionName}\\s*((?:.|\\s)*?)(?=^[A-Z]+[:\\s]|$)`, 'mi')
+        ];
+        
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          if (match && match[1] && match[1].trim()) {
+            return match[1].trim();
+          }
+        }
+        
+        return null;
+      };
+      
       // STRATEGY 섹션 추출
-      const strategyMatch = responseText.match(/## STRATEGY\s+([\s\S]*?)(?=##|$)/);
-      if (strategyMatch && strategyMatch[1].trim()) {
+      const strategyContent = extractSection(responseText, 'STRATEGY');
+      if (strategyContent) {
+        console.log('STRATEGY 섹션 추출 성공:', strategyContent.substring(0, 50) + '...');
         recommendations.push({
           userId,
           type: 'STRATEGY',
           subject: '전체',
-          content: strategyMatch[1].trim()
+          content: strategyContent
         });
+      } else {
+        console.log('STRATEGY 섹션을 찾을 수 없습니다.');
       }
       
       // SCHEDULE 섹션 추출
-      const scheduleMatch = responseText.match(/## SCHEDULE\s+([\s\S]*?)(?=##|$)/);
-      if (scheduleMatch && scheduleMatch[1].trim()) {
+      const scheduleContent = extractSection(responseText, 'SCHEDULE');
+      if (scheduleContent) {
+        console.log('SCHEDULE 섹션 추출 성공:', scheduleContent.substring(0, 50) + '...');
         recommendations.push({
           userId,
           type: 'SCHEDULE',
           subject: '전체',
-          content: scheduleMatch[1].trim()
+          content: scheduleContent
         });
+      } else {
+        console.log('SCHEDULE 섹션을 찾을 수 없습니다.');
       }
       
       // SUBJECT 섹션 추출
-      const subjectMatch = responseText.match(/## SUBJECT\s+([\s\S]*?)(?=##|$)/);
-      if (subjectMatch && subjectMatch[1].trim()) {
-        // 과목 이름을 추출하려고 시도
-        const subjectNameMatch = subjectMatch[1].match(/(\w+)(?:\s*:|에 대한)/);
+      const subjectContent = extractSection(responseText, 'SUBJECT');
+      if (subjectContent) {
+        // 과목 이름을 추출하려고 시도 - 한글 문자 지원 추가
+        const subjectNameMatch = subjectContent.match(/([가-힣a-zA-Z0-9]+)(?:\s*:|에 대한)/);
         const subject = subjectNameMatch ? subjectNameMatch[1] : '전체';
         
+        console.log('SUBJECT 섹션 추출 성공:', subject, subjectContent.substring(0, 50) + '...');
         recommendations.push({
           userId,
           type: 'SUBJECT',
           subject: subject,
-          content: subjectMatch[1].trim()
+          content: subjectContent
         });
+      } else {
+        console.log('SUBJECT 섹션을 찾을 수 없습니다.');
       }
       
       // UNIT 섹션 추출
-      const unitMatch = responseText.match(/## UNIT\s+([\s\S]*?)(?=##|$)/);
-      if (unitMatch && unitMatch[1].trim()) {
+      const unitContent = extractSection(responseText, 'UNIT');
+      if (unitContent) {
+        console.log('UNIT 섹션 추출 성공:', unitContent.substring(0, 50) + '...');
         recommendations.push({
           userId,
           type: 'UNIT',
           subject: '전체',
-          content: unitMatch[1].trim()
+          content: unitContent
         });
+      } else {
+        console.log('UNIT 섹션을 찾을 수 없습니다.');
       }
       
       // 추천 항목이 없으면 기본 추천 제공
       if (recommendations.length === 0) {
-        return [
-          {
+        console.log('추출된 추천이 없어 기본 추천을 생성합니다.');
+        
+        // 대안 1: 전체 응답을 하나의 STRATEGY 추천으로 사용
+        if (responseText.trim().length > 0) {
+          console.log('전체 응답을 하나의 STRATEGY 추천으로 사용합니다.');
+          recommendations.push({
+            userId,
+            type: 'STRATEGY',
+            subject: '전체',
+            content: responseText.trim()
+          });
+        } else {
+          // 대안 2: 기본 메시지 사용
+          console.log('기본 메시지를 사용합니다.');
+          recommendations.push({
             userId,
             type: 'STRATEGY',
             subject: '전체',
             content: '학습 데이터를 분석한 결과, 현재 더 많은 학습 계획이 필요합니다. 규칙적으로 학습하고 계획을 기록해보세요.'
-          }
-        ];
+          });
+        }
       }
       
       console.log('생성된 추천 항목 수:', recommendations.length);
@@ -207,6 +269,18 @@ ${JSON.stringify(progressSummary, null, 2)}
       if (apiError instanceof Error) {
         console.error('오류 메시지:', apiError.message);
         console.error('오류 스택:', apiError.stack);
+        
+        // API 키 관련 오류 메시지 처리
+        if (apiError.message.includes('invalid_api_key') || 
+            apiError.message.includes('auth') || 
+            apiError.message.includes('authentication')) {
+          return [{
+            userId,
+            type: 'STRATEGY',
+            subject: '전체',
+            content: 'API 키가 유효하지 않습니다. 관리자에게 문의하여 올바른 Claude API 키를 설정해주세요.',
+          }];
+        }
       }
       
       // 어떤 에러가 발생하더라도 유용한 기본 추천 제공
