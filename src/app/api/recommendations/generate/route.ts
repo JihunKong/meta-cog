@@ -42,7 +42,13 @@ export async function POST(request: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    console.log('인증된 사용자:', session.user.email, 'ID:', session.user.id);
+    console.log('인증된 사용자:', session.user.email, 'ID:', session.user.id, 'Role:', session.user.role);
+
+    // 사용자 ID 확인 (중요: 명시적 조건 검사 추가)
+    if (!session.user.id) {
+      console.error('사용자 ID가 없음:', session.user);
+      throw new ApiError(400, "유효한 사용자 ID를 찾을 수 없습니다");
+    }
 
     // 요청 데이터 검증
     let validatedData: GenerateRecommendationInput = {};
@@ -155,9 +161,9 @@ export async function POST(request: Request) {
       const savedRecommendations = await Promise.all(
         filteredRecommendations.map((recommendation) => {
           // userId가 확실히 설정되어 있는지 확인
-          if (!recommendation.userId) {
+          if (!recommendation.userId || recommendation.userId.trim() === '') {
+            console.warn("누락된 userId를 자동으로 설정");
             recommendation.userId = session.user.id;
-            console.log("누락된 userId를 자동으로 설정");
           }
           
           // 모든 추천에 userId가 올바르게 설정되었는지 로깅

@@ -32,6 +32,12 @@ export async function generateClaudeRecommendations(
   try {
     console.log(`[generateClaudeRecommendations] 시작: 사용자 ID ${userId}`);
     
+    // 제공된 userId가 없거나 유효하지 않은 경우를 명시적으로 체크
+    if (!userId || userId.trim() === '') {
+      console.error('[generateClaudeRecommendations] 유효하지 않은 userId:', userId);
+      throw new Error('유효한 사용자 ID가 필요합니다.');
+    }
+    
     // API 키가 없으면 오류 메시지 반환
     if (!apiKey) {
       console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다.');
