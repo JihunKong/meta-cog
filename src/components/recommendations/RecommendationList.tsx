@@ -47,6 +47,7 @@ export default function RecommendationList() {
           params.append("subject", subject);
         }
 
+        console.log('추천 목록 조회 - 사용자 ID:', session.user.id);
         const response = await fetch(`/api/recommendations?${params.toString()}`);
         
         if (!response.ok) {
@@ -55,7 +56,17 @@ export default function RecommendationList() {
         
         const data = await response.json();
         if (data.success) {
-          setRecommendations(data.data);
+          console.log('받은 추천 데이터:', data.data.length, '개 항목');
+          
+          // 안전을 위해 클라이언트측에서도 한번 더 필터링
+          const filteredRecommendations = data.data.filter(rec => rec.userId === session.user.id);
+          console.log('필터링 후 추천 데이터:', filteredRecommendations.length, '개 항목');
+          
+          if (filteredRecommendations.length !== data.data.length) {
+            console.warn('다른 사용자의 추천이 포함되어 있었습니다. 필터링 적용됨.');
+          }
+          
+          setRecommendations(filteredRecommendations);
         } else {
           throw new Error(data.error?.message || "추천 목록을 불러오는데 실패했습니다.");
         }

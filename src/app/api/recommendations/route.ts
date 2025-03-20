@@ -14,11 +14,16 @@ export async function GET(req: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
     
-    console.log('추천 조회 API: 인증된 사용자 ID:', session.user.id, 'Email:', session.user.email);
+    console.log('추천 조회 API: 인증된 사용자 ID:', session.user.id, 'Email:', session.user.email, 'Role:', session.user.role);
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const subject = searchParams.get("subject");
+
+    // 반드시 사용자 ID로 필터링
+    if (!session.user.id) {
+      throw new ApiError(400, "유효한 사용자 ID가 필요합니다");
+    }
 
     let where: any = {
       userId: session.user.id
@@ -42,8 +47,15 @@ export async function GET(req: Request) {
     });
     
     console.log(`사용자 ID ${session.user.id}에 대한 추천 조회 결과: ${recommendations.length}개 항목`);
+    
+    // 추가 안전장치: 모든 추천이 현재 사용자의 것인지 확인
+    const validRecommendations = recommendations.filter(rec => rec.userId === session.user.id);
+    
+    if (validRecommendations.length !== recommendations.length) {
+      console.error(`사용자 ID 불일치: ${recommendations.length - validRecommendations.length}개의 추천이 필터링되었습니다.`);
+    }
 
-    return successResponse(recommendations);
+    return successResponse(validRecommendations);
   } catch (error) {
     return errorResponse(error as Error);
   }
