@@ -30,6 +30,8 @@ export async function generateClaudeRecommendations(
   studyData: StudyData
 ): Promise<Recommendation[]> {
   try {
+    console.log(`[generateClaudeRecommendations] 시작: 사용자 ID ${userId}`);
+    
     // API 키가 없으면 오류 메시지 반환
     if (!apiKey) {
       console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다.');
@@ -48,7 +50,7 @@ export async function generateClaudeRecommendations(
 
     // 학습 데이터가 없으면 기본 메시지 반환
     if (recentStudyPlans.length === 0 && subjectProgress.length === 0) {
-      console.log('학습 데이터가 없어 기본 추천을 생성합니다.');
+      console.log(`[generateClaudeRecommendations] 학습 데이터 없음, 기본 추천 생성 (사용자 ID: ${userId})`);
       return [{
         userId,
         subject: '전체',
@@ -178,7 +180,7 @@ ${JSON.stringify(progressSummary, null, 2)}
       // STRATEGY 섹션 추출
       const strategyContent = extractSection(responseText, 'STRATEGY');
       if (strategyContent) {
-        console.log('STRATEGY 섹션 추출 성공:', strategyContent.substring(0, 50) + '...');
+        console.log(`[generateClaudeRecommendations] STRATEGY 섹션 추출 성공 (사용자 ID: ${userId})`);
         recommendations.push({
           userId,
           type: 'STRATEGY',
@@ -186,7 +188,7 @@ ${JSON.stringify(progressSummary, null, 2)}
           content: strategyContent
         });
       } else {
-        console.log('STRATEGY 섹션을 찾을 수 없습니다.');
+        console.log(`[generateClaudeRecommendations] STRATEGY 섹션을 찾을 수 없습니다 (사용자 ID: ${userId})`);
       }
       
       // SCHEDULE 섹션 추출
@@ -237,11 +239,11 @@ ${JSON.stringify(progressSummary, null, 2)}
       
       // 추천 항목이 없으면 기본 추천 제공
       if (recommendations.length === 0) {
-        console.log('추출된 추천이 없어 기본 추천을 생성합니다.');
+        console.log(`[generateClaudeRecommendations] 추출된 추천 없음, 기본 추천 생성 (사용자 ID: ${userId})`);
         
         // 대안 1: 전체 응답을 하나의 STRATEGY 추천으로 사용
         if (responseText.trim().length > 0) {
-          console.log('전체 응답을 하나의 STRATEGY 추천으로 사용합니다.');
+          console.log(`[generateClaudeRecommendations] 전체 응답을 STRATEGY 추천으로 사용 (사용자 ID: ${userId})`);
           recommendations.push({
             userId,
             type: 'STRATEGY',

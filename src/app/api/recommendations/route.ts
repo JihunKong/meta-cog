@@ -13,6 +13,8 @@ export async function GET(req: Request) {
     if (!session?.user) {
       throw new ApiError(401, "인증이 필요합니다");
     }
+    
+    console.log('추천 조회 API: 인증된 사용자 ID:', session.user.id, 'Email:', session.user.email);
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
@@ -29,6 +31,8 @@ export async function GET(req: Request) {
     if (subject) {
       where.subject = subject;
     }
+    
+    console.log('추천 조회 필터:', JSON.stringify(where));
 
     const recommendations = await prisma.aIRecommendation.findMany({
       where,
@@ -36,6 +40,8 @@ export async function GET(req: Request) {
         createdAt: 'desc'
       },
     });
+    
+    console.log(`사용자 ID ${session.user.id}에 대한 추천 조회 결과: ${recommendations.length}개 항목`);
 
     return successResponse(recommendations);
   } catch (error) {
