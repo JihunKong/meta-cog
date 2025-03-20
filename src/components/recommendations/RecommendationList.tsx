@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Icons } from "@/components/ui/icons";
 import { formatDate } from "@/lib/utils";
+import { checkUserRole } from "@/lib/utils";
 
 interface Recommendation {
   id: string;
@@ -23,6 +24,8 @@ export default function RecommendationList() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const isTeacher = session?.user && checkUserRole(session.user, ["TEACHER", "ADMIN"]);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -174,21 +177,31 @@ export default function RecommendationList() {
             </span>
           </div>
           <div className="p-4">
-            <p className="text-gray-700 line-clamp-3">{recommendation.content}</p>
-          </div>
-          <div className="p-4 bg-gray-50 border-t flex justify-between">
-            <Link
-              href={`/recommendations/${recommendation.id}`}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              자세히 보기
-            </Link>
-            <button
-              onClick={() => handleDelete(recommendation.id)}
-              className="text-red-600 hover:text-red-800 text-sm"
-            >
-              삭제
-            </button>
+            {isTeacher ? (
+              // 교사용 뷰: 내용 요약 + 자세히 보기/삭제 버튼
+              <>
+                <p className="text-gray-700 line-clamp-3">{recommendation.content}</p>
+                <div className="p-4 bg-gray-50 border-t flex justify-between">
+                  <Link
+                    href={`/recommendations/${recommendation.id}`}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
+                    자세히 보기
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(recommendation.id)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </>
+            ) : (
+              // 학생용 뷰: 전체 내용 바로 표시
+              <div className="whitespace-pre-line text-gray-700">
+                {recommendation.content}
+              </div>
+            )}
           </div>
         </div>
       ))}
