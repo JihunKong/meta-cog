@@ -122,3 +122,11 @@ export function calculateAchievementRate(achievement: number): number {
 export function easeOutExpo(t: number): number {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
+
+/**
+ * 사용자 역할을 확인하는 유틸리티 함수
+ */
+export function checkUserRole(user: any, allowedRoles: string[]): boolean {
+  if (!user || !user.role) return false;
+  return allowedRoles.includes(user.role);
+}

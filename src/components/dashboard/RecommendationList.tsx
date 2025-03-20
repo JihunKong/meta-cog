@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { AIRecommendation } from "@/types";
+import { AIRecommendation, UserRole } from "@/types";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "react-hot-toast";
 import { apiCall } from "@/lib/api-service";
+import { checkUserRole } from "@/lib/utils";
 
 export default function RecommendationList() {
   const { data: session } = useSession();
@@ -13,6 +14,7 @@ export default function RecommendationList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const isTeacher = session?.user && checkUserRole(session.user, ["TEACHER", "ADMIN"]);
 
   const fetchRecommendations = async () => {
     if (!session?.user) return;
@@ -131,27 +133,35 @@ export default function RecommendationList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          onClick={generateRecommendation}
-          disabled={generating}
-          className="flex items-center text-sm px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 font-bold"
-        >
-          {generating ? (
-            <Icons.spinner className="mr-1.5 h-4 w-4 animate-spin" />
-          ) : (
-            <Icons.add className="mr-1.5 h-4 w-4" />
-          )}
-          새 추천 생성
-        </button>
-      </div>
+      {isTeacher && (
+        <div className="flex justify-end">
+          <button
+            onClick={generateRecommendation}
+            disabled={generating}
+            className="flex items-center text-sm px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 font-bold"
+          >
+            {generating ? (
+              <Icons.spinner className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Icons.add className="mr-1.5 h-4 w-4" />
+            )}
+            새 추천 생성
+          </button>
+        </div>
+      )}
 
       {recommendations.length === 0 ? (
         <div className="text-center py-6 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-blue-800 font-medium">아직 추천이 없습니다.</p>
-          <p className="text-sm mt-1 text-blue-700">
-            '새 추천 생성' 버튼을 클릭하여 AI 추천을 받아보세요.
-          </p>
+          {isTeacher ? (
+            <p className="text-sm mt-1 text-blue-700">
+              '새 추천 생성' 버튼을 클릭하여 AI 추천을 생성해보세요.
+            </p>
+          ) : (
+            <p className="text-sm mt-1 text-blue-700">
+              선생님이 AI 추천을 생성하면 이곳에서 확인할 수 있습니다.
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">

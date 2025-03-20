@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import { AIRecommendation, UserRole } from "@/types";
 import { Icons } from "@/components/ui/icons";
+import { apiCall } from "@/lib/api-service";
+import { checkUserRole } from "@/lib/utils";
 
 interface RecommendationDetailProps {
   id: string;
@@ -24,6 +27,8 @@ export default function RecommendationDetail({ id }: RecommendationDetailProps) 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const isTeacher = session?.user && checkUserRole(session.user, ["TEACHER", "ADMIN"]);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchRecommendation() {
@@ -61,29 +66,28 @@ export default function RecommendationDetail({ id }: RecommendationDetailProps) 
   }, [id, session]);
 
   const handleDelete = async () => {
-    if (!confirm("정말 이 추천을 삭제하시겠습니까?")) {
+    if (!window.confirm("정말 이 추천을 삭제하시겠습니까?")) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/recommendations/${id}`, {
+      setDeleting(true);
+      
+      const result = await apiCall(`/api/recommendations/${id}`, {
         method: "DELETE",
       });
-
-      if (!response.ok) {
-        throw new Error("추천 삭제에 실패했습니다.");
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success("추천이 삭제되었습니다.");
+      
+      if (result.success) {
+        toast.success("추천이 삭제되었습니다");
         router.push("/recommendations");
       } else {
-        throw new Error(data.error?.message || "추천 삭제에 실패했습니다.");
+        throw new Error(result.error?.message || "추천을 삭제하는데 실패했습니다");
       }
     } catch (error) {
       console.error("추천 삭제 오류:", error);
-      toast.error("추천을 삭제하는데 문제가 발생했습니다.");
+      toast.error("추천을 삭제하는데 문제가 발생했습니다");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -166,37 +170,43 @@ export default function RecommendationDetail({ id }: RecommendationDetailProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-md text-sm font-medium ${getTypeColor(recommendation.type)}`}>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(recommendation.type)}`}>
             {getTypeLabel(recommendation.type)}
           </span>
-          <h2 className="text-xl font-semibold">{recommendation.subject}</h2>
+          <h2 className="text-xl font-bold">{recommendation.subject}</h2>
         </div>
-        <span className="text-sm text-gray-500">
-          {formatDate(recommendation.createdAt)}
-        </span>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.back()}
+            className="px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-200"
+          >
+            뒤로 가기
+          </button>
+          
+          {isTeacher && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
+            >
+              {deleting ? (
+                <Icons.spinner className="h-4 w-4 animate-spin" />
+              ) : (
+                <Icons.trash className="h-4 w-4" />
+              )}
+              삭제
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-gray-50 p-5 rounded-lg">
         <pre className="whitespace-pre-wrap text-gray-700 font-sans">
           {recommendation.content}
         </pre>
-      </div>
-
-      <div className="flex justify-end space-x-3 pt-4">
-        <button
-          onClick={() => router.push("/recommendations")}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-        >
-          목록으로
-        </button>
-        <button
-          onClick={handleDelete}
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-        >
-          삭제하기
-        </button>
       </div>
     </div>
   );
