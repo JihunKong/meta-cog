@@ -165,12 +165,14 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
     
     // 메타인지 달성률 값을 그대로 저장 (퍼센트 값)
     console.log("저장할 데이터:", {
+      studyPlanId: id,
       achievement: achievementPercent,
       reflection: reflection
     });
     
     setSaving(true);
     try {
+      console.log(`API 호출 URL: /api/study-plans/${id}`);
       const result = await apiCall<{success: boolean, data: StudyPlan}>(`/api/study-plans/${id}`, {
         method: "PATCH",
         body: {
@@ -178,6 +180,8 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
           reflection: reflection,
         },
       });
+      
+      console.log("API 응답 결과:", result);
       
       if (result.success && result.data) {
         setStudyPlan(result.data);

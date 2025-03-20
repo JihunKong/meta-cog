@@ -45,15 +45,37 @@ export async function GET(request: Request, context: Context) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    const studyPlan = await prisma.studyPlan.findUnique({
+    // 디버깅을 위한 코드 추가
+    console.log("학습 계획 조회 시도:", { planId: id, userId: session.user.id });
+    
+    // 1. 먼저 ID만으로 학습 계획이 존재하는지 확인
+    const anyPlan = await prisma.studyPlan.findUnique({
+      where: {
+        id,
+      },
+    });
+    
+    console.log("ID로만 찾은 학습 계획:", anyPlan);
+    
+    // 2. 원래 로직대로 ID와 사용자 ID로 함께 찾기
+    const studyPlan = await prisma.studyPlan.findFirst({
       where: {
         id,
         userId: session.user.id,
       },
     });
+    
+    console.log("ID와 사용자 ID로 찾은 학습 계획:", studyPlan);
 
     if (!studyPlan) {
-      throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      // 학습 계획이 존재하지만 현재 사용자의 것이 아닌 경우
+      if (anyPlan) {
+        console.log("학습 계획이 존재하지만 현재 사용자의 것이 아님");
+        throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
+      } else {
+        console.log("학습 계획이 존재하지 않음");
+        throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      }
     }
 
     // 날짜 처리를 클라이언트에서 더 쉽게 할 수 있도록 문자열 형식 유지
@@ -85,16 +107,37 @@ export async function PATCH(request: Request, context: Context) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 학습 계획 존재 확인 및 소유권 확인
-    const existingPlan = await prisma.studyPlan.findUnique({
+    // 학습 계획 존재 확인 및 소유권 확인 (디버깅용으로 수정)
+    console.log("학습 계획 찾기 시도:", { planId: id, userId: session.user.id });
+    
+    // 1. 먼저 ID만으로 학습 계획이 존재하는지 확인
+    const anyPlan = await prisma.studyPlan.findUnique({
+      where: {
+        id,
+      },
+    });
+    
+    console.log("ID로만 찾은 학습 계획:", anyPlan);
+    
+    // 2. 원래 로직대로 ID와 사용자 ID로 함께 찾기
+    const existingPlan = await prisma.studyPlan.findFirst({
       where: {
         id,
         userId: session.user.id,
       },
     });
+    
+    console.log("ID와 사용자 ID로 찾은 학습 계획:", existingPlan);
 
     if (!existingPlan) {
-      throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      // 학습 계획이 존재하지만 현재 사용자의 것이 아닌 경우
+      if (anyPlan) {
+        console.log("학습 계획이 존재하지만 현재 사용자의 것이 아님");
+        throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
+      } else {
+        console.log("학습 계획이 존재하지 않음");
+        throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      }
     }
 
     let body: any; // body에 임의 속성을 추가할 수 있도록 any 타입 사용
@@ -185,16 +228,37 @@ export async function DELETE(request: Request, context: Context) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 학습 계획 존재 확인 및 소유권 확인
-    const existingPlan = await prisma.studyPlan.findUnique({
+    // 디버깅을 위한 코드 추가
+    console.log("학습 계획 삭제 시도:", { planId: id, userId: session.user.id });
+    
+    // 1. 먼저 ID만으로 학습 계획이 존재하는지 확인
+    const anyPlan = await prisma.studyPlan.findUnique({
+      where: {
+        id,
+      },
+    });
+    
+    console.log("ID로만 찾은 학습 계획:", anyPlan);
+    
+    // 2. 원래 로직대로 ID와 사용자 ID로 함께 찾기
+    const existingPlan = await prisma.studyPlan.findFirst({
       where: {
         id,
         userId: session.user.id,
       },
     });
+    
+    console.log("ID와 사용자 ID로 찾은 학습 계획:", existingPlan);
 
     if (!existingPlan) {
-      throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      // 학습 계획이 존재하지만 현재 사용자의 것이 아닌 경우
+      if (anyPlan) {
+        console.log("학습 계획이 존재하지만 현재 사용자의 것이 아님");
+        throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
+      } else {
+        console.log("학습 계획이 존재하지 않음");
+        throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
+      }
     }
 
     await prisma.studyPlan.delete({
