@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    console.log('인증된 사용자:', session.user.email);
+    console.log('인증된 사용자:', session.user.email, 'ID:', session.user.id);
 
     // 요청 데이터 검증
     let validatedData: GenerateRecommendationInput = {};
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       take: 10,
     });
 
-    console.log(`조회된 학습 계획 수: ${recentStudyPlans.length}`);
+    console.log(`사용자 ID ${session.user.id}에 대한 학습 계획 조회: ${recentStudyPlans.length}개 결과`);
 
     // 과목별 단원 수 계산
     const curriculum = await prisma.curriculum.findMany({
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       },
     }) as CurriculumProgress[];
 
-    console.log(`조회된 커리큘럼 진도 수: ${curriculumProgress.length}`);
+    console.log(`사용자 ID ${session.user.id}에 대한 커리큘럼 진도 조회: ${curriculumProgress.length}개 결과`);
 
     // 과목별 진행 상황 매핑
     const subjectProgressMap: Record<string, { completedUnits: number; totalUnits: number }> = {};
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       }
     );
 
-    console.log(`생성된 추천 수: ${recommendations.length}`);
+    console.log(`사용자 ID ${session.user.id}에 대한 AI 추천 생성: ${recommendations.length}개 결과`);
 
     // 특정 타입과 과목에 대한 필터링
     const filteredRecommendations = recommendations.filter(rec => {
@@ -153,11 +153,20 @@ export async function POST(request: Request) {
     // 추천 결과를 저장합니다
     try {
       const savedRecommendations = await Promise.all(
-        filteredRecommendations.map((recommendation) =>
-          prisma.aIRecommendation.create({
+        filteredRecommendations.map((recommendation) => {
+          // userId가 확실히 설정되어 있는지 확인
+          if (!recommendation.userId) {
+            recommendation.userId = session.user.id;
+            console.log("누락된 userId를 자동으로 설정");
+          }
+          
+          // 모든 추천에 userId가 올바르게 설정되었는지 로깅
+          console.log(`추천 저장: 유형=${recommendation.type}, 과목=${recommendation.subject}, 사용자=${recommendation.userId}`);
+          
+          return prisma.aIRecommendation.create({
             data: recommendation,
-          })
-        )
+          });
+        })
       );
 
       console.log(`저장된 추천 수: ${savedRecommendations.length}`);

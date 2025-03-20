@@ -38,16 +38,29 @@ async function handleInitialize() {
     }
 
     // 관리자 계정을 제외한 모든 데이터 초기화
-    // 1. AI 추천 삭제
+    console.log("데이터 초기화 시작...");
+    
+    // 1. AI 추천 삭제 (대소문자 다른 테이블명 모두 시도)
+    console.log("AI 추천 데이터 삭제 중...");
     await prisma.aIRecommendation.deleteMany({});
+    await prisma.recommendation.deleteMany({});
+    await prisma.aiRecommendation.deleteMany({}).catch((e: Error) => console.log("aiRecommendation 테이블 없음"));
+    await prisma.AIRecommendation.deleteMany({}).catch((e: Error) => console.log("AIRecommendation 테이블 없음"));
     
     // 2. 학습 계획 삭제
+    console.log("학습 계획 데이터 삭제 중...");
     await prisma.studyPlan.deleteMany({});
     
-    // 3. 커리큘럼 삭제
+    // 3. 커리큘럼 진행 상황 삭제
+    console.log("커리큘럼 진행 상황 삭제 중...");
+    await prisma.curriculumProgress.deleteMany({});
+    
+    // 4. 커리큘럼 삭제
+    console.log("커리큘럼 데이터 삭제 중...");
     await prisma.curriculum.deleteMany({});
     
-    // 4. 관리자를 제외한 모든 사용자 삭제
+    // 5. 관리자를 제외한 모든 사용자 삭제
+    console.log("관리자 외 사용자 삭제 중...");
     await prisma.user.deleteMany({
       where: {
         role: {
@@ -56,6 +69,7 @@ async function handleInitialize() {
       }
     });
 
+    console.log("데이터 초기화 완료");
     return NextResponse.json(
       { message: "데이터가 성공적으로 초기화되었습니다." },
       { status: 200 }
