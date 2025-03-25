@@ -69,60 +69,48 @@ export default function StudyPlansTable() {
   }, []);
 
   useEffect(() => {
-    const fetchStudyPlans = async () => {
+    async function fetchStudyPlans() {
       if (!session?.user) return;
 
       try {
         setLoading(true);
-        
-        // 검색 파라미터 구성
+        setError(null);
+
+        // 날짜 필터링을 위한 URL 파라미터 구성
         const params = new URLSearchParams();
-        const subject = searchParams.get("subject");
-        const startDate = searchParams.get("startDate");
-        const endDate = searchParams.get("endDate");
-        
-        if (subject) {
-          params.append("subject", subject);
+        if (selectedDate) {
+          params.append("date", selectedDate.toISOString());
+        } else if (startDate && endDate) {
+          params.append("startDate", startDate.toISOString());
+          params.append("endDate", endDate.toISOString());
         }
-        
-        if (startDate) {
-          params.append("startDate", startDate);
-        }
-        
-        if (endDate) {
-          params.append("endDate", endDate);
+        if (selectedSubject) {
+          params.append("subject", selectedSubject);
         }
 
-        // 캐시를 방지하기 위한 타임스탬프 추가
-        params.append("_t", Date.now().toString());
-
-        const response = await fetch(`/api/study-plans?${params.toString()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
+        const response = await fetch(`/api/study-plans?${params.toString()}`);
         
         if (!response.ok) {
           throw new Error("학습 계획을 불러오는데 실패했습니다.");
         }
-        
+
         const data = await response.json();
         if (data.success) {
+          console.log("받은 학습 계획 데이터:", data.data);
           setStudyPlans(data.data);
         } else {
           throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
         }
       } catch (err) {
-        console.error("학습 계획 로딩 오류:", err);
+        console.error("학습 계획 조회 오류:", err);
         setError((err as Error).message);
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchStudyPlans();
-  }, [session, searchParams, router, refreshTrigger]); // refreshTrigger를 의존성 배열에 추가
+  }, [session, selectedDate, startDate, endDate, selectedSubject, refreshTrigger]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("정말로 이 학습 계획을 삭제하시겠습니까?")) {
