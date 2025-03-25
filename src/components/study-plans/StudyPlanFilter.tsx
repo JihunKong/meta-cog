@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Icons } from "@/components/ui/icons";
 
 // 과목 목록 직접 정의
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
@@ -9,111 +10,70 @@ const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 export default function StudyPlanFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const [subject, setSubject] = useState(searchParams.get("subject") || "");
-  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
-  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
-  
-  // 필터 적용
-  const applyFilters = () => {
-    const params = new URLSearchParams();
-    
-    if (subject) {
-      params.set("subject", subject);
-    }
-    
-    if (startDate) {
-      params.set("startDate", startDate);
-    }
-    
-    if (endDate) {
-      params.set("endDate", endDate);
-    }
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(
+    searchParams.get("subject")
+  );
+  const [selectedDate, setSelectedDate] = useState<string | null>(
+    searchParams.get("date")
+  );
 
-    router.push(`/study-plans?${params.toString()}`);
+  const handleSubjectChange = (subject: string) => {
+    const newSubject = selectedSubject === subject ? null : subject;
+    setSelectedSubject(newSubject);
+    
+    const params = new URLSearchParams(searchParams.toString());
+    if (newSubject) {
+      params.set("subject", newSubject);
+    } else {
+      params.delete("subject");
+    }
+    router.push(`?${params.toString()}`);
   };
 
-  // 필터 초기화
-  const resetFilters = () => {
-    setSubject("");
-    setStartDate("");
-    setEndDate("");
-    router.push("/study-plans");
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const date = event.target.value;
+    setSelectedDate(date);
+    
+    const params = new URLSearchParams(searchParams.toString());
+    if (date) {
+      params.set("date", date);
+    } else {
+      params.delete("date");
+    }
+    router.push(`?${params.toString()}`);
   };
 
   return (
-    <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-      <h2 className="text-lg font-medium mb-4">학습 계획 필터</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label
-            htmlFor="subject"
-            className="block text-sm font-medium text-gray-700 mb-1"
+    <div className="mb-6 space-y-4">
+      <div className="flex flex-wrap gap-4">
+        {SUBJECTS.map((subject) => (
+          <button
+            key={subject}
+            onClick={() => handleSubjectChange(subject)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              selectedSubject === subject
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
           >
-            과목
-          </label>
-          <select
-            id="subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          >
-            <option value="">모든 과목</option>
-            {SUBJECTS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label
-            htmlFor="startDate"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            시작일
-          </label>
-          <input
-            type="date"
-            id="startDate"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          />
-        </div>
-        
-        <div>
-          <label
-            htmlFor="endDate"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            종료일
-          </label>
-          <input
-            type="date"
-            id="endDate"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full p-2 border rounded-md"
-          />
-        </div>
+            {subject}
+          </button>
+        ))}
       </div>
-      
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={resetFilters}
-          className="px-3 py-1 border rounded text-gray-600 hover:bg-gray-100"
-        >
-          초기화
-        </button>
-        <button
-          onClick={applyFilters}
-          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          적용
-        </button>
+
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+            날짜 선택
+          </label>
+          <input
+            type="date"
+            id="date"
+            value={selectedDate || ""}
+            onChange={handleDateChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
       </div>
     </div>
   );
