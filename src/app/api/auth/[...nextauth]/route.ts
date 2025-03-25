@@ -120,11 +120,11 @@ export const authOptions: NextAuthOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET || 'META_COG_DEFAULT_SECRET',
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30일
   },
   callbacks: {
     async jwt({ token, user }) {
-      // 초기 로그인 시 user 객체가 전달됨
       if (user) {
         console.log("JWT 콜백 - 사용자 정보:", {
           userId: user.id,
@@ -134,11 +134,9 @@ export const authOptions: NextAuthOptions = {
         });
         
         token.id = user.id;
-        // 역할이 없으면 기본값으로 STUDENT 사용
         token.role = user.role || "STUDENT";
       }
       
-      // 토큰 내용 로깅 (중요 정보 제외)
       console.log("JWT 토큰 정보:", {
         userId: token.id,
         name: token.name,
@@ -151,7 +149,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token) {
         session.user.id = token.id as string;
-        // 역할이 없으면 STUDENT로 기본 설정
         session.user.role = (token.role || "STUDENT") as UserRole;
         
         console.log("세션 정보:", {
@@ -163,39 +160,31 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    // 리디렉션 콜백 개선
     async redirect({ url, baseUrl }) {
-      // 디버깅을 위한 로그 추가
       console.log("리디렉션 콜백:", { url, baseUrl });
       
-      // 고정된 프로덕션 URL 사용
       const siteUrl = process.env.NODE_ENV === "production" 
         ? "https://pure-ocean.netlify.app" 
         : baseUrl;
       
-      // 로그인 성공 후 대시보드로 리디렉션
       if (url.includes("/api/auth/signin") || url === baseUrl) {
         const dashboardUrl = `${siteUrl}/dashboard`;
         console.log(`로그인 성공, 대시보드로 리디렉션: ${dashboardUrl}`);
         return dashboardUrl;
       }
       
-      // 로그아웃 후 로그인 페이지로 리디렉션
       if (url.includes("/auth/signin")) {
         const signinUrl = `${siteUrl}/auth/signin`;
         console.log(`로그아웃 요청, 로그인 페이지로 리디렉션: ${signinUrl}`);
         return signinUrl;
       }
       
-      // 상대 URL인 경우 (예: "/dashboard")
       if (url.startsWith("/")) {
         console.log(`상대 URL 감지: ${url}, 사이트 URL에 추가: ${siteUrl}${url}`);
         return `${siteUrl}${url}`;
       }
       
-      // 이미 절대 URL인 경우
       if (url.startsWith("http")) {
-        // 같은 도메인인지 확인
         try {
           const urlObj = new URL(url);
           const baseUrlObj = new URL(siteUrl);
@@ -213,7 +202,6 @@ export const authOptions: NextAuthOptions = {
         }
       }
       
-      // 기본적으로 사이트 URL로 리디렉션
       console.log(`기본 리디렉션: ${siteUrl}`);
       return siteUrl;
     }

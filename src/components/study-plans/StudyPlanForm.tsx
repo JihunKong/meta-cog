@@ -83,15 +83,12 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 과목 검증
-    if (!formData.subject) {
-      toast.error("과목을 선택해주세요");
+    if (!session?.user) {
+      toast.error("로그인이 필요합니다.");
       return;
     }
-    
-    setLoading(true);
 
+    setLoading(true);
     try {
       const url = initialData
         ? `/api/study-plans/${initialData.id}`
@@ -103,36 +100,36 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
         throw new Error("필수 항목이 누락되었습니다. 모든 필드를 입력해주세요.");
       }
 
-      console.log("전송할 데이터:", formData);
+      const dataToSend = {
+        ...formData,
+        targetAchievement: 100, // 기본값 설정
+        date: new Date(formData.date).toISOString(),
+      };
 
-      // Content-Type을 application/json으로 명시적으로 설정
-      const responseData = await apiCall(url, {
+      const response = await fetch(url, {
         method,
-        body: formData,
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        cache: 'no-store'
+        body: JSON.stringify(dataToSend),
       });
-      
-      console.log("API 응답:", responseData);
-      
-      toast.success(
-        initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
-      );
-      
-      // 약간의 지연 후 페이지 이동 (데이터가 반영될 시간 확보)
-      setTimeout(() => {
-        router.refresh(); // 먼저 데이터 새로고침
-        router.push("/study-plans"); // 그 다음 페이지 이동
-      }, 500);
+
+      if (!response.ok) {
+        throw new Error("학습 계획을 저장하는데 실패했습니다.");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(
+          initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
+        );
+        router.push("/study-plans");
+      } else {
+        throw new Error(data.error?.message || "학습 계획을 저장하는데 실패했습니다.");
+      }
     } catch (error) {
-      console.error("저장 오류:", error);
-      toast.error(
-        error instanceof Error 
-          ? error.message 
-          : "학습 계획을 저장하는데 문제가 발생했습니다."
-      );
+      console.error("학습 계획 저장 오류:", error);
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }

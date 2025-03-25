@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: "인증이 필요합니다." },
         { status: 401 }
@@ -41,7 +41,6 @@ export async function GET(req: Request) {
     const endDate = searchParams.get("endDate");
 
     // 사용자 ID는 항상 현재 로그인한 사용자의 ID로 제한
-    // 추가 필터링 없이 반드시 현재 사용자의 데이터만 조회하도록 함
     let where: any = {
       userId: session.user.id,
     };
@@ -136,7 +135,6 @@ export async function POST(request: Request) {
     // 요청 본문 가져오기 및 기본 검증
     let body;
     try {
-      // JSON 형식으로 직접 파싱
       body = await request.json();
       console.log("파싱된 요청 본문:", JSON.stringify(body, null, 2));
       
@@ -158,7 +156,6 @@ export async function POST(request: Request) {
         const studyPlanData = {
           ...validatedData,
           userId: session.user.id,
-          // targetAchievement를 그대로 target 필드에 저장 (단위 변환 없이 백분율 그대로 저장)
           target: validatedData.targetAchievement || 100
         };
         
@@ -177,13 +174,12 @@ export async function POST(request: Request) {
           date: studyPlan.date.toISOString(),
           createdAt: studyPlan.createdAt.toISOString(),
           updatedAt: studyPlan.updatedAt.toISOString(),
-          targetAchievement: studyPlan.target // target 값을 targetAchievement로 변환
+          targetAchievement: studyPlan.target
         };
 
         return successResponse(formattedPlan, 201);
       } catch (dbError: any) {
         console.error("데이터베이스 저장 오류:", dbError);
-        // 외래 키 제약 조건 위반 확인
         if (dbError.code === 'P2003') {
           return errorResponse(new ApiError(400, "외래 키 제약 조건 위반: 유효하지 않은 사용자 ID입니다. 다시 로그인해주세요."));
         }
