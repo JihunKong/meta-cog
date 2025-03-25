@@ -219,7 +219,6 @@ export async function PATCH(request: Request, context: Context) {
 // 학습 계획 삭제
 export async function DELETE(request: Request, context: Context) {
   try {
-    // 비동기적으로 params 접근
     const { id } = context.params;
     
     const session = await getServerSession(authOptions);
@@ -261,12 +260,14 @@ export async function DELETE(request: Request, context: Context) {
       }
     }
 
+    // 학습 계획 삭제
     await prisma.studyPlan.delete({
       where: {
         id,
       },
     });
 
+    console.log("학습 계획 삭제 완료:", id);
     return successResponse({ message: "학습 계획이 삭제되었습니다" });
   } catch (error) {
     console.error("학습 계획 삭제 오류:", error);

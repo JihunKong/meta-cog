@@ -41,17 +41,14 @@ export async function GET(req: Request) {
     const endDate = searchParams.get("endDate");
 
     // 사용자 ID는 항상 현재 로그인한 사용자의 ID로 제한
-    let where: any = {
+    const where: any = {
       userId: session.user.id,
     };
 
     console.log("학습 계획 조회 조건:", JSON.stringify(where, null, 2));
 
     if (subject) {
-      where = {
-        ...where,
-        subject,
-      };
+      where.subject = subject;
     }
 
     if (date) {
@@ -60,26 +57,15 @@ export async function GET(req: Request) {
       const nextDate = new Date(targetDate);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      where = {
-        ...where,
-        date: {
-          gte: targetDate,
-          lt: nextDate,
-        },
+      where.date = {
+        gte: targetDate,
+        lt: nextDate,
       };
     } else if (startDate && endDate) {
-      where = {
-        ...where,
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
+      where.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
       };
-    }
-
-    // 쿼리에 항상 userId 조건이 있는지 확인
-    if (!where.userId) {
-      where.userId = session.user.id;
     }
 
     const studyPlans = await prisma.studyPlan.findMany({
@@ -106,7 +92,7 @@ export async function GET(req: Request) {
       date: plan.date.toISOString(),
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
-      targetAchievement: plan.target || 100 // 기존 target 값을 targetAchievement로 변환
+      targetAchievement: plan.target || 100
     }));
 
     return successResponse(formattedPlans);
