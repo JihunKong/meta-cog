@@ -76,16 +76,22 @@ export default function StudyPlansTable() {
         setLoading(true);
         setError(null);
 
+        // URL 파라미터에서 필터링 값 가져오기
+        const date = searchParams.get("date");
+        const startDate = searchParams.get("startDate");
+        const endDate = searchParams.get("endDate");
+        const subject = searchParams.get("subject");
+
         // 날짜 필터링을 위한 URL 파라미터 구성
         const params = new URLSearchParams();
-        if (selectedDate) {
-          params.append("date", selectedDate.toISOString());
+        if (date) {
+          params.append("date", date);
         } else if (startDate && endDate) {
-          params.append("startDate", startDate.toISOString());
-          params.append("endDate", endDate.toISOString());
+          params.append("startDate", startDate);
+          params.append("endDate", endDate);
         }
-        if (selectedSubject) {
-          params.append("subject", selectedSubject);
+        if (subject) {
+          params.append("subject", subject);
         }
 
         const response = await fetch(`/api/study-plans?${params.toString()}`);
@@ -110,7 +116,7 @@ export default function StudyPlansTable() {
     }
 
     fetchStudyPlans();
-  }, [session, selectedDate, startDate, endDate, selectedSubject, refreshTrigger]);
+  }, [session, searchParams, refreshTrigger]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("정말로 이 학습 계획을 삭제하시겠습니까?")) {
