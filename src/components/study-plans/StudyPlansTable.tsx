@@ -17,6 +17,7 @@ interface StudyPlan {
   achievement: number;
   date: string;
   timeSlot: string;
+  userId: string;
 }
 
 // 시간대 ID를 사용자 친화적인 레이블로 변환하는 함수
@@ -102,8 +103,9 @@ export default function StudyPlansTable() {
 
         const data = await response.json();
         if (data.success) {
-          console.log("받은 학습 계획 데이터:", data.data);
-          setStudyPlans(data.data);
+          // 사용자 ID로 필터링된 데이터만 표시
+          const filteredPlans = data.data.filter((plan: StudyPlan) => plan.userId === session.user.id);
+          setStudyPlans(filteredPlans);
         } else {
           throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
         }
