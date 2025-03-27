@@ -23,44 +23,14 @@ export async function GET(request: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    const { searchParams } = new URL(request.url);
-    const date = searchParams.get("date");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const subject = searchParams.get("subject");
-
-    // 기본 쿼리 조건에 userId 추가
-    const where: any = {
-      userId: session.user.id
-    };
-
-    // 날짜 필터링
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      where.date = {
-        gte: startOfDay,
-        lte: endOfDay,
-      };
-    } else if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
-    }
-
-    // 과목 필터링
-    if (subject) {
-      where.subject = subject;
-    }
-
+    // 사용자 ID로 필터링된 학습 계획만 조회
     const studyPlans = await prisma.studyPlan.findMany({
-      where,
-      orderBy: {
-        date: "desc",
+      where: {
+        userId: session.user.id
       },
+      orderBy: {
+        date: "desc"
+      }
     });
 
     // 날짜 형식 변환

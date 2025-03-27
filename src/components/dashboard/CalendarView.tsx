@@ -79,16 +79,7 @@ export default function CalendarView() {
       if (!session?.user) return;
 
       try {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        
-        // 현재 월의 첫 날과 마지막 날
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
-        
-        const response = await fetch(
-          `/api/study-plans?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
-        );
+        const response = await fetch('/api/study-plans');
         
         if (!response.ok) {
           throw new Error("학습 계획을 불러오는데 실패했습니다.");
@@ -96,9 +87,7 @@ export default function CalendarView() {
         
         const data = await response.json();
         if (data.success) {
-          // 사용자 ID로 필터링된 데이터만 표시
-          const filteredPlans = data.data.filter((plan: any) => plan.userId === session.user.id);
-          setStudyPlans(filteredPlans);
+          setStudyPlans(data.data);
         } else {
           throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
         }
@@ -111,7 +100,7 @@ export default function CalendarView() {
 
     setLoading(true);
     fetchStudyPlans();
-  }, [session, currentDate]);
+  }, [session]);
 
   const goToPreviousMonth = () => {
     setCurrentDate(
