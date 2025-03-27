@@ -96,7 +96,9 @@ export default function CalendarView() {
         
         const data = await response.json();
         if (data.success) {
-          setStudyPlans(data.data);
+          // 사용자 ID로 필터링된 데이터만 표시
+          const filteredPlans = data.data.filter((plan: any) => plan.userId === session.user.id);
+          setStudyPlans(filteredPlans);
         } else {
           throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
         }

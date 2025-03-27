@@ -15,57 +15,45 @@ const studyPlanSchema = z.object({
   achievement: z.number().min(0).max(100).optional().default(0),
 });
 
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session?.user) {
-      return NextResponse.json(
-        { error: "인증이 필요합니다." },
-        { status: 401 }
-      );
+      throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 디버그 로그 추가
-    console.log("학습 계획 조회 요청 - 사용자:", JSON.stringify({
-      userId: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
-      role: session.user.role
-    }, null, 2));
-
-    const { searchParams } = new URL(req.url);
-    const subject = searchParams.get("subject");
+    const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const subject = searchParams.get("subject");
 
-    // 사용자 ID는 항상 현재 로그인한 사용자의 ID로 제한
+    // 기본 쿼리 조건에 userId 추가
     const where: any = {
-      userId: session.user.id,
+      userId: session.user.id
     };
 
-    console.log("학습 계획 조회 조건:", JSON.stringify(where, null, 2));
-
-    if (subject) {
-      where.subject = subject;
-    }
-
+    // 날짜 필터링
     if (date) {
-      const targetDate = new Date(date);
-      targetDate.setHours(0, 0, 0, 0);
-      const nextDate = new Date(targetDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
       where.date = {
-        gte: targetDate,
-        lt: nextDate,
+        gte: startOfDay,
+        lte: endOfDay,
       };
     } else if (startDate && endDate) {
       where.date = {
         gte: new Date(startDate),
         lte: new Date(endDate),
       };
+    }
+
+    // 과목 필터링
+    if (subject) {
+      where.subject = subject;
     }
 
     const studyPlans = await prisma.studyPlan.findMany({
@@ -75,24 +63,13 @@ export async function GET(req: Request) {
       },
     });
 
-    // 조회 결과 로그
-    console.log(`학습 계획 조회 결과: ${studyPlans.length}개의 항목이 검색됨`);
-    if (studyPlans.length > 0) {
-      console.log("첫 번째 학습 계획:", JSON.stringify({
-        id: studyPlans[0].id,
-        userId: studyPlans[0].userId,
-        subject: studyPlans[0].subject,
-        date: studyPlans[0].date
-      }, null, 2));
-    }
-
-    // 응답 데이터 포맷팅
+    // 날짜 형식 변환
     const formattedPlans = studyPlans.map(plan => ({
       ...plan,
       date: plan.date.toISOString(),
       createdAt: plan.createdAt.toISOString(),
       updatedAt: plan.updatedAt.toISOString(),
-      targetAchievement: plan.target || 100
+      targetAchievement: plan.target
     }));
 
     return successResponse(formattedPlans);
