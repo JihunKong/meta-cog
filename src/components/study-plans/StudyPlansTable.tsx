@@ -77,25 +77,7 @@ export default function StudyPlansTable() {
         setLoading(true);
         setError(null);
 
-        // URL 파라미터에서 필터링 값 가져오기
-        const date = searchParams.get("date");
-        const startDate = searchParams.get("startDate");
-        const endDate = searchParams.get("endDate");
-        const subject = searchParams.get("subject");
-
-        // 날짜 필터링을 위한 URL 파라미터 구성
-        const params = new URLSearchParams();
-        if (date) {
-          params.append("date", date);
-        } else if (startDate && endDate) {
-          params.append("startDate", startDate);
-          params.append("endDate", endDate);
-        }
-        if (subject) {
-          params.append("subject", subject);
-        }
-
-        const response = await fetch(`/api/study-plans?${params.toString()}`);
+        const response = await fetch('/api/study-plans');
         
         if (!response.ok) {
           throw new Error("학습 계획을 불러오는데 실패했습니다.");
@@ -103,9 +85,7 @@ export default function StudyPlansTable() {
 
         const data = await response.json();
         if (data.success) {
-          // 사용자 ID로 필터링된 데이터만 표시
-          const filteredPlans = data.data.filter((plan: StudyPlan) => plan.userId === session.user.id);
-          setStudyPlans(filteredPlans);
+          setStudyPlans(data.data);
         } else {
           throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
         }
@@ -118,7 +98,7 @@ export default function StudyPlansTable() {
     }
 
     fetchStudyPlans();
-  }, [session, searchParams, refreshTrigger]);
+  }, [session]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm("정말로 이 학습 계획을 삭제하시겠습니까?")) {
