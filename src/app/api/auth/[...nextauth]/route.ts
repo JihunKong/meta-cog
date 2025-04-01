@@ -5,6 +5,7 @@ import { UserRole } from "@/types";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
+import { supabase } from "@/lib/supabase";
 
 // 데이터베이스 연결 확인 로그
 prisma.$connect()
@@ -20,41 +21,18 @@ prisma.$connect()
 const getBaseUrl = () => {
   let url;
   
-  // 고정 Netlify URL 사용 (배포된 환경에 맞게 수정)
   if (process.env.NODE_ENV === "production") {
     url = "https://pure-ocean.netlify.app";
-    console.log("프로덕션 고정 URL 사용:", url);
-  }
-  // Netlify 환경 변수 확인
-  else if (process.env.NETLIFY && process.env.URL) {
-    url = process.env.URL;
-    console.log("Netlify URL 감지:", url);
-  }
-  // Netlify 개발 URL
-  else if (process.env.NETLIFY_DEV && process.env.NETLIFY_DEV_URL) {
-    url = process.env.NETLIFY_DEV_URL;
-    console.log("Netlify Dev URL 감지:", url);
-  }
-  // 명시적으로 설정된 URL 사용
-  else if (process.env.NEXTAUTH_URL) {
+  } else if (process.env.NEXTAUTH_URL) {
     url = process.env.NEXTAUTH_URL;
-    console.log("NEXTAUTH_URL 사용:", url);
-  }
-  // 기본값 설정
-  else {
+  } else {
     url = "http://localhost:3000";
-    console.log("기본 URL 사용:", url);
   }
   
-  // URL 정리
   url = url.trim();
-  
-  // URL 유효성 검사
   if (url.endsWith('/')) {
     url = url.slice(0, -1);
   }
-  
-  console.log("최종 BASE URL:", url);
   
   return url;
 };
@@ -68,7 +46,6 @@ console.log("NextAuth 환경 변수 확인:", {
 });
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "이메일/비밀번호",
@@ -82,34 +59,38 @@ export const authOptions: NextAuthOptions = {
             throw new Error("이메일과 비밀번호를 입력해주세요");
           }
 
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
-          }).catch(err => {
-            console.error("사용자 조회 중 데이터베이스 오류:", err);
-            throw new Error("로그인 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.");
+          // Supabase로 로그인 시도
+          const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
           });
 
-          if (!user || !user.password) {
-            console.log("사용자 없음 또는 비밀번호 없음:", credentials.email);
+          if (signInError) {
+            console.error("Supabase 로그인 실패:", signInError);
             throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
           }
 
-          const isPasswordValid = await compare(credentials.password, user.password).catch(err => {
-            console.error("비밀번호 비교 중 오류:", err);
-            throw new Error("로그인 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.");
-          });
-
-          if (!isPasswordValid) {
-            console.log("비밀번호 불일치:", credentials.email);
-            throw new Error("이메일 또는 비밀번호가 일치하지 않습니다");
+          if (!authData.user) {
+            throw new Error("사용자를 찾을 수 없습니다");
           }
 
-          console.log("로그인 성공:", user.email);
+          // User 테이블에서 추가 정보 조회
+          const { data: userData, error: userError } = await supabase
+            .from('User')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
+
+          if (userError || !userData) {
+            console.error("사용자 정보 조회 실패:", userError);
+            throw new Error("사용자 정보를 찾을 수 없습니다");
+          }
+
           return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role
           };
         } catch (error) {
           console.error("인증 과정 오류:", error);
@@ -126,84 +107,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        console.log("JWT 콜백 - 사용자 정보:", {
-          userId: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role || "STUDENT"
-        });
-        
         token.id = user.id;
-        token.role = user.role || "STUDENT";
+        token.role = user.role;
       }
-      
-      console.log("JWT 토큰 정보:", {
-        userId: token.id,
-        name: token.name,
-        email: token.email,
-        role: token.role || "STUDENT"
-      });
-      
       return token;
     },
     async session({ session, token }) {
       if (session.user && token) {
         session.user.id = token.id as string;
-        session.user.role = (token.role || "STUDENT") as UserRole;
-        
-        console.log("세션 정보:", {
-          userId: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          role: session.user.role
-        });
+        session.user.role = token.role as UserRole;
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log("리디렉션 콜백:", { url, baseUrl });
-      
-      const siteUrl = process.env.NODE_ENV === "production" 
-        ? "https://pure-ocean.netlify.app" 
-        : baseUrl;
-      
-      if (url.includes("/api/auth/signin") || url === baseUrl) {
-        const dashboardUrl = `${siteUrl}/dashboard`;
-        console.log(`로그인 성공, 대시보드로 리디렉션: ${dashboardUrl}`);
-        return dashboardUrl;
-      }
-      
-      if (url.includes("/auth/signin")) {
-        const signinUrl = `${siteUrl}/auth/signin`;
-        console.log(`로그아웃 요청, 로그인 페이지로 리디렉션: ${signinUrl}`);
-        return signinUrl;
-      }
-      
-      if (url.startsWith("/")) {
-        console.log(`상대 URL 감지: ${url}, 사이트 URL에 추가: ${siteUrl}${url}`);
-        return `${siteUrl}${url}`;
-      }
-      
-      if (url.startsWith("http")) {
-        try {
-          const urlObj = new URL(url);
-          const baseUrlObj = new URL(siteUrl);
-          
-          if (urlObj.hostname === baseUrlObj.hostname) {
-            console.log(`같은 도메인 URL 감지: ${url}, 허용됨`);
-            return url;
-          } else {
-            console.log(`외부 도메인 URL 감지: ${url}, 사이트 URL로 리디렉션: ${siteUrl}`);
-            return siteUrl;
-          }
-        } catch (error) {
-          console.error("URL 파싱 오류:", error);
-          return siteUrl;
-        }
-      }
-      
-      console.log(`기본 리디렉션: ${siteUrl}`);
-      return siteUrl;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
     }
   },
   pages: {
