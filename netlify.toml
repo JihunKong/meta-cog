@@ -1,21 +1,25 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm run build"
   publish = ".next"
 
 [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
-  NEXT_NETLIFY_EXPERIMENTAL_TRACE = "true"
-  NODE_VERSION = "20.11.1"
-  NEXT_PUBLIC_PRODUCTION_URL = "https://meta-cog.netlify.app"
-  NEXTAUTH_URL = "https://meta-cog.netlify.app"
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/_next/static/:splat"
   status = 200
+  force = true
+  conditions = {Path = "/_next/static/*"}
+
+[[redirects]]
+  from = "/*"
+  to = "/404"
+  status = 404
 
 [functions]
-  included_files = [".next/standalone/**"]
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs" 
+  node_bundler = "esbuild" 
