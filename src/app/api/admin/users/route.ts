@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 // 모든 사용자 목록 조회 API (관리자만 접근 가능)
 export async function GET(req: Request) {
@@ -26,11 +26,13 @@ export async function GET(req: Request) {
       .order('name');
 
     if (error) {
+      console.error('사용자 목록 조회 오류:', error);
       throw new ApiError(500, error.message);
     }
 
-    return successResponse(users);
+    return successResponse(users || []);
   } catch (error) {
+    console.error('사용자 목록 조회 API 오류:', error);
     return errorResponse(error as Error);
   }
 }
@@ -58,14 +60,15 @@ export async function POST(req: Request) {
       throw new ApiError(400, "이름, 이메일, 비밀번호는 필수 항목입니다");
     }
 
-    // 1. Supabase Auth에 사용자 생성
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // 1. Supabase Auth에 사용자 생성 (관리자 권한 사용)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
 
     if (authError) {
+      console.error('Supabase Auth 사용자 생성 실패:', authError);
       throw new ApiError(500, authError.message);
     }
 
@@ -90,12 +93,14 @@ export async function POST(req: Request) {
 
     if (userError) {
       // User 테이블 생성 실패 시 Auth 사용자도 삭제
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      console.error('User 테이블 데이터 생성 실패:', userError);
       throw new ApiError(500, userError.message);
     }
 
     return successResponse(userData);
   } catch (error) {
+    console.error('사용자 생성 API 오류:', error);
     return errorResponse(error as Error);
   }
 } 
