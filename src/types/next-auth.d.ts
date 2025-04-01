@@ -9,10 +9,12 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role: UserRole;
+      student_id?: string | null;
     };
   }
 
   interface User {
     role: UserRole;
+    student_id?: string | null;
   }
 } 

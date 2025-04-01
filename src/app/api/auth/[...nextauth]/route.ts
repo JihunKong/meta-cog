@@ -1,49 +1,15 @@
 import { NextAuthOptions } from "next-auth";
-import { prisma } from "@/lib/prisma";
 import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
-// 데이터베이스 연결 확인 로그
-prisma.$connect()
-  .then(() => {
-    console.log("데이터베이스 연결 성공!");
-  })
-  .catch((e) => {
-    console.error("데이터베이스 연결 실패:", e);
-    console.log("데이터베이스 연결 문자열을 확인하세요");
-  });
-
-// URL 설정 로직 업데이트
-const getBaseUrl = () => {
-  let url;
-  
-  if (process.env.NODE_ENV === "production") {
-    url = "https://pure-ocean.netlify.app";
-  } else if (process.env.NEXTAUTH_URL) {
-    url = process.env.NEXTAUTH_URL;
-  } else {
-    url = "http://localhost:3000";
-  }
-  
-  url = url.trim();
-  if (url.endsWith('/')) {
-    url = url.slice(0, -1);
-  }
-  
-  return url;
-};
-
-const baseUrl = getBaseUrl();
-
-// 디버깅을 위한 환경 변수 로깅
-console.log("NextAuth 환경 변수 확인:", {
-  BASE_URL: baseUrl,
-  NODE_ENV: process.env.NODE_ENV,
-});
+// 고정 URL 설정 - Netlify 배포 URL
+const baseUrl = process.env.VERCEL_URL 
+  ? `https://${process.env.VERCEL_URL}`
+  : process.env.NEXT_PUBLIC_BASE_URL 
+  ? process.env.NEXT_PUBLIC_BASE_URL
+  : "http://localhost:3000";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -74,8 +40,8 @@ export const authOptions: NextAuthOptions = {
             throw new Error("사용자를 찾을 수 없습니다");
           }
 
-          // User 테이블에서 추가 정보 조회
-          const { data: userData, error: userError } = await supabase
+          // User 테이블에서 추가 정보 조회 (관리자 권한 사용)
+          const { data: userData, error: userError } = await supabaseAdmin
             .from('User')
             .select('*')
             .eq('id', authData.user.id)
@@ -90,14 +56,15 @@ export const authOptions: NextAuthOptions = {
             id: userData.id,
             name: userData.name,
             email: userData.email,
-            role: userData.role
+            role: userData.role,
+            student_id: userData.student_id || null
           };
         } catch (error) {
-          console.error("인증 과정 오류:", error);
+          console.error("인증 오류:", error);
           throw error;
         }
       }
-    }),
+    })
   ],
   secret: process.env.NEXTAUTH_SECRET || 'META_COG_DEFAULT_SECRET',
   session: {
@@ -109,38 +76,57 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.student_id = user.student_id;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        session.user.student_id = (token.student_id as string) || null;
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      console.log('리다이렉트 시도:', { url, baseUrl });
+      
+      // 절대 로컬호스트로 가지 않도록 강제 설정
+      const productionUrl = "https://meta-cog.netlify.app";
+      const finalBaseUrl = process.env.NODE_ENV === "production" ? productionUrl : baseUrl;
+      
+      // 로그아웃의 경우
+      if (url.includes("signout")) {
+        return `${finalBaseUrl}/auth/signin`;
+      }
+      
+      // 상대 경로인 경우 (가장 먼저 체크)
+      if (url.startsWith("/")) {
+        return `${finalBaseUrl}${url}`;
+      }
+      
+      // API 경로나 홈페이지인 경우
+      if (url.includes("/api/auth") || url === finalBaseUrl || url === baseUrl) {
+        return `${finalBaseUrl}/dashboard`;
+      }
+      
+      // 허용된 도메인인 경우
+      if (url.startsWith(finalBaseUrl) || url.startsWith(productionUrl)) {
+        return url;
+      }
+      
+      // 그 외의 모든 경우는 대시보드로
+      return `${finalBaseUrl}/dashboard`;
     }
   },
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
+    signOut: '/auth/signin'
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: false,
 };
 
 const handler = NextAuth(authOptions);
-
-// 최종 URL을 확인하여 문제 진단
-const API_URL = `${baseUrl}/api/auth`;
-
-// 디버깅용 로그 추가
-console.log("NextAuth 핸들러 초기화 완료. URL 정보:", {
-  BASE_URL: baseUrl,
-  API_URL,
-});
 
 export { handler as GET, handler as POST }; 

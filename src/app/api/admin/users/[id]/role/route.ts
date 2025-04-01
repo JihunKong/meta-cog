@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse, validateRequest } from "@/lib/api-utils";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const roleSchema = z.object({
   role: z.enum(["ADMIN", "TEACHER", "STUDENT"]),
@@ -15,6 +15,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log("사용자 역할 변경 API 시작");
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -33,8 +34,8 @@ export async function PATCH(
       throw new ApiError(400, "자신의 역할은 변경할 수 없습니다");
     }
 
-    // 사용자 존재 확인
-    const { data: user, error: userError } = await supabase
+    // 사용자 존재 확인 (관리자 권한 사용)
+    const { data: user, error: userError } = await supabaseAdmin
       .from('User')
       .select('*')
       .eq('id', id)
@@ -47,8 +48,8 @@ export async function PATCH(
     const { body } = await validateRequest(request, "PATCH");
     const { role } = roleSchema.parse(body);
 
-    // 사용자 역할 변경
-    const { data: updatedUser, error: updateError } = await supabase
+    // 사용자 역할 변경 (관리자 권한 사용)
+    const { data: updatedUser, error: updateError } = await supabaseAdmin
       .from('User')
       .update({ role })
       .eq('id', id)
@@ -61,6 +62,7 @@ export async function PATCH(
 
     return successResponse(updatedUser);
   } catch (error) {
+    console.error('사용자 역할 변경 API 오류:', error);
     return errorResponse(error as Error);
   }
 } 

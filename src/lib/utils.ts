@@ -130,3 +130,25 @@ export function checkUserRole(user: any, allowedRoles: string[]): boolean {
   if (!user || !user.role) return false;
   return allowedRoles.includes(user.role);
 }
+
+/**
+ * 프로덕션 URL을 반환하는 유틸리티 함수
+ */
+export function getBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return process.env.NEXT_PUBLIC_PRODUCTION_URL || "https://meta-cog.netlify.app";
+    }
+    return window.location.origin;
+  }
+  return process.env.NEXT_PUBLIC_PRODUCTION_URL || "https://meta-cog.netlify.app";
+}
+
+/**
+ * 안전한 리다이렉트 처리를 위한 유틸리티 함수
+ */
+export function safeRedirect(path: string): void {
+  const baseUrl = getBaseUrl();
+  window.location.href = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+}

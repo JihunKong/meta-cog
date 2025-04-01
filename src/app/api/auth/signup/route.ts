@@ -6,52 +6,52 @@ export async function POST(req: Request) {
   try {
     console.log("회원가입 API 시작");
     const body = await req.json();
-    const { email, password, name, role = "STUDENT" } = body;
-    const student_id = body.student_id || null;
+    const { email, password, name } = body;
 
     // 필수 필드 검증
     if (!email || !password || !name) {
       throw new ApiError(400, "이메일, 비밀번호, 이름은 필수 항목입니다");
     }
 
-    console.log("사용자 생성 시도:", { email, name, role });
+    // 비밀번호 유효성 검사
+    if (password.length < 6) {
+      throw new ApiError(400, "비밀번호는 최소 6자 이상이어야 합니다");
+    }
 
-    // 1. Supabase Auth에 사용자 생성 (관리자 권한 사용)
+    console.log("사용자 생성 시도:", { email, name });
+
+    // 1. Supabase Auth에 사용자 생성
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+      user_metadata: {
+        name,
+        role: 'STUDENT'
+      }
     });
 
     if (authError) {
       console.error('Supabase Auth 사용자 생성 실패:', authError);
-      throw new ApiError(500, authError.message);
+      if (authError.message.includes('already registered')) {
+        throw new ApiError(400, "이미 등록된 이메일입니다");
+      }
+      throw new ApiError(500, "사용자 생성에 실패했습니다");
     }
 
     if (!authData.user) {
       throw new ApiError(500, "사용자 생성에 실패했습니다");
     }
 
-    console.log("Auth 사용자 생성 성공:", authData.user.id);
-
-    // 사용자 데이터 준비
-    const userData = {
-      id: authData.user.id,
-      name,
-      email,
-      role: role || "STUDENT"
-    };
-
-    // student_id가 있는 경우만 추가
-    if (student_id) {
-      // @ts-ignore - 스키마에 따라 student_id가 있을 수도 있고 없을 수도 있음
-      userData.student_id = student_id;
-    }
-
-    // 2. User 테이블에 사용자 정보 추가 (관리자 권한 사용)
-    const { data: insertedData, error: userError } = await supabaseAdmin
+    // 2. User 테이블에 사용자 정보 추가
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('User')
-      .insert([userData])
+      .insert([{
+        id: authData.user.id,
+        name,
+        email,
+        role: 'STUDENT'
+      }])
       .select()
       .single();
 
@@ -59,11 +59,13 @@ export async function POST(req: Request) {
       // User 테이블 생성 실패 시 Auth 사용자도 삭제
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error('User 테이블 데이터 생성 실패:', userError);
-      throw new ApiError(500, userError.message);
+      throw new ApiError(500, "사용자 정보 저장에 실패했습니다");
     }
 
-    console.log('새 사용자 생성 성공:', userData);
-    return successResponse(insertedData);
+    return successResponse({
+      message: "회원가입이 완료되었습니다",
+      user: userData
+    });
   } catch (error) {
     console.error('회원가입 API 오류:', error);
     return errorResponse(error as Error);

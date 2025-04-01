@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(
   request: Request,
@@ -22,8 +22,8 @@ export async function GET(
 
     const id = params.id;
     
-    // 사용자 정보 조회
-    const { data: user, error } = await supabase
+    // 사용자 정보 조회 (관리자 권한 사용)
+    const { data: user, error } = await supabaseAdmin
       .from('User')
       .select('*')
       .eq('id', id)
@@ -33,8 +33,8 @@ export async function GET(
       throw new ApiError(404, "사용자를 찾을 수 없습니다");
     }
 
-    // 학습 계획 조회
-    const { data: studyPlans, error: studyPlansError } = await supabase
+    // 학습 계획 조회 (관리자 권한 사용)
+    const { data: studyPlans, error: studyPlansError } = await supabaseAdmin
       .from('StudyPlan')
       .select('*')
       .eq('user_id', id)
@@ -77,8 +77,8 @@ export async function DELETE(
       throw new ApiError(400, "자기 자신을 삭제할 수 없습니다");
     }
     
-    // 1. CurriculumProgress 삭제
-    const { error: progressError } = await supabase
+    // 1. CurriculumProgress 삭제 (관리자 권한 사용)
+    const { error: progressError } = await supabaseAdmin
       .from('CurriculumProgress')
       .delete()
       .eq('user_id', id);
@@ -87,8 +87,8 @@ export async function DELETE(
       console.error("CurriculumProgress 삭제 중 오류:", progressError);
     }
     
-    // 2. AIRecommendation 삭제
-    const { error: recommendationError } = await supabase
+    // 2. AIRecommendation 삭제 (관리자 권한 사용)
+    const { error: recommendationError } = await supabaseAdmin
       .from('AIRecommendation')
       .delete()
       .eq('user_id', id);
@@ -97,8 +97,8 @@ export async function DELETE(
       console.error("AIRecommendation 삭제 중 오류:", recommendationError);
     }
     
-    // 3. StudyPlan 삭제
-    const { error: studyPlanError } = await supabase
+    // 3. StudyPlan 삭제 (관리자 권한 사용)
+    const { error: studyPlanError } = await supabaseAdmin
       .from('StudyPlan')
       .delete()
       .eq('user_id', id);
@@ -107,8 +107,8 @@ export async function DELETE(
       console.error("StudyPlan 삭제 중 오류:", studyPlanError);
     }
     
-    // 4. User 테이블에서 사용자 삭제
-    const { error: userError } = await supabase
+    // 4. User 테이블에서 사용자 삭제 (관리자 권한 사용)
+    const { error: userError } = await supabaseAdmin
       .from('User')
       .delete()
       .eq('id', id);
@@ -117,8 +117,8 @@ export async function DELETE(
       throw new ApiError(500, "사용자 삭제 중 오류가 발생했습니다: " + userError.message);
     }
     
-    // 5. Supabase Auth에서 사용자 삭제
-    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+    // 5. Supabase Auth에서 사용자 삭제 (관리자 권한 사용)
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
 
     if (authError) {
       console.error("Auth 사용자 삭제 중 오류:", authError);
@@ -127,6 +127,7 @@ export async function DELETE(
 
     return successResponse({ message: "사용자가 성공적으로 삭제되었습니다" });
   } catch (error) {
+    console.error('사용자 삭제 API 오류:', error);
     return errorResponse(error as Error);
   }
 } 

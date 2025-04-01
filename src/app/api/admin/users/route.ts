@@ -19,10 +19,10 @@ export async function GET(req: Request) {
       throw new ApiError(403, "관리자 권한이 필요합니다");
     }
 
-    // 사용자 목록 조회
-    const { data: users, error } = await supabase
+    // 사용자 목록 조회 (관리자 권한 사용)
+    const { data: users, error } = await supabaseAdmin
       .from('User')
-      .select('id, name, email, role, created_at, updated_at')
+      .select('id, name, email, role, created_at, updated_at, student_id')
       .order('role')
       .order('name');
 
@@ -93,8 +93,8 @@ export async function POST(req: Request) {
       userData.student_id = student_id;
     }
 
-    // 2. User 테이블에 사용자 정보 추가
-    const { data: insertedData, error: userError } = await supabase
+    // 2. User 테이블에 사용자 정보 추가 (관리자 권한 사용)
+    const { data: insertedData, error: userError } = await supabaseAdmin
       .from('User')
       .insert([userData])
       .select()

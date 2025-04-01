@@ -49,3 +49,6 @@ next-env.d.ts
 .env.production
 prisma/dev.db
 docker-compose.override.yml
+
+# Local Netlify folder
+.netlify

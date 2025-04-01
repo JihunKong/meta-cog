@@ -9,11 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignInForm() {
-  // useSearchParams를 사용하되, 항상 안전하게 처리
-  const searchParams = useSearchParams?.() || null;
-  const callbackUrl = searchParams?.get("callbackUrl") || "/dashboard";
-  const error = searchParams?.get("error") || null;
-  
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -33,22 +28,32 @@ export default function SignInForm() {
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
-        callbackUrl,
         redirect: false
       });
       
       if (result?.error) {
         console.error("로그인 오류:", result.error);
-        // 로그인 페이지에서 오류 표시를 위해 URL에 오류 파라미터 추가
         window.location.href = `/auth/signin?error=${result.error}`;
         return;
       }
+
+      // 로그인 성공 후 세션 정보 직접 가져오기
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
       
-      // 성공 시 리디렉션
-      if (result?.url) {
-        window.location.href = result.url;
+      if (session?.user?.role) {
+        switch (session.user.role) {
+          case "ADMIN":
+            window.location.href = "/admin";
+            break;
+          case "TEACHER":
+            window.location.href = "/teacher";
+            break;
+          default:
+            window.location.href = "/dashboard";
+        }
       } else {
-        window.location.href = callbackUrl;
+        window.location.href = "/dashboard";
       }
       
     } catch (err) {
@@ -58,26 +63,8 @@ export default function SignInForm() {
     }
   };
 
-  // 오류 메시지 상세화
-  const getErrorMessage = () => {
-    if (!error) return null;
-    
-    console.log("로그인 오류 코드:", error);
-    
-    if (error === "CredentialsSignin") return "이메일 또는 비밀번호가 일치하지 않습니다.";
-    if (error === "AccessDenied") return "접근이 거부되었습니다. 관리자에게 문의하세요.";
-    if (error === "Configuration") return "서버 설정 오류가 발생했습니다. 관리자에게 문의하세요.";
-    return "로그인에 실패했습니다. 다시 시도하거나 관리자에게 문의하세요.";
-  };
-
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
-          {getErrorMessage()}
-        </div>
-      )}
-      
       <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-200">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

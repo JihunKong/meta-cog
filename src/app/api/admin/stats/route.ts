@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 // 관리자 통계 데이터 API
 export async function GET(req: Request) {
@@ -29,8 +29,8 @@ export async function GET(req: Request) {
     };
 
     try {
-      // 총 사용자 수 (학생만)
-      const { count: totalUsers, error: userError } = await supabase
+      // 총 사용자 수 (학생만) - 관리자 권한 사용
+      const { count: totalUsers, error: userError } = await supabaseAdmin
         .from('User')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'STUDENT');
@@ -47,8 +47,8 @@ export async function GET(req: Request) {
     }
 
     try {
-      // 과목 조회
-      const { data: subjects, error: subjectError } = await supabase
+      // 과목 조회 - 관리자 권한 사용
+      const { data: subjects, error: subjectError } = await supabaseAdmin
         .from('Curriculum')
         .select('subject');
 
@@ -67,8 +67,8 @@ export async function GET(req: Request) {
     }
 
     try {
-      // 교과서 단원 수
-      const { count: totalCurriculums, error: curriculumError } = await supabase
+      // 교과서 단원 수 - 관리자 권한 사용
+      const { count: totalCurriculums, error: curriculumError } = await supabaseAdmin
         .from('Curriculum')
         .select('*', { count: 'exact', head: true });
 
@@ -84,8 +84,8 @@ export async function GET(req: Request) {
     }
 
     try {
-      // 학습 계획 수
-      const { count: totalStudyPlans, error: studyPlanError } = await supabase
+      // 학습 계획 수 - 관리자 권한 사용
+      const { count: totalStudyPlans, error: studyPlanError } = await supabaseAdmin
         .from('StudyPlan')
         .select('*', { count: 'exact', head: true });
 
@@ -101,8 +101,8 @@ export async function GET(req: Request) {
     }
 
     try {
-      // 완료된 학습 계획 수 (달성률 100% 이상)
-      const { count: completedStudyPlans, error: completedError } = await supabase
+      // 완료된 학습 계획 수 (달성률 100% 이상) - 관리자 권한 사용
+      const { count: completedStudyPlans, error: completedError } = await supabaseAdmin
         .from('StudyPlan')
         .select('*', { count: 'exact', head: true })
         .gte('achievement', 100);

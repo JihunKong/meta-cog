@@ -9,6 +9,7 @@ export interface User {
   emailVerified: Date | null;
   image: string | null;
   role: UserRole;
+  student_id?: string | null;
 }
 
 export interface StudyPlan {

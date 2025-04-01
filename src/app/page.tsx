@@ -15,23 +15,27 @@ export default function Home() {
 
     // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
     if (!session) {
-      router.push("/auth/signin");
+      const baseUrl = process.env.NODE_ENV === "production" 
+        ? "https://meta-cog.netlify.app" 
+        : window.location.origin;
+      window.location.href = `${baseUrl}/auth/signin`;
       return;
     }
 
     // 사용자 역할에 따라 다른 페이지로 리다이렉트
     const userRole = session.user?.role;
-    console.log("사용자 역할:", userRole);
+    const baseUrl = process.env.NODE_ENV === "production" 
+      ? "https://meta-cog.netlify.app" 
+      : window.location.origin;
 
     if (userRole === "ADMIN") {
-      router.push("/admin");
+      window.location.href = `${baseUrl}/admin`;
     } else if (userRole === "TEACHER") {
-      router.push("/teacher");
+      window.location.href = `${baseUrl}/teacher`;
     } else {
-      // 기본적으로 학생 또는 다른 역할은 일반 대시보드로 이동
-      router.push("/dashboard");
+      window.location.href = `${baseUrl}/dashboard`;
     }
-  }, [session, status, router]);
+  }, [session, status]);
 
   // 로딩 상태일 때 표시할 UI
   if (status === "loading") {
