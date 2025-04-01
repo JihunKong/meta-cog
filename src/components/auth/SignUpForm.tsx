@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/ui/icons";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -13,6 +20,7 @@ export default function SignUpForm() {
     email: "",
     password: "",
     name: "",
+    role: "STUDENT",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,22 +33,19 @@ export default function SignUpForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          role: "STUDENT",
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message || "회원가입에 실패했습니다.");
+        throw new Error(data.error || "회원가입에 실패했습니다.");
       }
 
       toast.success("회원가입이 완료되었습니다. 로그인해주세요.");
       router.push("/auth/signin");
     } catch (error) {
-      toast.error((error as Error).message);
+      toast.error(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -49,6 +54,10 @@ export default function SignUpForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (value: string) => {
+    setFormData(prev => ({ ...prev, role: value }));
   };
 
   return (
@@ -100,6 +109,23 @@ export default function SignUpForm() {
           onChange={handleChange}
           required
         />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="role">계정 유형</Label>
+        <Select
+          name="role"
+          value={formData.role}
+          onValueChange={handleRoleChange}
+          disabled={isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="계정 유형을 선택하세요" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TEACHER">교사</SelectItem>
+            <SelectItem value="STUDENT">학생</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Button disabled={isLoading} type="submit" className="w-full">
         {isLoading && (
