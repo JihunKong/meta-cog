@@ -1,9 +1,8 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
-import { hash } from "bcryptjs";
+import { supabase } from "@/lib/supabase";
 
 // 모든 사용자 목록 조회 API (관리자만 접근 가능)
 export async function GET(req: Request) {
@@ -20,19 +19,15 @@ export async function GET(req: Request) {
     }
 
     // 사용자 목록 조회
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-      },
-      orderBy: [
-        { role: 'asc' },
-        { name: 'asc' },
-      ],
-    });
+    const { data: users, error } = await supabase
+      .from('User')
+      .select('*')
+      .order('role')
+      .order('name');
+
+    if (error) {
+      throw new ApiError(500, error.message);
+    }
 
     return successResponse(users);
   } catch (error) {
@@ -56,43 +51,50 @@ export async function POST(req: Request) {
 
     // 요청 본문 파싱
     const body = await req.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, student_id } = body;
 
     // 필수 필드 검증
     if (!name || !email || !password) {
       throw new ApiError(400, "이름, 이메일, 비밀번호는 필수 항목입니다");
     }
 
-    // 이메일 중복 확인
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // 1. Supabase Auth에 사용자 생성
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
     });
 
-    if (existingUser) {
-      throw new ApiError(400, "이미 사용 중인 이메일입니다");
+    if (authError) {
+      throw new ApiError(500, authError.message);
     }
 
-    // 비밀번호 해싱
-    const hashedPassword = await hash(password, 10);
+    if (!authData.user) {
+      throw new ApiError(500, "사용자 생성에 실패했습니다");
+    }
 
-    // 사용자 생성
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: role || "STUDENT",
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-      },
-    });
+    // 2. User 테이블에 사용자 정보 추가
+    const { data: userData, error: userError } = await supabase
+      .from('User')
+      .insert([
+        {
+          id: authData.user.id,
+          name,
+          email,
+          role: role || "STUDENT",
+          student_id: student_id || null
+        }
+      ])
+      .select()
+      .single();
 
-    return successResponse(newUser);
+    if (userError) {
+      // User 테이블 생성 실패 시 Auth 사용자도 삭제
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      throw new ApiError(500, userError.message);
+    }
+
+    return successResponse(userData);
   } catch (error) {
     return errorResponse(error as Error);
   }

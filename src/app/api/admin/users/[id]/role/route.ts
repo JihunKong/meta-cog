@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse, validateRequest } from "@/lib/api-utils";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
 
 const roleSchema = z.object({
   role: z.enum(["ADMIN", "TEACHER", "STUDENT"]),
@@ -34,11 +34,13 @@ export async function PATCH(
     }
 
     // 사용자 존재 확인
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
+    const { data: user, error: userError } = await supabase
+      .from('User')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       throw new ApiError(404, "사용자를 찾을 수 없습니다");
     }
 
@@ -46,16 +48,16 @@ export async function PATCH(
     const { role } = roleSchema.parse(body);
 
     // 사용자 역할 변경
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { role },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('User')
+      .update({ role })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new ApiError(500, "역할 변경 중 오류가 발생했습니다: " + updateError.message);
+    }
 
     return successResponse(updatedUser);
   } catch (error) {

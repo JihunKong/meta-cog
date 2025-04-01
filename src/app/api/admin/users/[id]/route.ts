@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(
   request: Request,
@@ -23,21 +23,32 @@ export async function GET(
     const id = params.id;
     
     // 사용자 정보 조회
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        studyPlans: {
-          orderBy: { createdAt: 'desc' },
-          take: 10
-        }
-      }
-    });
+    const { data: user, error } = await supabase
+      .from('User')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!user) {
+    if (error) {
       throw new ApiError(404, "사용자를 찾을 수 없습니다");
     }
 
-    return successResponse(user);
+    // 학습 계획 조회
+    const { data: studyPlans, error: studyPlansError } = await supabase
+      .from('StudyPlan')
+      .select('*')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (studyPlansError) {
+      console.error("학습 계획 조회 중 오류:", studyPlansError);
+    }
+
+    return successResponse({
+      ...user,
+      studyPlans: studyPlans || []
+    });
   } catch (error) {
     return errorResponse(error as Error);
   }
@@ -66,33 +77,53 @@ export async function DELETE(
       throw new ApiError(400, "자기 자신을 삭제할 수 없습니다");
     }
     
-    // 사용자의 모든 데이터 삭제
-    await prisma.$transaction(async (tx) => {
-      // 1. 학습 계획 삭제
-      await tx.studyPlan.deleteMany({
-        where: { userId: id }
-      });
-      
-      // 2. 과목별 진도 삭제
-      await tx.curriculumProgress.deleteMany({
-        where: { userId: id }
-      });
-      
-      // 3. AI 추천 삭제
-      await tx.aIRecommendation.deleteMany({
-        where: { userId: id }
-      });
-      
-      // 4. 세션 삭제
-      await tx.session.deleteMany({
-        where: { userId: id }
-      });
-      
-      // 5. 계정 삭제
-      await tx.user.delete({
-        where: { id }
-      });
-    });
+    // 1. CurriculumProgress 삭제
+    const { error: progressError } = await supabase
+      .from('CurriculumProgress')
+      .delete()
+      .eq('user_id', id);
+
+    if (progressError) {
+      console.error("CurriculumProgress 삭제 중 오류:", progressError);
+    }
+    
+    // 2. AIRecommendation 삭제
+    const { error: recommendationError } = await supabase
+      .from('AIRecommendation')
+      .delete()
+      .eq('user_id', id);
+
+    if (recommendationError) {
+      console.error("AIRecommendation 삭제 중 오류:", recommendationError);
+    }
+    
+    // 3. StudyPlan 삭제
+    const { error: studyPlanError } = await supabase
+      .from('StudyPlan')
+      .delete()
+      .eq('user_id', id);
+
+    if (studyPlanError) {
+      console.error("StudyPlan 삭제 중 오류:", studyPlanError);
+    }
+    
+    // 4. User 테이블에서 사용자 삭제
+    const { error: userError } = await supabase
+      .from('User')
+      .delete()
+      .eq('id', id);
+
+    if (userError) {
+      throw new ApiError(500, "사용자 삭제 중 오류가 발생했습니다: " + userError.message);
+    }
+    
+    // 5. Supabase Auth에서 사용자 삭제
+    const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+    if (authError) {
+      console.error("Auth 사용자 삭제 중 오류:", authError);
+      throw new ApiError(500, "인증 정보 삭제 중 오류가 발생했습니다");
+    }
 
     return successResponse({ message: "사용자가 성공적으로 삭제되었습니다" });
   } catch (error) {
