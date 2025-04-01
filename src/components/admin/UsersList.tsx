@@ -302,11 +302,14 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
                 사용자 추가
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby="user-creation-description">
               <DialogHeader>
                 <DialogTitle>새 사용자 추가</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <p id="user-creation-description" className="text-sm text-gray-600 mb-2">
+                  새 사용자 정보를 입력하세요.
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="name">이름</Label>
                   <Input 
@@ -375,11 +378,14 @@ export default function UsersList({ limit, showFilters }: UsersListProps) {
       )}
       
       <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="password-reset-description">
           <DialogHeader>
             <DialogTitle>비밀번호 재설정</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <p id="password-reset-description" className="text-sm text-gray-600 mb-2">
+              사용자의 새 비밀번호를 입력하세요.
+            </p>
             <div className="space-y-2">
               <Label htmlFor="newPassword">새 비밀번호</Label>
               <Input 
