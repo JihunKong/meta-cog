@@ -5,6 +5,14 @@
 [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
   NEXT_NETLIFY_EXPERIMENTAL_TRACE = "true"
+  NODE_VERSION = "20.11.1"
+  NEXT_PUBLIC_PRODUCTION_URL = "https://meta-cog.netlify.app"
+  NEXTAUTH_URL = "https://meta-cog.netlify.app"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 [functions]
   included_files = [".next/standalone/**"]
