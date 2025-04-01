@@ -7,6 +7,7 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 // 모든 사용자 목록 조회 API (관리자만 접근 가능)
 export async function GET(req: Request) {
   try {
+    console.log("사용자 목록 조회 API 시작");
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
     // 사용자 목록 조회
     const { data: users, error } = await supabase
       .from('User')
-      .select('*')
+      .select('id, name, email, role, created_at, updated_at')
       .order('role')
       .order('name');
 
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
 // 새 사용자 생성 API (관리자만 접근 가능)
 export async function POST(req: Request) {
   try {
+    console.log("사용자 생성 API 시작");
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -53,7 +55,8 @@ export async function POST(req: Request) {
 
     // 요청 본문 파싱
     const body = await req.json();
-    const { name, email, password, role, student_id } = body;
+    const { name, email, password, role } = body;
+    const student_id = body.student_id || null;
 
     // 필수 필드 검증
     if (!name || !email || !password) {
@@ -76,18 +79,24 @@ export async function POST(req: Request) {
       throw new ApiError(500, "사용자 생성에 실패했습니다");
     }
 
+    // 사용자 데이터 준비
+    const userData = {
+      id: authData.user.id,
+      name,
+      email,
+      role: role || "STUDENT"
+    };
+
+    // student_id가 있는 경우만 추가
+    if (student_id) {
+      // @ts-ignore - 스키마에 따라 student_id가 있을 수도 있고 없을 수도 있음
+      userData.student_id = student_id;
+    }
+
     // 2. User 테이블에 사용자 정보 추가
-    const { data: userData, error: userError } = await supabase
+    const { data: insertedData, error: userError } = await supabase
       .from('User')
-      .insert([
-        {
-          id: authData.user.id,
-          name,
-          email,
-          role: role || "STUDENT",
-          student_id: student_id || null
-        }
-      ])
+      .insert([userData])
       .select()
       .single();
 
@@ -98,7 +107,7 @@ export async function POST(req: Request) {
       throw new ApiError(500, userError.message);
     }
 
-    return successResponse(userData);
+    return successResponse(insertedData);
   } catch (error) {
     console.error('사용자 생성 API 오류:', error);
     return errorResponse(error as Error);

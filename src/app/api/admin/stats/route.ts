@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 // 관리자 통계 데이터 API
 export async function GET(req: Request) {
   try {
+    console.log("관리자 통계 API 시작");
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -18,71 +19,106 @@ export async function GET(req: Request) {
       throw new ApiError(403, "관리자 권한이 필요합니다");
     }
 
-    // 총 사용자 수 (학생만)
-    const { count: totalUsers, error: userError } = await supabase
-      .from('User')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'STUDENT');
-
-    if (userError) {
-      console.error('사용자 수 조회 오류:', userError);
-      throw new ApiError(500, userError.message);
-    }
-
-    // 과목 조회
-    const { data: subjects, error: subjectError } = await supabase
-      .from('Curriculum')
-      .select('subject');
-
-    if (subjectError) {
-      console.error('과목 조회 오류:', subjectError);
-      throw new ApiError(500, subjectError.message);
-    }
-
-    // 과목 중복 제거
-    const uniqueSubjects = new Set();
-    subjects?.forEach(item => uniqueSubjects.add(item.subject));
-    const totalSubjects = uniqueSubjects.size;
-
-    // 교과서 단원 수
-    const { count: totalCurriculums, error: curriculumError } = await supabase
-      .from('Curriculum')
-      .select('*', { count: 'exact', head: true });
-
-    if (curriculumError) {
-      console.error('교과서 단원 조회 오류:', curriculumError);
-      throw new ApiError(500, curriculumError.message);
-    }
-
-    // 학습 계획 수
-    const { count: totalStudyPlans, error: studyPlanError } = await supabase
-      .from('StudyPlan')
-      .select('*', { count: 'exact', head: true });
-
-    if (studyPlanError) {
-      console.error('학습 계획 조회 오류:', studyPlanError);
-      throw new ApiError(500, studyPlanError.message);
-    }
-
-    // 완료된 학습 계획 수 (달성률 100% 이상)
-    const { count: completedStudyPlans, error: completedError } = await supabase
-      .from('StudyPlan')
-      .select('*', { count: 'exact', head: true })
-      .gte('achievement', 100);
-
-    if (completedError) {
-      console.error('완료된 학습 계획 조회 오류:', completedError);
-      throw new ApiError(500, completedError.message);
-    }
-
-    const stats = {
-      totalUsers: totalUsers || 0,
-      totalSubjects: totalSubjects || 0,
-      totalCurriculums: totalCurriculums || 0,
-      totalStudyPlans: totalStudyPlans || 0,
-      completedStudyPlans: completedStudyPlans || 0,
+    // 초기 통계 값 설정
+    let stats = {
+      totalUsers: 0,
+      totalSubjects: 0,
+      totalCurriculums: 0,
+      totalStudyPlans: 0,
+      completedStudyPlans: 0,
     };
 
+    try {
+      // 총 사용자 수 (학생만)
+      const { count: totalUsers, error: userError } = await supabase
+        .from('User')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'STUDENT');
+
+      if (userError) {
+        console.error('사용자 수 조회 오류:', userError);
+        // 오류가 있어도 계속 진행
+      } else {
+        stats.totalUsers = totalUsers || 0;
+      }
+    } catch (err) {
+      console.error("사용자 통계 조회 오류:", err);
+      // 오류가 있어도 계속 진행
+    }
+
+    try {
+      // 과목 조회
+      const { data: subjects, error: subjectError } = await supabase
+        .from('Curriculum')
+        .select('subject');
+
+      if (subjectError) {
+        console.error('과목 조회 오류:', subjectError);
+        // 오류가 있어도 계속 진행
+      } else {
+        // 과목 중복 제거
+        const uniqueSubjects = new Set();
+        subjects?.forEach(item => uniqueSubjects.add(item.subject));
+        stats.totalSubjects = uniqueSubjects.size;
+      }
+    } catch (err) {
+      console.error("과목 통계 조회 오류:", err);
+      // 오류가 있어도 계속 진행
+    }
+
+    try {
+      // 교과서 단원 수
+      const { count: totalCurriculums, error: curriculumError } = await supabase
+        .from('Curriculum')
+        .select('*', { count: 'exact', head: true });
+
+      if (curriculumError) {
+        console.error('교과서 단원 조회 오류:', curriculumError);
+        // 오류가 있어도 계속 진행
+      } else {
+        stats.totalCurriculums = totalCurriculums || 0;
+      }
+    } catch (err) {
+      console.error("교과서 단원 통계 조회 오류:", err);
+      // 오류가 있어도 계속 진행
+    }
+
+    try {
+      // 학습 계획 수
+      const { count: totalStudyPlans, error: studyPlanError } = await supabase
+        .from('StudyPlan')
+        .select('*', { count: 'exact', head: true });
+
+      if (studyPlanError) {
+        console.error('학습 계획 조회 오류:', studyPlanError);
+        // 오류가 있어도 계속 진행
+      } else {
+        stats.totalStudyPlans = totalStudyPlans || 0;
+      }
+    } catch (err) {
+      console.error("학습 계획 통계 조회 오류:", err);
+      // 오류가 있어도 계속 진행
+    }
+
+    try {
+      // 완료된 학습 계획 수 (달성률 100% 이상)
+      const { count: completedStudyPlans, error: completedError } = await supabase
+        .from('StudyPlan')
+        .select('*', { count: 'exact', head: true })
+        .gte('achievement', 100);
+
+      if (completedError) {
+        console.error('완료된 학습 계획 조회 오류:', completedError);
+        // 오류가 있어도 계속 진행
+      } else {
+        stats.completedStudyPlans = completedStudyPlans || 0;
+      }
+    } catch (err) {
+      console.error("완료된 학습 계획 통계 조회 오류:", err);
+      // 오류가 있어도 계속 진행
+    }
+
+    console.log("통계 데이터 생성 완료:", stats);
     return successResponse(stats);
   } catch (error) {
     console.error('관리자 통계 API 오류:', error);
