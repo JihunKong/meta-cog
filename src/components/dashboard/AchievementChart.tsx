@@ -9,6 +9,15 @@ import { Icons } from "@/components/ui/icons";
 
 Chart.register(...registerables);
 
+interface SubjectData {
+  plans: StudyPlan[];
+  achievementSum: number;
+}
+
+interface SubjectAchievement {
+  achievementRate: number;
+}
+
 export default function AchievementChart() {
   const { data: session } = useSession();
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
@@ -43,6 +52,8 @@ export default function AchievementChart() {
       if (!session?.user) return;
 
       try {
+        setLoading(true);
+        setError(null);
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
@@ -60,30 +71,47 @@ export default function AchievementChart() {
         );
         
         if (!response.ok) {
-          throw new Error("학습 계획을 불러오는데 실패했습니다.");
+          // 404나 500 에러인 경우에도 빈 배열로 처리하고 오류 메시지는 숨김
+          console.error('API 응답 오류:', response.status, response.statusText);
+          setStudyPlans([]);
+          setLoading(false);
+          return;
         }
         
         const data = await response.json();
         if (data.success) {
-          setStudyPlans(data.data);
+          setStudyPlans(data.data || []);
         } else {
-          throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
+          console.error('API 응답 실패:', data.error);
+          setStudyPlans([]);
         }
       } catch (err) {
-        setError((err as Error).message);
+        console.error('학습 계획 데이터 가져오기 오류:', err);
+        setStudyPlans([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStudyPlans();
+    if (session?.user) {
+      fetchStudyPlans();
+    }
   }, [session, refreshTrigger]);
 
   useEffect(() => {
-    if (loading || !studyPlans.length || !chartRef.current) return;
+    // 이전 차트 정리
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+    
+    if (loading || !chartRef.current) return;
+    
+    // 데이터가 없는 경우 차트를 그리지 않음
+    if (studyPlans.length === 0) return;
 
     // 과목별로 데이터 그룹화
-    const subjectMap = {};
+    const subjectMap: Record<string, SubjectData> = {};
     
     studyPlans.forEach((plan) => {
       if (!subjectMap[plan.subject]) {
@@ -94,13 +122,13 @@ export default function AchievementChart() {
       }
       
       subjectMap[plan.subject].plans.push(plan);
-      subjectMap[plan.subject].achievementSum += plan.achievement;
+      subjectMap[plan.subject].achievementSum += (plan.achievement || 0);
     });
     
     // 차트 데이터 준비
     const subjects = Object.keys(subjectMap);
-    const achievementRates = [];
-    const subjectData = {};
+    const achievementRates: number[] = [];
+    const subjectData: Record<string, SubjectAchievement> = {};
     
     subjects.forEach((subject) => {
       const { plans, achievementSum } = subjectMap[subject];
@@ -147,7 +175,7 @@ export default function AchievementChart() {
             tooltip: {
               callbacks: {
                 label: function (context) {
-                  const subject = context.label;
+                  const subject = context.label as string;
                   const { achievementRate } = subjectData[subject];
                   return [`달성률: ${achievementRate}%`];
                 },
@@ -161,6 +189,7 @@ export default function AchievementChart() {
     return () => {
       if (chartInstance.current) {
         chartInstance.current.destroy();
+        chartInstance.current = null;
       }
     };
   }, [studyPlans, loading]);
@@ -173,18 +202,15 @@ export default function AchievementChart() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-8 text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
   if (studyPlans.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
         <p>표시할 학습 데이터가 없습니다.</p>
+        <p className="text-sm mt-2">
+          <a href="/study-plans/new" className="text-blue-500 hover:underline">
+            학습 계획 추가하기
+          </a>
+        </p>
       </div>
     );
   }

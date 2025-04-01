@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 
 export async function POST(req: Request) {
@@ -12,8 +12,8 @@ export async function POST(req: Request) {
       throw new ApiError(400, "이메일, 비밀번호, 이름은 필수 항목입니다");
     }
 
-    // 1. Supabase Auth에 사용자 생성
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // 1. Supabase Auth에 사용자 생성 (관리자 권한 사용)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     if (userError) {
       // User 테이블 생성 실패 시 Auth 사용자도 삭제
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error('User 테이블 데이터 생성 실패:', userError);
       throw new ApiError(500, "사용자 정보 저장에 실패했습니다");
     }

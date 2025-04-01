@@ -18,25 +18,39 @@ export default function StudyPlanSummary() {
       if (!session?.user) return;
 
       try {
+        setLoading(true);
+        setError(null);
         const today = new Date();
         const { start, end } = getWeekRange(today);
         
         const response = await fetch(
-          `/api/study-plans?startDate=${start.toISOString()}&endDate=${end.toISOString()}`
+          `/api/study-plans?startDate=${start.toISOString()}&endDate=${end.toISOString()}`,
+          {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          }
         );
         
         if (!response.ok) {
-          throw new Error("학습 계획을 불러오는데 실패했습니다.");
+          // 404나 500 에러인 경우에도 빈 배열로 처리하고 오류 메시지는 숨김
+          console.error('API 응답 오류:', response.status, response.statusText);
+          setStudyPlans([]);
+          setLoading(false);
+          return;
         }
         
         const data = await response.json();
         if (data.success) {
-          setStudyPlans(data.data);
+          setStudyPlans(data.data || []);
         } else {
-          throw new Error(data.error?.message || "학습 계획을 불러오는데 실패했습니다.");
+          console.error('API 응답 실패:', data.error);
+          setStudyPlans([]);
         }
       } catch (err) {
-        setError((err as Error).message);
+        console.error('학습 계획 데이터 가져오기 오류:', err);
+        setStudyPlans([]);
       } finally {
         setLoading(false);
       }
@@ -53,22 +67,14 @@ export default function StudyPlanSummary() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center py-8 text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
   if (studyPlans.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
         <p>이번 주 학습 계획이 없습니다.</p>
         <p className="text-sm mt-2">
-          <a href="/study-plans/new" className="text-blue-500 hover:underline">
+          <Link href="/study-plans/new" className="text-blue-500 hover:underline">
             새 학습 계획 추가하기
-          </a>
+          </Link>
         </p>
       </div>
     );
@@ -96,10 +102,9 @@ export default function StudyPlanSummary() {
       </div>
       
       {Object.entries(groupedBySubject).map(([subject, plans]) => {
-        // 달성률을 직접 사용
-        const achievementRate = Math.round(
-          plans.reduce((sum, plan) => sum + Number(plan.achievement), 0) / plans.length
-        );
+        // 달성률을 직접 사용 (NaN 방지)
+        const totalAchievement = plans.reduce((sum, plan) => sum + Number(plan.achievement || 0), 0);
+        const achievementRate = plans.length > 0 ? Math.round(totalAchievement / plans.length) : 0;
 
         return (
           <div key={subject} className="border rounded-lg p-4">

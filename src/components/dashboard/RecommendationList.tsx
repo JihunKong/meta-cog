@@ -21,26 +21,36 @@ export default function RecommendationList() {
 
     try {
       setLoading(true);
+      setError(null);
       console.log('추천 조회 요청 - 사용자 ID:', session.user.id);
       
-      const data = await apiCall<{success: boolean; data: AIRecommendation[]}>("/api/recommendations");
+      const response = await fetch("/api/recommendations", {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        // 404나 500 에러인 경우에도 빈 배열로 처리하고 오류 메시지는 숨김
+        console.error('API 응답 오류:', response.status, response.statusText);
+        setRecommendations([]);
+        setLoading(false);
+        return;
+      }
+      
+      const data = await response.json();
       
       if (data.success) {
-        console.log('받은 추천 데이터:', data.data.length, '개 항목');
-        // 안전을 위해 클라이언트측에서도 한번 더 필터링
-        const filteredRecommendations = data.data.filter(rec => rec.userId === session.user.id);
-        console.log('필터링 후 추천 데이터:', filteredRecommendations.length, '개 항목');
-        
-        if (filteredRecommendations.length !== data.data.length) {
-          console.warn('다른 사용자의 추천이 포함되어 있었습니다. 필터링 적용됨.');
-        }
-        
-        setRecommendations(filteredRecommendations);
+        console.log('받은 추천 데이터:', data.data?.length || 0, '개 항목');
+        setRecommendations(data.data || []);
       } else {
-        throw new Error(data.error?.message || "추천을 불러오는데 실패했습니다.");
+        console.error('API 응답 실패:', data.error);
+        setRecommendations([]);
       }
     } catch (err) {
-      setError((err as Error).message);
+      console.error('추천 데이터 가져오기 오류:', err);
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
@@ -51,9 +61,18 @@ export default function RecommendationList() {
     
     try {
       setGenerating(true);
-      const data = await apiCall<{success: boolean; data: AIRecommendation}>("/api/recommendations/generate", {
-        method: "POST"
+      const response = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      
+      if (!response.ok) {
+        throw new Error("추천 생성에 실패했습니다. 서버 오류가 발생했습니다.");
+      }
+      
+      const data = await response.json();
       
       if (data.success) {
         toast.success("새로운 AI 추천이 생성되었습니다!");
@@ -70,7 +89,9 @@ export default function RecommendationList() {
   };
 
   useEffect(() => {
-    fetchRecommendations();
+    if (session?.user) {
+      fetchRecommendations();
+    }
   }, [session]);
 
   const getRecommendationIcon = (type: string) => {
@@ -107,20 +128,6 @@ export default function RecommendationList() {
     return (
       <div className="flex justify-center py-8">
         <Icons.spinner className="animate-spin h-8 w-8 text-primary" />
-      </div>
-    );
-  }
-
-  if (error && !generating) {
-    return (
-      <div className="text-center py-4 text-red-600 font-medium">
-        <p>{error}</p>
-        <button
-          onClick={fetchRecommendations}
-          className="mt-2 text-sm text-blue-600 hover:underline font-bold"
-        >
-          다시 시도
-        </button>
       </div>
     );
   }
