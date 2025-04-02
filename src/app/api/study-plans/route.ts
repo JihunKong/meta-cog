@@ -11,6 +11,8 @@ const studyPlanSchema = z.object({
   target: z.number().min(0, "목표 달성률은 0% 이상이어야 합니다").max(100, "목표 달성률은 100% 이하여야 합니다").optional().default(100),
   date: z.string().transform((str) => new Date(str)),
   achievement: z.number().min(0).max(100).optional().default(0),
+  timeSlot: z.string().min(1, "시간대를 선택해주세요"),
+  reflection: z.string().optional(),
 });
 
 export async function GET(request: Request) {
@@ -68,24 +70,29 @@ export async function POST(request: Request) {
       
       try {
         // 형식화된 데이터로 학습 계획 생성
+        const dataToInsert = {
+          user_id: session.user.id,
+          subject: validatedData.subject,
+          content: validatedData.content,
+          target: validatedData.target,
+          achievement: validatedData.achievement,
+          date: validatedData.date,
+          time_slot: validatedData.timeSlot,
+          reflection: validatedData.reflection,
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        
+        console.log("Supabase에 삽입할 데이터:", JSON.stringify(dataToInsert, null, 2));
+        
         const { data: studyPlan, error } = await supabase
           .from('StudyPlan')
-          .insert([
-            {
-              user_id: session.user.id,
-              subject: validatedData.subject,
-              content: validatedData.content,
-              target: validatedData.target,
-              achievement: validatedData.achievement,
-              date: validatedData.date,
-              created_at: new Date(),
-              updated_at: new Date()
-            }
-          ])
+          .insert([dataToInsert])
           .select()
           .single();
 
         if (error) {
+          console.error("Supabase 삽입 오류:", error);
           throw new Error(error.message);
         }
 

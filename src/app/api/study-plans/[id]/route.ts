@@ -23,6 +23,7 @@ const studyPlanUpdateSchema = z.object({
     }
   }).optional(),
   timeSlot: z.string().min(1, "시간대를 선택해주세요").optional(),
+  time_slot: z.string().min(1, "시간대를 선택해주세요").optional(),
   reflection: z.string().optional(),
 });
 
@@ -120,6 +121,13 @@ export async function PATCH(request: Request, context: Context) {
       ...validatedData,
       updated_at: new Date()
     };
+
+    // timeSlot과 time_slot 필드 처리
+    if (validatedData.timeSlot && !updateData.time_slot) {
+      updateData.time_slot = validatedData.timeSlot;
+    }
+    
+    console.log("업데이트할 데이터:", updateData);
 
     // 학습 계획 업데이트
     const { data: updatedPlan, error: updateError } = await supabase

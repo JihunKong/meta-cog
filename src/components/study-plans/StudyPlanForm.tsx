@@ -104,7 +104,10 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
         ...formData,
         targetAchievement: 100, // 기본값 설정
         date: new Date(formData.date).toISOString(),
+        time_slot: formData.timeSlot, // Supabase 필드명 호환성 추가
       };
+
+      console.log("서버로 전송할 데이터:", dataToSend);
 
       const response = await fetch(url, {
         method,
