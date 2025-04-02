@@ -175,7 +175,7 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => signOut({ 
-                  callbackUrl: getSiteUrl() + "/auth/signin" 
+                  callbackUrl: "/auth/signin" 
                 })}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
