@@ -4,11 +4,14 @@ import { UserRole } from "@/types";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 
-// 고정 URL 설정 - Netlify 배포 URL
-const baseUrl = process.env.VERCEL_URL 
+// 동적으로 URL 설정
+const baseUrl = 
+  process.env.NETLIFY_URL
+  ? process.env.NETLIFY_URL
+  : process.env.VERCEL_URL 
   ? `https://${process.env.VERCEL_URL}`
-  : process.env.NEXT_PUBLIC_BASE_URL 
-  ? process.env.NEXT_PUBLIC_BASE_URL
+  : process.env.NEXTAUTH_URL
+  ? process.env.NEXTAUTH_URL
   : "http://localhost:3000";
 
 export const authOptions: NextAuthOptions = {
@@ -91,32 +94,23 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       console.log('리다이렉트 시도:', { url, baseUrl });
       
-      // 절대 로컬호스트로 가지 않도록 강제 설정
-      const productionUrl = "https://meta-cog.netlify.app";
-      const finalBaseUrl = process.env.NODE_ENV === "production" ? productionUrl : baseUrl;
-      
-      // 로그아웃의 경우
-      if (url.includes("signout")) {
-        return `${finalBaseUrl}/auth/signin`;
-      }
-      
       // 상대 경로인 경우 (가장 먼저 체크)
       if (url.startsWith("/")) {
-        return `${finalBaseUrl}${url}`;
+        return `${baseUrl}${url}`;
       }
       
       // API 경로나 홈페이지인 경우
-      if (url.includes("/api/auth") || url === finalBaseUrl || url === baseUrl) {
-        return `${finalBaseUrl}/dashboard`;
+      if (url.includes("/api/auth") || url === baseUrl) {
+        return `${baseUrl}/dashboard`;
       }
       
-      // 허용된 도메인인 경우
-      if (url.startsWith(finalBaseUrl) || url.startsWith(productionUrl)) {
+      // 허용된 도메인인 경우 (현재 사이트와 동일한 도메인)
+      if (url.startsWith(baseUrl)) {
         return url;
       }
       
       // 그 외의 모든 경우는 대시보드로
-      return `${finalBaseUrl}/dashboard`;
+      return `${baseUrl}/dashboard`;
     }
   },
   pages: {
