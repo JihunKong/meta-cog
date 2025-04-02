@@ -96,6 +96,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    console.log("------------------ 학습 계획 생성 API 시작 ------------------");
+    
+    // 요청 헤더 로깅
+    console.log("요청 헤더:", Object.fromEntries([...request.headers.entries()]));
+    
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       console.error("인증 오류: 세션이 없거나 사용자 정보가 없습니다");
@@ -180,9 +185,29 @@ export async function POST(request: Request) {
           updatedAt: studyPlan.updated_at
         };
 
-        return successResponse(formattedResponse, 201);
+        console.log("최종 응답 데이터:", { success: true, data: formattedResponse });
+        console.log("------------------ 학습 계획 생성 API 종료 ------------------");
+        
+        // CORS 헤더 추가 및 응답 반환
+        const response = NextResponse.json(
+          {
+            success: true,
+            data: formattedResponse,
+          },
+          { 
+            status: 201,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type',
+            }
+          }
+        );
+        
+        return response;
       } catch (dbError: any) {
         console.error("데이터베이스 저장 오류:", dbError);
+        console.log("------------------ 학습 계획 생성 API 종료 (오류) ------------------");
         return errorResponse(new ApiError(500, `학습 계획을 저장하는 중 오류가 발생했습니다: ${dbError.message || '알 수 없는 오류'}`));
       }
     } catch (validationError) {
@@ -196,4 +221,16 @@ export async function POST(request: Request) {
     console.error("학습 계획 생성 오류:", error);
     return errorResponse(error as Error);
   }
+}
+
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400', // 24 hours
+    },
+  });
 } 

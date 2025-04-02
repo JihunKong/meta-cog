@@ -107,31 +107,63 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
         time_slot: formData.timeSlot, // Supabase 필드명 호환성 추가
       };
 
-      console.log("서버로 전송할 데이터:", dataToSend);
+      console.log("[폼 제출] 서버로 전송할 데이터:", dataToSend);
+      console.log("[폼 제출] 요청 URL:", url);
+      console.log("[폼 제출] 요청 메소드:", method);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dataToSend),
-      });
+      try {
+        const response = await fetch(url, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dataToSend),
+        });
 
-      if (!response.ok) {
-        throw new Error("학습 계획을 저장하는데 실패했습니다.");
-      }
+        console.log("[폼 제출] 응답 상태:", response.status);
+        const contentType = response.headers.get('content-type');
+        console.log("[폼 제출] 응답 콘텐츠 타입:", contentType);
 
-      const data = await response.json();
-      if (data.success) {
-        toast.success(
-          initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
-        );
-        router.push("/study-plans");
-      } else {
-        throw new Error(data.error?.message || "학습 계획을 저장하는데 실패했습니다.");
+        let responseData;
+        try {
+          const responseText = await response.text();
+          console.log("[폼 제출] 응답 텍스트:", responseText);
+          
+          try {
+            responseData = JSON.parse(responseText);
+            console.log("[폼 제출] 응답 데이터:", responseData);
+          } catch (parseError) {
+            console.error("[폼 제출] JSON 파싱 오류:", parseError);
+            throw new Error("서버 응답을 파싱할 수 없습니다: " + responseText);
+          }
+        } catch (textError) {
+          console.error("[폼 제출] 응답 텍스트 읽기 오류:", textError);
+          throw new Error("서버 응답을 읽을 수 없습니다.");
+        }
+
+        if (!response.ok) {
+          const errorMessage = responseData?.error?.message || "학습 계획을 저장하는데 실패했습니다.";
+          console.error("[폼 제출] 응답 오류:", errorMessage);
+          throw new Error(errorMessage);
+        }
+
+        if (responseData.success) {
+          toast.success(
+            initialData ? "학습 계획이 수정되었습니다." : "새 학습 계획이 생성되었습니다."
+          );
+          console.log("[폼 제출] 성공, 리디렉션 수행");
+          router.push("/study-plans");
+        } else {
+          const errorMessage = responseData.error?.message || "학습 계획을 저장하는데 실패했습니다.";
+          console.error("[폼 제출] 성공 플래그 없음:", errorMessage);
+          throw new Error(errorMessage);
+        }
+      } catch (fetchError) {
+        console.error("[폼 제출] 네트워크 오류:", fetchError);
+        throw fetchError;
       }
     } catch (error) {
-      console.error("학습 계획 저장 오류:", error);
+      console.error("[폼 제출] 최종 오류:", error);
       toast.error((error as Error).message);
     } finally {
       setLoading(false);
