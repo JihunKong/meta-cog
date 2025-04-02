@@ -34,7 +34,22 @@ export async function GET(request: Request) {
       throw new ApiError(500, error.message);
     }
 
-    return successResponse(studyPlans || []);
+    // Supabase 응답을 Prisma 호환 형식으로 변환 (snake_case → camelCase)
+    const formattedStudyPlans = (studyPlans || []).map(plan => ({
+      id: plan.id,
+      userId: plan.user_id,
+      subject: plan.subject,
+      content: plan.content,
+      target: plan.target,
+      achievement: plan.achievement,
+      date: plan.date,
+      timeSlot: plan.time_slot,
+      reflection: plan.reflection,
+      createdAt: plan.created_at,
+      updatedAt: plan.updated_at
+    }));
+
+    return successResponse(formattedStudyPlans);
   } catch (error) {
     console.error("학습 계획 조회 오류:", error);
     return errorResponse(error as Error);
@@ -69,7 +84,7 @@ export async function POST(request: Request) {
       console.log("유효성 검사 통과:", JSON.stringify(validatedData, null, 2));
       
       try {
-        // 형식화된 데이터로 학습 계획 생성
+        // Prisma 필드명과 Supabase 필드명 매핑
         const dataToInsert = {
           user_id: session.user.id,
           subject: validatedData.subject,
@@ -77,7 +92,7 @@ export async function POST(request: Request) {
           target: validatedData.target,
           achievement: validatedData.achievement,
           date: validatedData.date,
-          time_slot: validatedData.timeSlot,
+          time_slot: validatedData.timeSlot || body.time_slot, // timeSlot 또는 time_slot 사용
           reflection: validatedData.reflection,
           created_at: new Date(),
           updated_at: new Date()
@@ -96,7 +111,22 @@ export async function POST(request: Request) {
           throw new Error(error.message);
         }
 
-        return successResponse(studyPlan, 201);
+        // Prisma 스타일 응답으로 변환 (camelCase)
+        const formattedResponse = {
+          id: studyPlan.id,
+          userId: studyPlan.user_id,
+          subject: studyPlan.subject,
+          content: studyPlan.content,
+          target: studyPlan.target,
+          achievement: studyPlan.achievement,
+          date: studyPlan.date,
+          timeSlot: studyPlan.time_slot,
+          reflection: studyPlan.reflection,
+          createdAt: studyPlan.created_at,
+          updatedAt: studyPlan.updated_at
+        };
+
+        return successResponse(formattedResponse, 201);
       } catch (dbError: any) {
         console.error("데이터베이스 저장 오류:", dbError);
         return errorResponse(new ApiError(500, `학습 계획을 저장하는 중 오류가 발생했습니다: ${dbError.message || '알 수 없는 오류'}`));

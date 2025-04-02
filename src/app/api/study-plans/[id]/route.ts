@@ -61,7 +61,22 @@ export async function GET(request: Request, context: Context) {
       throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
     }
 
-    return successResponse(studyPlan);
+    // Supabase 응답을 Prisma 호환 형식으로 변환 (snake_case → camelCase)
+    const formattedStudyPlan = {
+      id: studyPlan.id,
+      userId: studyPlan.user_id,
+      subject: studyPlan.subject,
+      content: studyPlan.content,
+      target: studyPlan.target,
+      achievement: studyPlan.achievement,
+      date: studyPlan.date,
+      timeSlot: studyPlan.time_slot,
+      reflection: studyPlan.reflection,
+      createdAt: studyPlan.created_at,
+      updatedAt: studyPlan.updated_at
+    };
+
+    return successResponse(formattedStudyPlan);
   } catch (error) {
     console.error("학습 계획 조회 오류:", error);
     return errorResponse(error as Error);
@@ -116,15 +131,28 @@ export async function PATCH(request: Request, context: Context) {
     // 데이터 검증
     const validatedData = studyPlanUpdateSchema.parse(body);
     
-    // 업데이트할 데이터 준비
-    const updateData = {
-      ...validatedData,
+    // 업데이트할 데이터 준비 - snake_case로 변환
+    const updateData: any = {
       updated_at: new Date()
     };
+    
+    // Prisma 스타일(camelCase)에서 Supabase 스타일(snake_case)로 변환
+    if (validatedData.subject) updateData.subject = validatedData.subject;
+    if (validatedData.content) updateData.content = validatedData.content;
+    if (validatedData.target !== undefined) updateData.target = validatedData.target;
+    if (validatedData.achievement !== undefined) updateData.achievement = validatedData.achievement;
+    if (validatedData.date) updateData.date = validatedData.date;
+    if (validatedData.reflection !== undefined) updateData.reflection = validatedData.reflection;
 
-    // timeSlot과 time_slot 필드 처리
-    if (validatedData.timeSlot && !updateData.time_slot) {
+    // timeSlot 필드 처리 (camelCase → snake_case)
+    if (validatedData.timeSlot) {
       updateData.time_slot = validatedData.timeSlot;
+    } else if (validatedData.time_slot) {
+      updateData.time_slot = validatedData.time_slot;
+    } else if (body.timeSlot) {
+      updateData.time_slot = body.timeSlot;
+    } else if (body.time_slot) {
+      updateData.time_slot = body.time_slot;
     }
     
     console.log("업데이트할 데이터:", updateData);
@@ -141,7 +169,22 @@ export async function PATCH(request: Request, context: Context) {
       throw new ApiError(500, "학습 계획 업데이트 중 오류가 발생했습니다: " + updateError.message);
     }
 
-    return successResponse(updatedPlan);
+    // Supabase 응답을 Prisma 호환 형식으로 변환 (snake_case → camelCase)
+    const formattedUpdatedPlan = {
+      id: updatedPlan.id,
+      userId: updatedPlan.user_id,
+      subject: updatedPlan.subject,
+      content: updatedPlan.content,
+      target: updatedPlan.target,
+      achievement: updatedPlan.achievement,
+      date: updatedPlan.date,
+      timeSlot: updatedPlan.time_slot,
+      reflection: updatedPlan.reflection,
+      createdAt: updatedPlan.created_at,
+      updatedAt: updatedPlan.updated_at
+    };
+
+    return successResponse(formattedUpdatedPlan);
   } catch (error) {
     console.error("학습 계획 수정 오류:", error);
     return errorResponse(error as Error);
@@ -185,7 +228,11 @@ export async function DELETE(request: Request, context: Context) {
       throw new ApiError(500, "학습 계획 삭제 중 오류가 발생했습니다: " + deleteError.message);
     }
 
-    return successResponse({ message: "학습 계획이 삭제되었습니다" });
+    // 삭제 성공 응답
+    return successResponse({ 
+      message: "학습 계획이 삭제되었습니다",
+      id
+    });
   } catch (error) {
     console.error("학습 계획 삭제 오류:", error);
     return errorResponse(error as Error);
