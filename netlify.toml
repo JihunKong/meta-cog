@@ -8,18 +8,5 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Fallback for client-side routing (SPA)
-[[redirects]]
-  from = "/*"
-  to = "/_next/static/index.html"
-  status = 200
-  force = false
-
-# Handle 404 errors
-[[redirects]]
-  from = "/*"
-  to = "/404.html"
-  status = 404
-
 [functions]
   node_bundler = "esbuild" 
