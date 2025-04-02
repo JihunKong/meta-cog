@@ -33,8 +33,8 @@ export async function GET(
 
     // 학습 계획 가져오기
     const studyPlans = await prisma.studyPlan.findMany({
-      where: { userId: id },
-      orderBy: { createdAt: 'desc' },
+      where: { user_id: id },
+      orderBy: { created_at: 'desc' },
       select: {
         id: true,
         subject: true,
@@ -42,14 +42,42 @@ export async function GET(
         target: true,
         achievement: true,
         date: true,
-        timeSlot: true,
-        userId: true,
-        createdAt: true,
-        updatedAt: true
+        time_slot: true,
+        reflection: true,
+        user_id: true,
+        created_at: true,
+        updated_at: true
       }
     });
 
-    return successResponse(studyPlans);
+    // Prisma 스타일 응답으로 변환 (클라이언트 호환성)
+    const formattedStudyPlans = studyPlans.map((plan: {
+      id: string;
+      subject: string;
+      content: string;
+      target: number;
+      achievement: number;
+      date: Date;
+      time_slot: string;
+      reflection: string | null;
+      user_id: string;
+      created_at: Date;
+      updated_at: Date;
+    }) => ({
+      id: plan.id,
+      subject: plan.subject,
+      content: plan.content,
+      target: plan.target,
+      achievement: plan.achievement, 
+      date: plan.date,
+      timeSlot: plan.time_slot,
+      reflection: plan.reflection,
+      userId: plan.user_id,
+      createdAt: plan.created_at,
+      updatedAt: plan.updated_at
+    }));
+
+    return successResponse(formattedStudyPlans);
   } catch (error) {
     return errorResponse(error as Error);
   }

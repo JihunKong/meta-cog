@@ -134,15 +134,15 @@ export async function POST(request: Request) {
       
       try {
         // Prisma 필드명과 Supabase 필드명 매핑
-        const dataToInsert = {
+        const dataToInsert: any = {
           user_id: session.user.id,
           subject: validatedData.subject,
           content: validatedData.content,
           target: validatedData.target,
           achievement: validatedData.achievement,
           date: validatedData.date,
-          time_slot: validatedData.timeSlot || body.time_slot || "", // timeSlot 또는 time_slot 사용 (빈 문자열 기본값 추가)
-          reflection: validatedData.reflection || "",
+          time_slot: validatedData.timeSlot || body.time_slot || "19-20:15", // 기본값 제공
+          reflection: validatedData.reflection || null, // reflection 필드 추가
           created_at: new Date(),
           updated_at: new Date()
         };
