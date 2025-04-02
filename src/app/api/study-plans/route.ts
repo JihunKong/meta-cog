@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const studyPlanSchema = z.object({
   subject: z.string().min(1, "과목을 입력해주세요"),
@@ -23,12 +23,50 @@ export async function GET(request: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 사용자 ID로 필터링된 학습 계획만 조회
-    const { data: studyPlans, error } = await supabase
-      .from('StudyPlan')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('date', { ascending: false });
+    console.log("사용자 역할:", session.user.role);
+    
+    let studyPlans;
+    let error;
+
+    // 역할에 따라 다른 쿼리 실행
+    if (session.user.role === 'STUDENT') {
+      // 학생은 자신의 학습 계획만 조회 가능
+      const result = await supabaseAdmin
+        .from('StudyPlan')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('date', { ascending: false });
+      
+      studyPlans = result.data;
+      error = result.error;
+    } else if (session.user.role === 'TEACHER' || session.user.role === 'ADMIN') {
+      // URL에서 특정 학생 ID 파라미터 추출
+      const url = new URL(request.url);
+      const studentId = url.searchParams.get("studentId");
+      
+      if (studentId) {
+        // 특정 학생의 학습 계획 조회
+        const result = await supabaseAdmin
+          .from('StudyPlan')
+          .select('*')
+          .eq('user_id', studentId)
+          .order('date', { ascending: false });
+        
+        studyPlans = result.data;
+        error = result.error;
+      } else {
+        // 모든 학습 계획 조회 (교사/관리자)
+        const result = await supabaseAdmin
+          .from('StudyPlan')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        studyPlans = result.data;
+        error = result.error;
+      }
+    } else {
+      throw new ApiError(403, "권한이 없습니다");
+    }
 
     if (error) {
       throw new ApiError(500, error.message);
@@ -64,6 +102,12 @@ export async function POST(request: Request) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
+    console.log("사용자 세션 정보:", {
+      id: session.user.id,
+      role: session.user.role,
+      email: session.user.email
+    });
+
     // 요청 본문 가져오기 및 기본 검증
     let body;
     try {
@@ -92,15 +136,23 @@ export async function POST(request: Request) {
           target: validatedData.target,
           achievement: validatedData.achievement,
           date: validatedData.date,
-          time_slot: validatedData.timeSlot || body.time_slot, // timeSlot 또는 time_slot 사용
-          reflection: validatedData.reflection,
+          time_slot: validatedData.timeSlot || body.time_slot || "", // timeSlot 또는 time_slot 사용 (빈 문자열 기본값 추가)
+          reflection: validatedData.reflection || "",
           created_at: new Date(),
           updated_at: new Date()
         };
         
         console.log("Supabase에 삽입할 데이터:", JSON.stringify(dataToInsert, null, 2));
         
-        const { data: studyPlan, error } = await supabase
+        // supabase 클라이언트 권한 확인
+        console.log("Supabase 클라이언트 정보:", {
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+        });
+        
+        // 서비스 롤(관리자 권한)로 데이터 삽입
+        const { data: studyPlan, error } = await supabaseAdmin
           .from('StudyPlan')
           .insert([dataToInsert])
           .select()
@@ -110,6 +162,8 @@ export async function POST(request: Request) {
           console.error("Supabase 삽입 오류:", error);
           throw new Error(error.message);
         }
+
+        console.log("Supabase 삽입 결과:", studyPlan);
 
         // Prisma 스타일 응답으로 변환 (camelCase)
         const formattedResponse = {

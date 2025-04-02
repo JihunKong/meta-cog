@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse, validateRequest } from "@/lib/api-utils";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const studyPlanUpdateSchema = z.object({
   subject: z.string().min(1, "과목을 입력해주세요").optional(),
@@ -45,8 +45,8 @@ export async function GET(request: Request, context: Context) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 학습 계획 조회
-    const { data: studyPlan, error } = await supabase
+    // 관리자 권한으로 학습 계획 조회
+    const { data: studyPlan, error } = await supabaseAdmin
       .from('StudyPlan')
       .select('*')
       .eq('id', id)
@@ -56,8 +56,8 @@ export async function GET(request: Request, context: Context) {
       throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
     }
 
-    // 사용자 권한 확인
-    if (studyPlan.user_id !== session.user.id) {
+    // 사용자 권한 확인 (학생은 자신의 데이터만 조회 가능)
+    if (session.user.role === 'STUDENT' && studyPlan.user_id !== session.user.id) {
       throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
     }
 
@@ -95,7 +95,7 @@ export async function PATCH(request: Request, context: Context) {
     }
 
     // 학습 계획 조회
-    const { data: existingPlan, error: findError } = await supabase
+    const { data: existingPlan, error: findError } = await supabaseAdmin
       .from('StudyPlan')
       .select('*')
       .eq('id', id)
@@ -105,8 +105,8 @@ export async function PATCH(request: Request, context: Context) {
       throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
     }
 
-    // 사용자 권한 확인
-    if (existingPlan.user_id !== session.user.id) {
+    // 학생은 자신의 데이터만 수정 가능
+    if (session.user.role === 'STUDENT' && existingPlan.user_id !== session.user.id) {
       throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
     }
 
@@ -157,8 +157,8 @@ export async function PATCH(request: Request, context: Context) {
     
     console.log("업데이트할 데이터:", updateData);
 
-    // 학습 계획 업데이트
-    const { data: updatedPlan, error: updateError } = await supabase
+    // 학습 계획 업데이트 (관리자 권한 사용)
+    const { data: updatedPlan, error: updateError } = await supabaseAdmin
       .from('StudyPlan')
       .update(updateData)
       .eq('id', id)
@@ -202,8 +202,8 @@ export async function DELETE(request: Request, context: Context) {
       throw new ApiError(401, "인증이 필요합니다");
     }
 
-    // 학습 계획 조회
-    const { data: existingPlan, error: findError } = await supabase
+    // 학습 계획 조회 (관리자 권한 사용)
+    const { data: existingPlan, error: findError } = await supabaseAdmin
       .from('StudyPlan')
       .select('*')
       .eq('id', id)
@@ -213,13 +213,13 @@ export async function DELETE(request: Request, context: Context) {
       throw new ApiError(404, "학습 계획을 찾을 수 없습니다");
     }
 
-    // 사용자 권한 확인
-    if (existingPlan.user_id !== session.user.id) {
+    // 학생은 자신의 데이터만 삭제 가능
+    if (session.user.role === 'STUDENT' && existingPlan.user_id !== session.user.id) {
       throw new ApiError(403, "해당 학습 계획에 접근할 권한이 없습니다");
     }
 
-    // 학습 계획 삭제
-    const { error: deleteError } = await supabase
+    // 학습 계획 삭제 (관리자 권한 사용)
+    const { error: deleteError } = await supabaseAdmin
       .from('StudyPlan')
       .delete()
       .eq('id', id);
