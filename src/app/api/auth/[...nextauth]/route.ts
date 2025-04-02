@@ -4,16 +4,6 @@ import { UserRole } from "@/types";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 
-// 동적으로 URL 설정
-const baseUrl = 
-  process.env.NETLIFY_URL
-  ? process.env.NETLIFY_URL
-  : process.env.VERCEL_URL 
-  ? `https://${process.env.VERCEL_URL}`
-  : process.env.NEXTAUTH_URL
-  ? process.env.NEXTAUTH_URL
-  : "http://localhost:3000";
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -92,25 +82,26 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log('리다이렉트 시도:', { url, baseUrl });
-      
-      // 상대 경로인 경우 (가장 먼저 체크)
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
-      
-      // API 경로나 홈페이지인 경우
-      if (url.includes("/api/auth") || url === baseUrl) {
-        return `${baseUrl}/dashboard`;
-      }
-      
-      // 허용된 도메인인 경우 (현재 사이트와 동일한 도메인)
-      if (url.startsWith(baseUrl)) {
+      // 절대 경로인 경우 바로 리디렉션
+      if (url.startsWith('http')) {
         return url;
       }
       
-      // 그 외의 모든 경우는 대시보드로
-      return `${baseUrl}/dashboard`;
+      // 클라이언트 사이드에서 현재 URL 사용
+      if (typeof window !== 'undefined') {
+        const origin = window.location.origin;
+        if (url.startsWith('/')) {
+          return `${origin}${url}`;
+        }
+      }
+      
+      // 상대 경로인 경우
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // 기본 리디렉션
+      return baseUrl;
     }
   },
   pages: {
@@ -118,7 +109,7 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
     signOut: '/auth/signin'
   },
-  debug: false,
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
