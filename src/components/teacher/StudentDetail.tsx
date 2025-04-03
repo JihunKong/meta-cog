@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Icons } from "@/components/ui/icons";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
@@ -32,11 +32,11 @@ interface StudyPlan {
 
 interface AIRecommendation {
   id: string;
-  userId: string;
+  user_id: string;
   subject: string;
   content: string;
   type: string;
-  createdAt: string;
+  created_at: string;
 }
 
 interface StudentDetailProps {
@@ -266,6 +266,59 @@ export default function StudentDetail({ studentId }: StudentDetailProps) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI 학습 추천</h3>
+          <button
+            onClick={generateRecommendation}
+            disabled={generatingRecommendation}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center space-x-2"
+          >
+            {generatingRecommendation ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>생성 중...</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span>새 추천 생성</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {recommendations.length === 0 ? (
+          <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+            <p>아직 AI 추천이 없습니다. 새 추천을 생성해보세요.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recommendations.map((rec) => (
+              <div 
+                key={rec.id} 
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <div className="flex justify-between">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">{rec.subject}</h4>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(rec.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {rec.content}
+                </div>
+                <div className="mt-2 text-sm">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900 dark:text-blue-200">
+                    {rec.type}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
