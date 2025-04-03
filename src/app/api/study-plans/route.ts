@@ -28,39 +28,78 @@ export async function GET(request: Request) {
     let studyPlans;
     let error;
 
+    // URL에서 날짜 범위 파라미터 추출
+    const url = new URL(request.url);
+    const startDate = url.searchParams.get("startDate");
+    const endDate = url.searchParams.get("endDate");
+    console.log("요청된 날짜 범위:", startDate, "~", endDate);
+
     // 역할에 따라 다른 쿼리 실행
     if (session.user.role === 'STUDENT') {
       // 학생은 자신의 학습 계획만 조회 가능
-      const result = await supabaseAdmin
+      let query = supabaseAdmin
         .from('StudyPlan')
         .select('*')
         .eq('user_id', session.user.id)
         .order('date', { ascending: false });
       
+      // 날짜 범위 필터 적용
+      if (startDate && endDate) {
+        query = query
+          .gte('date', startDate)
+          .lte('date', endDate);
+      }
+      
+      const result = await query;
       studyPlans = result.data;
       error = result.error;
+      
+      console.log(`${session.user.id} 학생의 학습 계획 조회 결과:`, {
+        count: studyPlans?.length || 0,
+        dateRange: startDate && endDate ? `${startDate} ~ ${endDate}` : '전체'
+      });
     } else if (session.user.role === 'TEACHER' || session.user.role === 'ADMIN') {
       // URL에서 특정 학생 ID 파라미터 추출
-      const url = new URL(request.url);
       const studentId = url.searchParams.get("studentId");
       
       if (studentId) {
         // 특정 학생의 학습 계획 조회
-        const result = await supabaseAdmin
+        let query = supabaseAdmin
           .from('StudyPlan')
           .select('*')
           .eq('user_id', studentId)
           .order('date', { ascending: false });
         
+        // 날짜 범위 필터 적용
+        if (startDate && endDate) {
+          query = query
+            .gte('date', startDate)
+            .lte('date', endDate);
+        }
+        
+        const result = await query;
         studyPlans = result.data;
         error = result.error;
+        
+        console.log(`${studentId} 학생의 학습 계획 조회 결과:`, {
+          count: studyPlans?.length || 0,
+          dateRange: startDate && endDate ? `${startDate} ~ ${endDate}` : '전체'
+        });
       } else {
         // 모든 학습 계획 조회 (교사/관리자)
-        const result = await supabaseAdmin
+        let query = supabaseAdmin
           .from('StudyPlan')
           .select('*')
           .order('date', { ascending: false });
         
+        // 날짜 범위 필터 적용
+        if (startDate && endDate) {
+          query = query
+            .gte('date', startDate)
+            .lte('date', endDate);
+        }
+        
+        const result = await query;
         studyPlans = result.data;
         error = result.error;
       }
