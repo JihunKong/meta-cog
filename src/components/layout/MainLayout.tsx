@@ -175,12 +175,17 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => {
-                  // 로그아웃 후 전체 URL로 명시적 리디렉션
-                  const callbackUrl = typeof window !== 'undefined' ? 
-                    `${window.location.origin}/auth/signin` : 
-                    'https://pure-ocean.netlify.app/auth/signin';
+                  // 쿠키를 명시적으로 삭제
+                  document.cookie = 'next-auth.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                  document.cookie = 'next-auth.csrf-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                  document.cookie = 'next-auth.callback-url=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                  document.cookie = '__Secure-next-auth.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Secure;';
                   
-                  signOut({ callbackUrl });
+                  // 세션 스토리지도 정리
+                  sessionStorage.clear();
+                  
+                  // 직접 리디렉션 (NextAuth signOut 대신)
+                  window.location.href = 'https://pure-ocean.netlify.app/auth/signin';
                 }}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
