@@ -30,7 +30,8 @@ export const authOptions: NextAuthOptions = {
           console.log("Supabase 인증 결과:", { 
             success: !!authData?.user, 
             error: signInError?.message,
-            userId: authData?.user?.id 
+            userId: authData?.user?.id,
+            email: authData?.user?.email
           });
 
           if (signInError) {
@@ -50,8 +51,14 @@ export const authOptions: NextAuthOptions = {
 
           console.log("Auth 사용자 메타데이터:", { 
             appMetadata: authUserData?.user?.app_metadata,
-            role: authUserData?.user?.app_metadata?.role 
+            userMetadata: authUserData?.user?.user_metadata,
+            role: authUserData?.user?.app_metadata?.role,
+            email: authUserData?.user?.email
           });
+
+          if (getUserError) {
+            console.error("Auth 사용자 정보 조회 실패:", getUserError);
+          }
 
           // User 테이블에서 추가 정보 조회 (관리자 권한 사용)
           const { data: userData, error: userError } = await supabaseAdmin
@@ -63,14 +70,20 @@ export const authOptions: NextAuthOptions = {
           console.log("User 테이블 조회 결과:", { 
             found: !!userData,
             error: userError?.message,
-            userData: userData 
+            userData: userData,
+            userId: authData.user.id  
           });
 
           if (userError || !userData) {
             console.error("사용자 정보 조회 실패:", userError);
             
             // 사용자 정보가 없으면 User 테이블에 자동으로 추가 시도
-            console.log("User 테이블에 사용자 추가 시도");
+            console.log("User 테이블에 사용자 추가 시도", {
+              id: authData.user.id,
+              email: credentials.email,
+              role: authUserData?.user?.app_metadata?.role || "STUDENT",
+              name: authUserData?.user?.user_metadata?.name || credentials.email
+            });
             
             const role = authUserData?.user?.app_metadata?.role || "STUDENT";
             const name = authUserData?.user?.user_metadata?.name || credentials.email;
@@ -88,6 +101,16 @@ export const authOptions: NextAuthOptions = {
               .select()
               .single();
               
+            // 오류를 더 자세히 로깅
+            if (insertError) {
+              console.error("사용자 정보 추가 실패 상세:", {
+                code: insertError.code,
+                details: insertError.details,
+                hint: insertError.hint,
+                message: insertError.message
+              });
+            }
+            
             console.log("User 테이블 추가 결과:", {
               success: !!insertData,
               error: insertError?.message,
