@@ -23,8 +23,12 @@ export default function StudyPlanSummary() {
         const today = new Date();
         const { start, end } = getWeekRange(today);
         
+        const url = `/api/study-plans?startDate=${start.toISOString()}&endDate=${end.toISOString()}&userId=${session.user.id}`;
+        console.log('학습 계획 요청 URL:', url);
+        console.log('현재 사용자 ID:', session.user.id);
+        
         const response = await fetch(
-          `/api/study-plans?startDate=${start.toISOString()}&endDate=${end.toISOString()}`,
+          url,
           {
             cache: 'no-store',
             headers: {
@@ -43,7 +47,12 @@ export default function StudyPlanSummary() {
         
         const data = await response.json();
         if (data.success) {
-          setStudyPlans(data.data || []);
+          const filteredPlans = data.data.filter((plan: StudyPlan) => 
+            plan.userId === session.user.id
+          );
+          console.log(`API 응답 데이터 수: ${data.data.length}, 필터링 후 데이터 수: ${filteredPlans.length}`);
+          
+          setStudyPlans(filteredPlans || []);
         } else {
           console.error('API 응답 실패:', data.error);
           setStudyPlans([]);

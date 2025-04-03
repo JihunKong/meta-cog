@@ -32,11 +32,17 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const startDate = url.searchParams.get("startDate");
     const endDate = url.searchParams.get("endDate");
-    console.log("요청된 날짜 범위:", startDate, "~", endDate);
+    const userId = url.searchParams.get("userId");
+    
+    console.log("요청된 조회 정보:", { 
+      날짜범위: `${startDate} ~ ${endDate}`, 
+      요청사용자ID: session.user.id,
+      조회대상사용자ID: userId || "미지정"
+    });
 
     // 역할에 따라 다른 쿼리 실행
     if (session.user.role === 'STUDENT') {
-      // 학생은 자신의 학습 계획만 조회 가능
+      // 학생은 자신의 학습 계획만 조회 가능 - 파라미터로 받은 userId는 무시하고 항상 자신의 ID 사용
       let query = supabaseAdmin
         .from('StudyPlan')
         .select('*')
@@ -59,8 +65,8 @@ export async function GET(request: Request) {
         dateRange: startDate && endDate ? `${startDate} ~ ${endDate}` : '전체'
       });
     } else if (session.user.role === 'TEACHER' || session.user.role === 'ADMIN') {
-      // URL에서 특정 학생 ID 파라미터 추출
-      const studentId = url.searchParams.get("studentId");
+      // userId 파라미터가 있으면 해당 학생의 학습 계획 조회, 없으면 studentId 사용
+      const studentId = userId || url.searchParams.get("studentId");
       
       if (studentId) {
         // 특정 학생의 학습 계획 조회
@@ -125,6 +131,15 @@ export async function GET(request: Request) {
       createdAt: plan.created_at,
       updatedAt: plan.updated_at
     }));
+
+    // 응답 전에 데이터 확인 로그
+    console.log("최종 응답 데이터:", {
+      총개수: formattedStudyPlans.length,
+      사용자별개수: formattedStudyPlans.reduce((acc, plan) => {
+        acc[plan.userId] = (acc[plan.userId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
 
     return successResponse(formattedStudyPlans);
   } catch (error) {
