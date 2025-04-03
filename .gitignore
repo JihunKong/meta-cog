@@ -47,3 +47,9 @@ docker-compose.override.yml
 
 # Local Netlify folder
 .netlify
+# 환경 변수 파일
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
