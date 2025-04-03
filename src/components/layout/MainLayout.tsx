@@ -175,9 +175,9 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => {
-                  // 배포 환경의 URL을 사용하여 로그아웃 리디렉션 처리
-                  const callbackUrl = process.env.NEXT_PUBLIC_PRODUCTION_URL || window.location.origin;
-                  signOut({ callbackUrl: `${callbackUrl}/auth/signin` });
+                  // getSiteUrl 함수를 사용하여 적절한 URL 반환
+                  const siteUrl = getSiteUrl();
+                  signOut({ callbackUrl: `${siteUrl}/auth/signin` });
                 }}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
