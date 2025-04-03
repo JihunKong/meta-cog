@@ -175,8 +175,8 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => {
-                  // 단순히 로그아웃만 수행하고 기본 로그아웃 페이지로 이동
-                  signOut();
+                  // 로그아웃 후 로그인 페이지로 명시적 리디렉션
+                  signOut({ callbackUrl: "/auth/signin" });
                 }}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
