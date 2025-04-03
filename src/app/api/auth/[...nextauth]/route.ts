@@ -68,7 +68,45 @@ export const authOptions: NextAuthOptions = {
 
           if (userError || !userData) {
             console.error("사용자 정보 조회 실패:", userError);
-            throw new Error("사용자 정보를 찾을 수 없습니다");
+            
+            // 사용자 정보가 없으면 User 테이블에 자동으로 추가 시도
+            console.log("User 테이블에 사용자 추가 시도");
+            
+            const role = authUserData?.user?.app_metadata?.role || "STUDENT";
+            const name = authUserData?.user?.user_metadata?.name || credentials.email;
+            
+            const { data: insertData, error: insertError } = await supabaseAdmin
+              .from('User')
+              .insert([{
+                id: authData.user.id,
+                email: credentials.email,
+                name: name,
+                role: role,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }])
+              .select()
+              .single();
+              
+            console.log("User 테이블 추가 결과:", {
+              success: !!insertData,
+              error: insertError?.message,
+              data: insertData
+            });
+            
+            if (insertError || !insertData) {
+              console.error("사용자 정보 추가 실패:", insertError);
+              throw new Error("사용자 정보를 찾을 수 없고 추가도 실패했습니다");
+            }
+            
+            // 성공적으로 추가된 사용자 정보 사용
+            return {
+              id: insertData.id,
+              name: insertData.name,
+              email: insertData.email,
+              role: insertData.role,
+              student_id: insertData.student_id || null
+            };
           }
 
           // Auth 메타데이터와 User 테이블 모두에서 역할 확인
