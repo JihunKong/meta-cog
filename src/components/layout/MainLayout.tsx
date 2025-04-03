@@ -175,8 +175,12 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => {
-                  // 로그아웃 후 로그인 페이지로 명시적 리디렉션
-                  signOut({ callbackUrl: "/auth/signin" });
+                  // 로그아웃 후 전체 URL로 명시적 리디렉션
+                  const callbackUrl = typeof window !== 'undefined' ? 
+                    `${window.location.origin}/auth/signin` : 
+                    'https://meta-cog.netlify.app/auth/signin';
+                  
+                  signOut({ callbackUrl });
                 }}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
