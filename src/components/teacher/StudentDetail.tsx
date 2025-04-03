@@ -2,16 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { Database } from "@/types/supabase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Icons } from "@/components/ui/icons";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 
-type User = Database['public']['Tables']['users']['Row'];
-type StudyPlan = Database['public']['Tables']['study_plans']['Row'];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  image: string;
+  role: string;
+}
+
+interface StudyPlan {
+  id: string;
+  user_id: string;
+  subject: string;
+  content: string;
+  target: number;
+  achievement: number;
+  date: string;
+  time_slot: string;
+  reflection: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AIRecommendation {
   id: string;
@@ -41,39 +58,41 @@ export default function StudentDetail({ studentId }: StudentDetailProps) {
 
   const fetchStudentData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
+      setLoading(true);
+      
+      // 학생 정보 조회 (API 사용)
+      const studentResponse = await fetch(`/api/teacher/users/${studentId}`);
+      if (!studentResponse.ok) {
+        const errorData = await studentResponse.json();
+        throw new Error(errorData.error?.message || '학생 정보를 불러오는데 실패했습니다.');
       }
-
-      // 학생 정보 조회
-      const { data: studentData, error: studentError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', studentId)
-        .single();
-
-      if (studentError) throw studentError;
-      if (!studentData) {
-        throw new Error('학생을 찾을 수 없습니다.');
+      
+      const studentData = await studentResponse.json();
+      if (!studentData.success) {
+        throw new Error(studentData.error?.message || '학생 정보를 불러오는데 실패했습니다.');
       }
+      
+      setStudent(studentData.data);
 
-      setStudent(studentData);
+      // 학습 계획 조회 (API 사용)
+      const plansResponse = await fetch(`/api/teacher/users/${studentId}/study-plans`);
+      if (!plansResponse.ok) {
+        const errorData = await plansResponse.json();
+        throw new Error(errorData.error?.message || '학습 계획을 불러오는데 실패했습니다.');
+      }
+      
+      const plansData = await plansResponse.json();
+      if (!plansData.success) {
+        throw new Error(plansData.error?.message || '학습 계획을 불러오는데 실패했습니다.');
+      }
+      
+      setStudyPlans(plansData.data || []);
 
-      // 학습 계획 조회
-      const { data: plans, error: plansError } = await supabase
-        .from('study_plans')
-        .select('*')
-        .eq('user_id', studentId)
-        .order('created_at', { ascending: false });
-
-      if (plansError) throw plansError;
-      setStudyPlans(plans || []);
-
-      // AI 추천 가져오기
+      // AI 추천 가져오기 (API 사용)
       const recommendationsResponse = await fetch(`/api/teacher/users/${studentId}/recommendations`);
-      if (recommendationsResponse.ok) {
+      if (!recommendationsResponse.ok) {
+        console.error('AI 추천을 불러오는데 실패했습니다.');
+      } else {
         const recommendationsData = await recommendationsResponse.json();
         if (recommendationsData.success) {
           setRecommendations(recommendationsData.data || []);
@@ -81,7 +100,8 @@ export default function StudentDetail({ studentId }: StudentDetailProps) {
       }
     } catch (error) {
       console.error('Error fetching student data:', error);
-      toast.error('학생 정보를 불러오는데 실패했습니다.');
+      toast.error((error as Error).message || '데이터를 불러오는데 실패했습니다.');
+      setError((error as Error).message);
     } finally {
       setLoading(false);
     }

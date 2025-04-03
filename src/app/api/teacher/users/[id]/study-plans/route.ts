@@ -52,7 +52,7 @@ export async function GET(request: Request, { params }: Context) {
     // 학생 학습 계획 조회
     const studyPlans = await prisma.studyPlan.findMany({
       where: {
-        userId: id,
+        user_id: id,
         ...(startDate && endDate ? {
           date: {
             gte: new Date(startDate),

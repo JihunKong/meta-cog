@@ -48,10 +48,10 @@ export async function GET(request: Request, { params }: Context) {
     // 학생 AI 추천 조회
     const recommendations = await prisma.aIRecommendation.findMany({
       where: {
-        userId: id,
+        user_id: id,
       },
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
     });
 
@@ -82,7 +82,8 @@ export async function POST(request: Request, { params }: Context) {
       where: { id },
       select: { 
         id: true,
-        role: true 
+        role: true,
+        name: true
       }
     });
 
@@ -98,7 +99,7 @@ export async function POST(request: Request, { params }: Context) {
     // 학생의 최근 학습 계획 조회
     const recentStudyPlans = await prisma.studyPlan.findMany({
       where: {
-        userId: id,
+        user_id: id,
       },
       orderBy: {
         date: 'desc',
@@ -112,9 +113,9 @@ export async function POST(request: Request, { params }: Context) {
 
     // 학습 계획 분석 및 추천 생성 (실제로는 AI 모델을 호출하여 생성)
     // 여기서는 간단한 예시로 구현
-    const subjects = [...new Set(recentStudyPlans.map(plan => plan.subject))];
-    const completedPlans = recentStudyPlans.filter(plan => plan.achievement > 0);
-    const incompletePlans = recentStudyPlans.filter(plan => plan.achievement === 0);
+    const subjects = [...new Set(recentStudyPlans.map((plan: any) => plan.subject))];
+    const completedPlans = recentStudyPlans.filter((plan: any) => plan.achievement > 0);
+    const incompletePlans = recentStudyPlans.filter((plan: any) => plan.achievement === 0);
     
     // 추천 유형 결정
     let recommendationType: RecommendationType = "STRATEGY";
@@ -141,7 +142,7 @@ export async function POST(request: Request, { params }: Context) {
     // AI 추천 저장
     const recommendation = await prisma.aIRecommendation.create({
       data: {
-        userId: id,
+        user_id: id,
         subject: recommendationSubject,
         content: recommendationContent,
         type: recommendationType,

@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: Context) {
 
     // 학생 학습 계획 조회
     const studyPlans = await prisma.studyPlan.findMany({
-      where: { userId: id },
+      where: { user_id: id },
       select: {
         id: true,
         target: true,
@@ -53,11 +53,11 @@ export async function GET(request: Request, { params }: Context) {
     const totalPlans = studyPlans.length;
     
     // 달성률이 작성된(0보다 큰) 계획들만 필터링
-    const plansWithAchievement = studyPlans.filter(plan => plan.achievement > 0);
+    const plansWithAchievement = studyPlans.filter((plan: any) => plan.achievement > 0);
     const completedPlans = plansWithAchievement.length;
     
     // 달성률 총합 계산
-    const totalAchievement = plansWithAchievement.reduce((sum, plan) => {
+    const totalAchievement = plansWithAchievement.reduce((sum: number, plan: any) => {
       return sum + plan.achievement;
     }, 0);
     
