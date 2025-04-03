@@ -178,7 +178,7 @@ export default function MainLayout({
                   // 로그아웃 후 전체 URL로 명시적 리디렉션
                   const callbackUrl = typeof window !== 'undefined' ? 
                     `${window.location.origin}/auth/signin` : 
-                    'https://meta-cog.netlify.app/auth/signin';
+                    'https://pure-ocean.netlify.app/auth/signin';
                   
                   signOut({ callbackUrl });
                 }}
