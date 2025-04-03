@@ -9,4 +9,23 @@
   package = "@netlify/plugin-nextjs"
 
 [functions]
-  node_bundler = "esbuild" 
+  node_bundler = "esbuild"
+
+# 리디렉션 규칙 추가
+[[redirects]]
+  from = "/api/auth/signout"
+  to = "/auth/signin"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/api/auth/signout/*"
+  to = "/auth/signin"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/api/auth/logout"
+  to = "/auth/signin"
+  status = 302
+  force = true 
