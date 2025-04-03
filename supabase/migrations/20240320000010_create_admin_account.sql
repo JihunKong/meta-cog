@@ -17,6 +17,14 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 관리자 계정에 대응하는 Auth 계정도 생성 (만약 Supabase Auth에서도 생성해야 한다면)
--- 아래 명령은 SQL에서 직접 실행 불가능하므로 서비스 계정을 통해 API로 수행해야 함
--- Admin 계정 생성 후 Supabase Studio에서 수동으로 비밀번호 설정 필요 
+-- 참고: 실제 로그인을 위해서는 Supabase Auth에도 동일한 계정이 필요합니다.
+-- Supabase Studio의 Authentication 섹션에서 관리자 계정 생성 또는
+-- 아래 SQL을 실행하여 관리자 계정의 비밀번호를 설정해야 합니다:
+-- 
+-- SELECT supabase_admin.create_auth_user(
+--  '00000000-0000-0000-0000-000000000000',
+--  'admin@metacog.kr', 
+--  'strong_password_here',
+--  'admin@metacog.kr',
+--  '관리자'
+-- ); 

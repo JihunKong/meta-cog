@@ -18,29 +18,15 @@ export const authOptions: NextAuthOptions = {
           
           // 테스트 계정 처리 (admin@pof.com)
           if (credentials?.email === "admin@pof.com" && credentials?.password === "admin1234") {
-            console.log("테스트 관리자 계정 직접 처리");
-            
-            // Supabase로 로그인 시도
-            const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-              email: credentials.email,
-              password: credentials.password,
-            });
-            
-            // 로그인 성공 시 정상 로그인 진행
-            if (authData?.user) {
-              console.log("테스트 계정 정상 로그인");
-            } 
-            // 실패 시 테스트 관리자 계정 정보 직접 반환
-            else {
-              console.log("테스트 계정 수동 생성");
-              return {
-                id: "admin-test-id",
-                name: "관리자",
-                email: "admin@pof.com",
-                role: "ADMIN",
-                student_id: null
-              };
-            }
+            console.log("테스트 관리자 계정 직접 반환");
+            // 테스트 계정은 무조건 로그인 성공 처리
+            return {
+              id: "admin-test-id",
+              name: "관리자",
+              email: "admin@pof.com",
+              role: "ADMIN",
+              student_id: null
+            };
           }
           
           if (!credentials?.email || !credentials?.password) {

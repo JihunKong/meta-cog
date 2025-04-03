@@ -52,7 +52,6 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
     subject: initialData?.subject || "",
     content: initialData?.content || "",
     achievement: initialData?.achievement || 0,
-    reflection: initialData?.reflection || "", // 학습 반성 및 정리
   });
 
   const handleChange = (
@@ -290,23 +289,6 @@ export default function StudyPlanForm({ initialData }: StudyPlanFormProps) {
               ></div>
             </div>
           </div>
-        </div>
-      )}
-
-      {initialData && (
-        <div className="space-y-2">
-          <label htmlFor="reflection" className="block text-sm font-medium text-gray-700">
-            학습 소감
-          </label>
-          <textarea
-            id="reflection"
-            name="reflection"
-            value={formData.reflection}
-            onChange={handleChange}
-            rows={4}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="학습 후 느낀 점, 어려웠던 부분, 다음에 개선할 점 등을 기록하세요"
-          />
         </div>
       )}
 

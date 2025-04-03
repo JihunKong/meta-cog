@@ -10,36 +10,26 @@ export function cn(...inputs: ClassValue[]) {
  * 환경에 따라 적절한 URL을 사용합니다.
  */
 export function getSiteUrl(): string {
-  let url;
-  
-  // 프로덕션 환경에서는 Netlify URL 사용
-  if (process.env.NODE_ENV === "production") {
-    url = "https://pure-ocean.netlify.app";
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
+  
   // Netlify 환경 변수 사용
-  else if (process.env.NETLIFY && process.env.URL) {
-    url = process.env.URL;
+  if (process.env.NETLIFY && process.env.URL) {
+    return process.env.URL.trim().replace(/\/$/, '');
   }
   // Netlify 개발 URL
   else if (process.env.NETLIFY_DEV && process.env.NETLIFY_DEV_URL) {
-    url = process.env.NETLIFY_DEV_URL;
+    return process.env.NETLIFY_DEV_URL.trim().replace(/\/$/, '');
   }
   // NextAuth URL 사용
   else if (process.env.NEXTAUTH_URL) {
-    url = process.env.NEXTAUTH_URL;
+    return process.env.NEXTAUTH_URL.trim().replace(/\/$/, '');
   }
   // 기본값은 로컬호스트
   else {
-    url = "http://localhost:3000";
+    return "http://localhost:3000";
   }
-  
-  // URL 정리
-  url = url.trim();
-  if (url.endsWith('/')) {
-    url = url.slice(0, -1);
-  }
-  
-  return url;
 }
 
 /**
@@ -136,13 +126,25 @@ export function checkUserRole(user: any, allowedRoles: string[]): boolean {
  */
 export function getBaseUrl(): string {
   if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return process.env.NEXT_PUBLIC_PRODUCTION_URL || "https://meta-cog.netlify.app";
-    }
     return window.location.origin;
   }
-  return process.env.NEXT_PUBLIC_PRODUCTION_URL || "https://meta-cog.netlify.app";
+  
+  // Netlify 환경 변수 사용
+  if (process.env.NETLIFY && process.env.URL) {
+    return process.env.URL.trim().replace(/\/$/, '');
+  }
+  // Netlify 개발 URL
+  else if (process.env.NETLIFY_DEV && process.env.NETLIFY_DEV_URL) {
+    return process.env.NETLIFY_DEV_URL.trim().replace(/\/$/, '');
+  }
+  // NextAuth URL 사용
+  else if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL.trim().replace(/\/$/, '');
+  }
+  // 기본값은 로컬호스트
+  else {
+    return "http://localhost:3000";
+  }
 }
 
 /**
@@ -152,3 +154,4 @@ export function safeRedirect(path: string): void {
   const baseUrl = getBaseUrl();
   window.location.href = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 }
+

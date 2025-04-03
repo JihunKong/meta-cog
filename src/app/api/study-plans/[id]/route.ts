@@ -71,7 +71,6 @@ export async function GET(request: Request, context: Context) {
       achievement: studyPlan.achievement,
       date: studyPlan.date,
       timeSlot: studyPlan.time_slot,
-      reflection: studyPlan.reflection,
       createdAt: studyPlan.created_at,
       updatedAt: studyPlan.updated_at
     };
@@ -142,8 +141,7 @@ export async function PATCH(request: Request, context: Context) {
     if (validatedData.target !== undefined) updateData.target = validatedData.target;
     if (validatedData.achievement !== undefined) updateData.achievement = validatedData.achievement;
     if (validatedData.date) updateData.date = validatedData.date;
-    if (validatedData.reflection !== undefined) updateData.reflection = validatedData.reflection;
-
+    
     // timeSlot 필드 처리 (camelCase → snake_case)
     if (validatedData.timeSlot) {
       updateData.time_slot = validatedData.timeSlot;
@@ -179,7 +177,6 @@ export async function PATCH(request: Request, context: Context) {
       achievement: updatedPlan.achievement,
       date: updatedPlan.date,
       timeSlot: updatedPlan.time_slot,
-      reflection: updatedPlan.reflection,
       createdAt: updatedPlan.created_at,
       updatedAt: updatedPlan.updated_at
     };

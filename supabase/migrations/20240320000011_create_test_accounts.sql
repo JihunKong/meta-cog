@@ -48,6 +48,7 @@ VALUES
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 참고: 이 계정들은 Supabase의 'User' 테이블에만 삽입되며,
--- 실제 로그인을 위해서는 Supabase Auth 시스템에도 동일한 계정이 필요합니다.
--- Supabase Studio의 Authentication 섹션에서 계정 생성 후 비밀번호를 설정해야 합니다. 
+-- 참고: Auth 계정도 생성 필요
+-- SELECT supabase_admin.create_auth_user('11111111-1111-1111-1111-111111111111', 'teacher@metacog.kr', 'teacher123', 'teacher@metacog.kr', '테스트 교사');
+-- SELECT supabase_admin.create_auth_user('22222222-2222-2222-2222-222222222222', 'student1@metacog.kr', 'student123', 'student1@metacog.kr', '테스트 학생1');
+-- SELECT supabase_admin.create_auth_user('33333333-3333-3333-3333-333333333333', 'student2@metacog.kr', 'student123', 'student2@metacog.kr', '테스트 학생2'); 

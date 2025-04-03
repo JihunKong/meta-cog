@@ -20,7 +20,6 @@ interface StudyPlan {
   createdAt: string;
   updatedAt: string;
   timeSlot?: string;
-  reflection?: string;
 }
 
 // 달성률 옵션을 10% 단위로 세분화
@@ -110,7 +109,6 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [achievementPercent, setAchievementPercent] = useState<number>(0);
-  const [reflection, setReflection] = useState("");
 
   useEffect(() => {
     async function fetchStudyPlan() {
@@ -125,7 +123,6 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
           // achievement를 메타인지 척도(0-100%)로 직접 해석
           const achievementValue = data.achievement || 0;
           setAchievementPercent(achievementValue);
-          setReflection(data.reflection || "");
         } else {
           throw new Error("학습 계획 데이터 형식이 올바르지 않습니다.");
         }
@@ -166,43 +163,29 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
     // 메타인지 달성률 값을 그대로 저장 (퍼센트 값)
     console.log("저장할 데이터:", {
       studyPlanId: id,
-      achievement: achievementPercent,
-      reflection: reflection
+      achievement: achievementPercent
     });
     
     setSaving(true);
+    
     try {
-      console.log(`API 호출 URL: /api/study-plans/${id}`);
       const result = await apiCall<{success: boolean, data: StudyPlan}>(`/api/study-plans/${id}`, {
         method: "PATCH",
         body: {
-          achievement: achievementPercent, // 메타인지 달성률(0-100%)로 저장
-          reflection: reflection,
-        },
+          achievement: achievementPercent,
+        }
       });
       
-      console.log("API 응답 결과:", result);
-      
-      if (result.success && result.data) {
+      if (result.success) {
+        toast.success("학습 달성률이 업데이트되었습니다.");
         setStudyPlan(result.data);
         setIsEditing(false);
-        toast.success("학습 결과가 저장되었습니다.");
-        
-        // 저장 후 약간의 지연을 둔 뒤 페이지 새로고침
-        setTimeout(() => {
-          router.refresh(); // Next.js의 페이지 새로고침 기능
-          
-          // 대시보드 등 다른 페이지의 데이터 갱신을 위해 로컬 스토리지에 갱신 신호 추가
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('studyPlanUpdated', Date.now().toString());
-          }
-        }, 300);
       } else {
-        throw new Error("학습 달성률 응답 데이터가 올바르지 않습니다.");
+        throw new Error("업데이트에 실패했습니다.");
       }
     } catch (error) {
-      console.error("학습 달성률 저장 오류:", error);
-      toast.error("학습 결과를 저장하는데 문제가 발생했습니다.");
+      console.error("학습 달성률 업데이트 오류:", error);
+      toast.error("학습 달성률을 저장하는데 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -397,14 +380,7 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
               </div>
             </div>
 
-            {studyPlan.reflection && (
-              <div>
-                <p className="text-sm text-gray-500 mb-1">학습 반성 및 정리</p>
-                <p className="whitespace-pre-wrap">{studyPlan.reflection}</p>
-              </div>
-            )}
-
-            {!studyPlan.reflection && getAchievementRate() === 0 && (
+            {getAchievementRate() === 0 && (
               <div className="text-center text-gray-500 py-2">
                 아직 학습 결과가 업데이트되지 않았습니다.
               </div>
@@ -430,35 +406,19 @@ export default function StudyPlanDetail({ id }: StudyPlanDetailProps) {
               </p>
             </div>
 
-            <div>
-              <label htmlFor="reflection" className="block text-sm font-medium text-gray-700 mb-1">
-                학습 반성 및 정리
-              </label>
-              <textarea
-                id="reflection"
-                value={reflection}
-                onChange={(e) => setReflection(e.target.value)}
-                rows={4}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="오늘 학습한 내용을 어떻게 느꼈나요? 무엇을 배웠고, 다음에는 어떻게 개선할 수 있을까요?"
-              ></textarea>
-              <p className="mt-1 text-sm text-gray-500">
-                학습을 돌아보고 정리하는 시간을 가지면 기억에 더 오래 남고 효과적인 학습 방법을 찾는데 도움이 됩니다.
-              </p>
-            </div>
-
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-3 pt-4">
               <button
+                type="button"
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                disabled={saving}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 취소
               </button>
               <button
-                onClick={handleSaveAchievement}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
+                type="button"
                 disabled={saving}
+                onClick={handleSaveAchievement}
+                className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600"
               >
                 {saving ? "저장 중..." : "저장하기"}
               </button>
