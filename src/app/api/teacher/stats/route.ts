@@ -1,26 +1,62 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
+import { supabaseAdmin } from "@/lib/supabase";
+
+// 수정된 기본 통계 데이터 타입 정의
+interface MonthlyStats {
+  month: string;
+  achievement: number;
+  participationRate: number;
+  totalPlans: number;
+  completedPlans: number;
+}
+
+interface StudentPerformance {
+  id: string;
+  name: string;
+  email: string;
+  totalPlans: number;
+  completedPlans: number;
+  averageAchievement: number;
+  participationRate: number;
+  participationDays: number;
+  possibleDays: number;
+}
+
+interface TeacherStats {
+  totalStudents: number;
+  totalStudyPlans: number;
+  averageAchievement: number;
+  averageParticipationRate: number;
+  subjectDistribution: Record<string, number>;
+  monthlyAchievements: MonthlyStats[];
+  studentPerformance: StudentPerformance[];
+  lastUpdated: string;
+}
 
 // 통계 API (교사만 접근 가능)
 export async function GET(request: Request) {
   try {
-    console.log("교사 통계 API 시작");
+    console.log("[교사 통계 API] 시작");
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
+      console.log("[교사 통계 API] 인증 실패: 세션 없음");
       throw new ApiError(401, "인증이 필요합니다");
     }
+    
+    console.log(`[교사 통계 API] 사용자: ${session.user.email}, 역할: ${session.user.role}`);
 
     // 교사 또는 관리자 권한 확인
     if (session.user.role !== "TEACHER" && session.user.role !== "ADMIN") {
+      console.log(`[교사 통계 API] 권한 오류: ${session.user.role}는 접근 불가`);
       throw new ApiError(403, "교사 또는 관리자 권한이 필요합니다");
     }
 
     // 기본 통계 데이터 구조 (오류 시 이 값 반환)
-    const defaultStats = {
+    const defaultStats: TeacherStats = {
       totalStudents: 0,
       totalStudyPlans: 0,
       averageAchievement: 0,
@@ -32,40 +68,69 @@ export async function GET(request: Request) {
     };
 
     try {
-      // 전체 학생 수 조회
-      const totalStudents = await prisma.user.count({
-        where: { role: "STUDENT" },
-      });
+      console.log("[교사 통계 API] Supabase 쿼리 시작");
+      
+      // 1. 전체 학생 수 조회
+      const { data: students, error: studentsError } = await supabaseAdmin
+        .from('User')
+        .select('id, name, email')
+        .eq('role', 'STUDENT');
+      
+      if (studentsError) {
+        console.error("[교사 통계 API] 학생 조회 오류:", studentsError);
+        throw new Error(`학생 정보 조회 오류: ${studentsError.message}`);
+      }
+      
+      const totalStudents = students?.length || 0;
       defaultStats.totalStudents = totalStudents;
+      console.log(`[교사 통계 API] 전체 학생 수: ${totalStudents}명`);
 
-      // 모든 학습 계획 조회
-      const studyPlans = await prisma.studyPlan.findMany({
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-      defaultStats.totalStudyPlans = studyPlans.length;
+      // 2. 모든 학습 계획 조회
+      const { data: studyPlans, error: studyPlansError } = await supabaseAdmin
+        .from('StudyPlan')
+        .select(`
+          id, 
+          user_id,
+          subject,
+          content,
+          target,
+          achievement,
+          date,
+          time_slot,
+          reflection,
+          created_at,
+          updated_at,
+          User:user_id (
+            id,
+            name,
+            email
+          )
+        `);
+      
+      if (studyPlansError) {
+        console.error("[교사 통계 API] 학습 계획 조회 오류:", studyPlansError);
+        throw new Error(`학습 계획 조회 오류: ${studyPlansError.message}`);
+      }
+      
+      const totalStudyPlans = studyPlans?.length || 0;
+      defaultStats.totalStudyPlans = totalStudyPlans;
+      console.log(`[교사 통계 API] 전체 학습 계획 수: ${totalStudyPlans}개`);
 
-      // 과목별 분포 계산
+      // 3. 과목별 분포 계산
       const subjectDistribution: Record<string, number> = {};
-      studyPlans.forEach(plan => {
+      studyPlans?.forEach(plan => {
         const subject = plan.subject || "기타";
         subjectDistribution[subject] = (subjectDistribution[subject] || 0) + 1;
       });
       defaultStats.subjectDistribution = subjectDistribution;
+      console.log(`[교사 통계 API] 과목별 분포: ${Object.keys(subjectDistribution).length}개 과목`);
 
-      // 월별 달성률 추이 계산
+      // 4. 월별 달성률 추이 계산
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       
       // 최근 6개월 통계 계산
-      const monthlyStats = [];
+      const monthlyStats: MonthlyStats[] = [];
       // 총 참여율 계산용 변수
       let totalMaxParticipation = 0;
       let totalActualParticipation = 0;
@@ -75,11 +140,11 @@ export async function GET(request: Request) {
         const monthName = month.toLocaleString('ko-KR', { month: 'long' });
         
         // 해당 달의 학습 계획들 필터링
-        const monthPlans = studyPlans.filter(plan => {
+        const monthPlans = studyPlans?.filter(plan => {
           const planDate = new Date(plan.date);
           return planDate.getMonth() === month.getMonth() && 
                 planDate.getFullYear() === month.getFullYear();
-        });
+        }) || [];
         
         // 월간 참여 가능 횟수 계산 (학생 수 * 주당 참여 가능 횟수(5) * 주당 일수(5))
         const daysInMonth = new Date(currentYear, month.getMonth() + 1, 0).getDate();
@@ -101,7 +166,7 @@ export async function GET(request: Request) {
         // 달성률 계산
         const completedPlans = monthPlans.filter(plan => plan.achievement > 0);
         const averageAchievement = completedPlans.length > 0
-          ? Math.round(completedPlans.reduce((sum, plan) => sum + plan.achievement, 0) / completedPlans.length)
+          ? Math.round(completedPlans.reduce((sum, plan) => sum + (plan.achievement || 0), 0) / completedPlans.length)
           : 0;
           
         monthlyStats.push({
@@ -113,26 +178,32 @@ export async function GET(request: Request) {
         });
       }
       defaultStats.monthlyAchievements = monthlyStats;
+      console.log(`[교사 통계 API] 월별 통계 계산 완료: ${monthlyStats.length}개월 데이터`);
       
-      // 전체 평균 참여율 계산
+      // 5. 전체 평균 참여율 계산
       const averageParticipationRate = totalMaxParticipation > 0
         ? Math.round((totalActualParticipation / totalMaxParticipation) * 100)
         : 0;
       defaultStats.averageParticipationRate = averageParticipationRate;
+      console.log(`[교사 통계 API] 전체 평균 참여율: ${averageParticipationRate}%`);
 
-      // 학생별 평균 달성률 계산
-      const studentPerformance = [];
-      const studentMap: Record<string, { plans: any[], name: string, email: string }> = {};
+      // 6. 학생별 평균 달성률 계산
+      const studentPerformance: StudentPerformance[] = [];
+      const studentMap: Record<string, { 
+        plans: any[], 
+        name: string,
+        email: string 
+      }> = {};
       
       // 학생별로 학습 계획 그룹화
-      studyPlans.forEach(plan => {
-        if (plan.user) {
-          const userId = plan.user.id;
+      studyPlans?.forEach(plan => {
+        if (plan.User) {
+          const userId = plan.user_id;
           if (!studentMap[userId]) {
             studentMap[userId] = {
               plans: [],
-              name: plan.user.name || "이름 없음",
-              email: plan.user.email || "",
+              name: plan.User.name || "이름 없음",
+              email: plan.User.email || "",
             };
           }
           studentMap[userId].plans.push(plan);
@@ -149,7 +220,7 @@ export async function GET(request: Request) {
         const student = studentMap[userId];
         const plansWithAchievement = student.plans.filter(plan => plan.achievement > 0);
         const averageAchievement = plansWithAchievement.length > 0
-          ? Math.round(plansWithAchievement.reduce((sum, plan) => sum + plan.achievement, 0) / plansWithAchievement.length)
+          ? Math.round(plansWithAchievement.reduce((sum, plan) => sum + (plan.achievement || 0), 0) / plansWithAchievement.length)
           : 0;
         
         // 참여율 계산: 최근 3개월간 참여한 일수 / 최근 3개월간 총 수업일수
@@ -191,21 +262,25 @@ export async function GET(request: Request) {
         });
       }
       defaultStats.studentPerformance = studentPerformance;
+      console.log(`[교사 통계 API] 학생별 통계 계산 완료: ${studentPerformance.length}명`);
       
-      // 전체 평균 달성률 계산
-      const plansWithAchievement = studyPlans.filter(plan => plan.achievement > 0);
+      // 7. 전체 평균 달성률 계산
+      const plansWithAchievement = studyPlans?.filter(plan => plan.achievement > 0) || [];
       const averageAchievement = plansWithAchievement.length > 0
-        ? Math.round(plansWithAchievement.reduce((sum, plan) => sum + plan.achievement, 0) / plansWithAchievement.length)
+        ? Math.round(plansWithAchievement.reduce((sum, plan) => sum + (plan.achievement || 0), 0) / plansWithAchievement.length)
         : 0;
       defaultStats.averageAchievement = averageAchievement;
+      console.log(`[교사 통계 API] 전체 평균 달성률: ${averageAchievement}%`);
+      
+      console.log("[교사 통계 API] 통계 데이터 생성 완료");
     } catch (dbError) {
-      console.error("데이터베이스 쿼리 오류:", dbError);
+      console.error("[교사 통계 API] 데이터베이스 쿼리 오류:", dbError);
       // DB 오류 시 기본 통계 데이터 반환
     }
 
     return successResponse(defaultStats);
   } catch (error) {
-    console.error("통계 API 오류:", error);
+    console.error("[교사 통계 API] 통계 API 오류:", error);
     return errorResponse(error as Error);
   }
 } 

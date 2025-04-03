@@ -1,5 +1,14 @@
-import * as tf from "@tensorflow/tfjs";
-import { PrismaClient } from "@prisma/client";
+// 클라이언트 사이드일 때만 TensorFlow 임포트
+let tf: any;
+if (typeof window !== 'undefined') {
+  // 클라이언트 사이드
+  import('@tensorflow/tfjs').then((module) => {
+    tf = module;
+  }).catch(error => {
+    console.error('TensorFlow.js 로드 오류:', error);
+  });
+}
+
 import { RecommendationType } from "@/types";
 
 interface StudyPlan {
