@@ -36,27 +36,40 @@ export default function TeacherDashboard() {
 
       try {
         setLoading(true);
+        console.log("학생 목록 API 호출 시작");
+        
         const response = await fetch("/api/teacher/users?role=STUDENT");
+        console.log("API 응답 상태:", response.status, response.statusText);
         
         if (!response.ok) {
-          throw new Error("학생 목록을 불러오는데 실패했습니다.");
+          const errorText = await response.text();
+          console.error("API 응답 에러:", errorText);
+          throw new Error(`학생 목록을 불러오는데 실패했습니다. 상태 코드: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log("API 응답 데이터:", data);
+        
         if (data.success) {
           setStudents(data.data || []);
+          console.log(`${data.data?.length || 0}명의 학생 정보 로드됨`);
           
           // 학생별 학습 계획 요약 정보 가져오기
           const summaries: Record<string, StudyPlanSummary> = {};
           
           for (const student of data.data) {
             try {
+              console.log(`학생 ${student.id} 요약 정보 요청 중`);
               const summaryResponse = await fetch(`/api/teacher/users/${student.id}/study-plans/summary`);
+              
               if (summaryResponse.ok) {
                 const summaryData = await summaryResponse.json();
                 if (summaryData.success) {
                   summaries[student.id] = summaryData.data;
+                  console.log(`학생 ${student.id} 요약 정보 로드 성공`);
                 }
+              } else {
+                console.error(`학생 ${student.id} 요약 정보 로드 실패:`, summaryResponse.status);
               }
             } catch (err) {
               console.error(`학생 ${student.id}의 학습 계획 요약 정보를 가져오는데 실패했습니다:`, err);
@@ -70,6 +83,7 @@ export default function TeacherDashboard() {
       } catch (err) {
         setError((err as Error).message);
         toast.error((err as Error).message);
+        console.error("학생 목록 로드 중 오류:", err);
       } finally {
         setLoading(false);
       }
