@@ -204,7 +204,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
-    signOut: '/auth/signin'
+    signOut: '/'
   },
   debug: true, // 디버깅 활성화
 };
