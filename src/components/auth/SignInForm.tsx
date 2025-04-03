@@ -25,36 +25,24 @@ export default function SignInForm() {
     try {
       setLoading(true);
       
+      console.log("로그인 시도:", formData.email);
+      
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
         redirect: false
       });
       
+      console.log("로그인 결과:", result);
+      
       if (result?.error) {
         console.error("로그인 오류:", result.error);
-        window.location.href = `/auth/signin?error=${result.error}`;
+        window.location.href = `/auth/signin?error=${encodeURIComponent(result.error)}`;
         return;
       }
 
-      // 로그인 성공 후 세션 정보 직접 가져오기
-      const sessionRes = await fetch("/api/auth/session");
-      const session = await sessionRes.json();
-      
-      if (session?.user?.role) {
-        switch (session.user.role) {
-          case "ADMIN":
-            window.location.href = "/admin";
-            break;
-          case "TEACHER":
-            window.location.href = "/teacher";
-            break;
-          default:
-            window.location.href = "/dashboard";
-        }
-      } else {
-        window.location.href = "/dashboard";
-      }
+      // 로그인 성공 시 페이지 이동
+      window.location.href = "/dashboard";
       
     } catch (err) {
       console.error("로그인 중 오류 발생:", err);

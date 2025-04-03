@@ -2,50 +2,76 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { UserRole } from "@/types";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  adminOnly?: boolean;
+  requiredRoles?: UserRole[];
 }
 
 export default function ProtectedRoute({
   children,
-  adminOnly = false,
+  requiredRoles = ["STUDENT", "TEACHER", "ADMIN"], // 기본적으로 모든 인증된 사용자 허용
 }: ProtectedRouteProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-
+  const [authorized, setAuthorized] = useState(false);
+  
   useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session) {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+    // 상태 로깅
+    console.log("[ProtectedRoute] 페이지:", pathname);
+    console.log("[ProtectedRoute] 인증 상태:", status);
+    console.log("[ProtectedRoute] 사용자 정보:", session?.user);
+    console.log("[ProtectedRoute] 필요 권한:", requiredRoles);
+    
+    // 인증 확인 중인 경우
+    if (status === "loading") {
       return;
     }
-
-    if (adminOnly && session.user.role !== "ADMIN") {
+    
+    // 인증되지 않은 경우
+    if (status !== "authenticated" || !session?.user) {
+      console.log("[ProtectedRoute] 인증되지 않음, 로그인 페이지로 이동");
+      router.push("/auth/signin");
+      return;
+    }
+    
+    // 사용자의 역할이 있는지 확인
+    if (!session.user.role) {
+      console.error("[ProtectedRoute] 사용자 역할 정보 없음");
+      router.push("/auth/signin?error=역할 정보가 없습니다");
+      return;
+    }
+    
+    // 역할 기반 액세스 제어
+    const hasRequiredRole = requiredRoles.includes(session.user.role);
+    console.log("[ProtectedRoute] 권한 확인 결과:", hasRequiredRole);
+    
+    if (!hasRequiredRole) {
+      console.log("[ProtectedRoute] 권한 없음, 대시보드로 이동");
       router.push("/dashboard");
       return;
     }
-  }, [session, status, router, pathname, adminOnly]);
-
-  if (status === "loading") {
+    
+    // 모든 검사 통과
+    setAuthorized(true);
+    
+  }, [status, session, router, pathname, requiredRoles]);
+  
+  // 인증 확인 중이거나 권한 없는 경우
+  if (!authorized) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="h-32 w-32 animate-spin rounded-full border-t-2 border-b-2 border-gray-900"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">권한 확인 중...</p>
+        </div>
       </div>
     );
   }
-
-  if (!session) {
-    return null;
-  }
-
-  if (adminOnly && session.user.role !== "ADMIN") {
-    return null;
-  }
-
+  
+  // 인증 및 권한 확인 완료
   return <>{children}</>;
 } 
