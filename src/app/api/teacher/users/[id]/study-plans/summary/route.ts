@@ -6,8 +6,9 @@ import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 
 // Supabase 클라이언트 생성 - 런타임에만 초기화
 const getSupabaseClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Netlify 환경변수 이름과 일치하도록 수정
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_DATABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");

@@ -7,12 +7,16 @@ import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 // Supabase 클라이언트 생성 - 런타임에만 초기화
 // 빌드 시에는 초기화하지 않고 런타임에만 초기화
 const getSupabaseClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Netlify 환경변수 이름과 일치하도록 수정
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_DATABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
   
   console.log("Supabase 설정:", { 
     url: supabaseUrl ? '설정됨' : '설정되지 않음', 
-    hasAnonKey: !!supabaseAnonKey 
+    hasAnonKey: !!supabaseAnonKey,
+    // 디버깅을 위해 실제 값의 일부를 안전하게 출력
+    urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : 'undefined',
+    keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 3)}...` : 'undefined'
   });
   
   if (!supabaseUrl || !supabaseAnonKey) {
