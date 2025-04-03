@@ -14,6 +14,20 @@ const getSupabaseClient = () => {
     throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
   }
   
+  // auth.uid() 기반 RLS 정책의 무한 재귀 문제 해결을 위해 서비스 롤 키 사용
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  // 서비스 롤 키가 있으면 RLS 우회
+  if (supabaseServiceRoleKey) {
+    return createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+  
+  // 서비스 롤 키가 없으면 기본 키 사용
   return createClient(supabaseUrl, supabaseAnonKey);
 };
 
