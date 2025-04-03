@@ -55,7 +55,19 @@ export async function GET(request: Request, { params }: Context) {
       },
     });
 
-    return successResponse(recommendations);
+    // 필드명 매핑 추가 (snake_case에서 camelCase로)
+    const mappedRecommendations = recommendations.map((rec: any) => ({
+      id: rec.id,
+      userId: rec.user_id,
+      user_id: rec.user_id, // 둘 다 제공하여 호환성 유지
+      subject: rec.subject,
+      content: rec.content,
+      type: rec.type,
+      createdAt: rec.created_at,
+      created_at: rec.created_at // 둘 다 제공하여 호환성 유지
+    }));
+
+    return successResponse(mappedRecommendations);
   } catch (error) {
     return errorResponse(error as Error);
   }
@@ -149,7 +161,19 @@ export async function POST(request: Request, { params }: Context) {
       },
     });
 
-    return successResponse(recommendation);
+    // 필드명 매핑 추가 (snake_case에서 camelCase로)
+    const mappedRecommendation = {
+      id: recommendation.id,
+      userId: recommendation.user_id,
+      user_id: recommendation.user_id,
+      subject: recommendation.subject,
+      content: recommendation.content,
+      type: recommendation.type,
+      createdAt: recommendation.created_at,
+      created_at: recommendation.created_at
+    };
+
+    return successResponse(mappedRecommendation);
   } catch (error) {
     return errorResponse(error as Error);
   }

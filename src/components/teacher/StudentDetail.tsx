@@ -32,11 +32,13 @@ interface StudyPlan {
 
 interface AIRecommendation {
   id: string;
-  user_id: string;
+  user_id?: string;
+  userId?: string;
   subject: string;
   content: string;
   type: string;
-  created_at: string;
+  created_at?: string;
+  createdAt?: string;
 }
 
 interface StudentDetailProps {
@@ -304,7 +306,7 @@ export default function StudentDetail({ studentId }: StudentDetailProps) {
                 <div className="flex justify-between">
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100">{rec.subject}</h4>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(rec.created_at).toLocaleDateString()}
+                    {new Date(rec.created_at || rec.createdAt || new Date()).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
