@@ -5,10 +5,17 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 import { RecommendationType } from "@/types";
 
-// Supabase 클라이언트 생성
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Supabase 클라이언트 생성 - 런타임에만 초기화
+const getSupabaseClient = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey);
+};
 
 interface Context {
   params: {
@@ -38,6 +45,9 @@ export async function GET(request: Request, { params }: Context) {
 
     const { id } = params;
     console.log("조회할 학생 ID:", id);
+
+    // Supabase 클라이언트 초기화
+    const supabase = getSupabaseClient();
 
     // 사용자 확인
     const { data: user, error: userError } = await supabase
@@ -116,6 +126,9 @@ export async function POST(request: Request, { params }: Context) {
 
     const { id } = params;
     console.log("AI 추천을 생성할 학생 ID:", id);
+
+    // Supabase 클라이언트 초기화
+    const supabase = getSupabaseClient();
 
     // 사용자 확인
     const { data: user, error: userError } = await supabase

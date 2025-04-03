@@ -4,10 +4,23 @@ import { createClient } from "@supabase/supabase-js";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 
-// Supabase 클라이언트 생성
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Supabase 클라이언트 생성 - 런타임에만 초기화
+// 빌드 시에는 초기화하지 않고 런타임에만 초기화
+const getSupabaseClient = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  console.log("Supabase 설정:", { 
+    url: supabaseUrl ? '설정됨' : '설정되지 않음', 
+    hasAnonKey: !!supabaseAnonKey 
+  });
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+  }
+  
+  return createClient(supabaseUrl, supabaseAnonKey);
+};
 
 // 학생 목록 조회 API (교사만 접근 가능)
 export async function GET(req: Request) {
@@ -35,6 +48,9 @@ export async function GET(req: Request) {
     console.log("요청된 역할:", role);
 
     try {
+      // Supabase 클라이언트 초기화
+      const supabase = getSupabaseClient();
+      
       // 학생 목록 조회 (role 파라미터가 있으면 해당 역할의 사용자만 조회)
       console.log("Supabase 쿼리 시작");
       
