@@ -175,9 +175,8 @@ export default function MainLayout({
               </div>
               <button
                 onClick={() => {
-                  // getSiteUrl 함수를 사용하여 적절한 URL 반환
-                  const siteUrl = getSiteUrl();
-                  signOut({ callbackUrl: `${siteUrl}/auth/signin` });
+                  // 단순히 로그아웃만 수행하고 기본 로그아웃 페이지로 이동
+                  signOut();
                 }}
                 className="flex items-center px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors rounded-md"
               >
