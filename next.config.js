@@ -13,7 +13,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // 서버 컴포넌트에서 외부 패키지 사용 설정
-  serverExternalPackages: ['next-auth'],
+  experimental: {
+    serverActions: true,
+    serverComponentsExternalPackages: ['next-auth']
+  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

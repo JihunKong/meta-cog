@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: "사용자 관리 페이지입니다.",
 };
 
+// 정적 생성 비활성화
+export const dynamic = "force-dynamic";
+
 export default function UsersPage() {
   return <UsersClient />;
 } 
