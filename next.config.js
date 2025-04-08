@@ -26,6 +26,16 @@ const nextConfig = {
     };
     return config;
   },
+  // 정적 내보내기 시 보호된 경로 제외
+  exportPathMap: async function (
+    defaultPathMap,
+    { dev, dir, outDir, distDir, buildId }
+  ) {
+    return {
+      '/': { page: '/' },
+      '/auth/signin': { page: '/auth/signin' },
+    };
+  },
 };
 
 module.exports = nextConfig; 
