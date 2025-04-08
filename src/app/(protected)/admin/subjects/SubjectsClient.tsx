@@ -1,12 +1,9 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import SubjectsList from "@/components/admin/SubjectsList";
 import { AdminCheck } from "@/components/admin/AdminCheck";
 
 export default function SubjectsClient() {
-  const { data: session } = useSession();
-
   return (
     <AdminCheck>
       <div className="space-y-6">
