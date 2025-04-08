@@ -1,3 +1,5 @@
+"use client";
+
 import { Metadata } from "next";
 import { AdminCheck } from "@/components/admin/AdminCheck";
 import SystemLogs from "@/components/admin/SystemLogs";

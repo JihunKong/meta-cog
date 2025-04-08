@@ -15,7 +15,7 @@ const createSupabaseConnectionString = () => {
   }
 
   // Supabase Direct Connection URL 형식 사용
-  return `postgresql://postgres.${projectId}:${serviceRoleKey}@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres`;
+  return `postgresql://postgres:${serviceRoleKey}@db.${projectId}.supabase.co:5432/postgres`;
 };
 
 // 데이터베이스 URL 가져오기
