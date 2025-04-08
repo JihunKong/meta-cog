@@ -16,7 +16,9 @@ const nextConfig = {
   output: 'standalone',
   // 정적 내보내기 과정에서 제외할 페이지
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
+    },
   },
   // 서버 컴포넌트에서 외부 패키지 사용 설정
   serverExternalPackages: ['next-auth'],
