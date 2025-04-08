@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  NEXT_DISABLE_SOURCEMAPS = "true"
+  NEXT_USE_NETLIFY_EDGE = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
@@ -11,35 +13,12 @@
 [functions]
   node_bundler = "esbuild"
 
-# 클라이언트 사이드 라우팅을 위한 SPA 리디렉션
+# 기본 리디렉션
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/nextjs-server"
   status = 200
   force = true
-  conditions = {Role = ["visitor", "user", "student"]}
-
-# 보호된 경로에 대한 조건부 리디렉션
-[[redirects]]
-  from = "/dashboard/*"
-  to = "/index.html"
-  status = 200
-  force = true
-  conditions = {Role = ["user", "student", "teacher", "admin"]}
-
-[[redirects]]
-  from = "/teacher/*"
-  to = "/index.html"
-  status = 200
-  force = true
-  conditions = {Role = ["teacher", "admin"]}
-
-[[redirects]]
-  from = "/admin/*"
-  to = "/index.html"
-  status = 200
-  force = true
-  conditions = {Role = ["admin"]}
 
 # 로그아웃 관련 리디렉션
 [[redirects]]

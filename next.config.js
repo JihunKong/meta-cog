@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: ['lh3.googleusercontent.com', 'avatars.githubusercontent.com'],
+    unoptimized: true
   },
   eslint: {
     // ESLint를 실행하지만 빌드를 중단하지 않음
@@ -17,7 +18,8 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
-    }
+    },
+    serverComponentsExternalPackages: ['next-auth']
   },
   webpack: (config) => {
     config.resolve.fallback = {
@@ -26,16 +28,8 @@ const nextConfig = {
     };
     return config;
   },
-  // 정적 내보내기 시 보호된 경로 제외
-  exportPathMap: async function (
-    defaultPathMap,
-    { dev, dir, outDir, distDir, buildId }
-  ) {
-    return {
-      '/': { page: '/' },
-      '/auth/signin': { page: '/auth/signin' },
-    };
-  },
+  // App Router와 함께 사용하기 위한 설정
+  output: 'standalone',
 };
 
 module.exports = nextConfig; 
