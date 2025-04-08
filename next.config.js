@@ -12,6 +12,8 @@ const nextConfig = {
     // 타입 체크를 무시하고 빌드 진행
     ignoreBuildErrors: true,
   },
+  // 정적 내보내기 비활성화
+  output: 'standalone',
   // 서버 컴포넌트에서 외부 패키지 사용 설정
   serverExternalPackages: ['next-auth'],
   webpack: (config) => {
