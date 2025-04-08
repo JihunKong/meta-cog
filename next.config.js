@@ -21,6 +21,8 @@ const nextConfig = {
     // next-auth를 서버 컴포넌트에서 사용할 수 있도록 설정
     serverComponentsExternalPackages: ['next-auth'],
   },
+  // 서버 컴포넌트에서 외부 패키지 사용 설정
+  serverExternalPackages: ['next-auth'],
 };
 
 module.exports = nextConfig; 
