@@ -25,6 +25,8 @@ const nextConfig = {
     };
     return config;
   },
+  // 정적 내보내기 대신 서버 렌더링 사용
+  output: 'standalone',
 };
 
 module.exports = nextConfig; 
