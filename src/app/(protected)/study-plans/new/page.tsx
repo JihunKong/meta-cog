@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   description: "새로운 학습 계획을 생성하세요.",
 };
 
+// 정적 내보내기를 위한 더미 파라미터
+export async function generateStaticParams() {
+  return [{}];
+}
+
 export default function NewStudyPlanPage() {
   return <StudyPlanClient />;
 } 

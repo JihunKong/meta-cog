@@ -13,8 +13,6 @@ const nextConfig = {
     // 타입 체크를 무시하고 빌드 진행
     ignoreBuildErrors: true,
   },
-  // 서버 컴포넌트에서 외부 패키지 사용 설정
-  serverComponentsExternalPackages: ['next-auth'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']

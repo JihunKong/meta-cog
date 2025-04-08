@@ -5,12 +5,14 @@
 [build.environment]
   NODE_VERSION = "20"
   NEXT_DISABLE_SOURCEMAPS = "true"
+  NEXT_FORCE_EDGE_RUNTIME = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["!node_modules/.pnpm/**/*"]
 
 # 로그아웃 관련 리디렉션
 [[redirects]]
