@@ -17,6 +17,9 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
     },
+    // 정적 내보내기 관련 설정
+    isrMemoryCacheSize: 0,
+    serverComponentsExternalPackages: ['next-auth'],
   },
   webpack: (config) => {
     config.resolve.fallback = {

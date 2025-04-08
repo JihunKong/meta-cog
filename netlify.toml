@@ -6,9 +6,13 @@
   NODE_VERSION = "20"
   NEXT_DISABLE_SOURCEMAPS = "true"
   NEXT_FORCE_EDGE_RUNTIME = "false"
+  NETLIFY_NEXT_PLUGIN_SKIP = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[plugins.inputs]
+  debug = "true"
 
 [functions]
   node_bundler = "esbuild"
