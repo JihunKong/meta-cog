@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { AdminCheck } from "@/components/admin/AdminCheck";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
@@ -98,106 +97,104 @@ export default function DataManagementClient() {
   };
 
   return (
-    <AdminCheck>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">데이터 관리</h1>
-        </div>
-
-        <Tabs defaultValue="initialize" className="w-full">
-          <TabsList>
-            <TabsTrigger value="initialize">데이터 초기화</TabsTrigger>
-            <TabsTrigger value="backup">데이터 백업</TabsTrigger>
-            <TabsTrigger value="restore">데이터 복원</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="initialize" className="space-y-4">
-            <div className="bg-red-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-red-800">데이터 초기화</h3>
-              <p className="text-sm text-red-600 mt-1">
-                모든 데이터를 초기화합니다. 이 작업은 되돌릴 수 없습니다.
-              </p>
-              <Button
-                variant="destructive"
-                className="mt-4"
-                onClick={handleInitialize}
-                disabled={isInitializing}
-              >
-                {isInitializing ? (
-                  <>
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                    초기화 중...
-                  </>
-                ) : (
-                  "데이터 초기화"
-                )}
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="backup" className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-800">데이터 백업</h3>
-              <p className="text-sm text-blue-600 mt-1">
-                현재 데이터베이스의 모든 데이터를 JSON 파일로 백업합니다.
-              </p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={handleBackup}
-                disabled={isBackingUp}
-              >
-                {isBackingUp ? (
-                  <>
-                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                    백업 중...
-                  </>
-                ) : (
-                  "데이터 백업"
-                )}
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="restore" className="space-y-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold text-green-800">데이터 복원</h3>
-              <p className="text-sm text-green-600 mt-1">
-                백업 파일에서 데이터를 복원합니다. 현재 데이터는 모두 삭제됩니다.
-              </p>
-              <div className="mt-4">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleRestore}
-                  className="hidden"
-                  id="restore-file"
-                  disabled={isRestoring}
-                />
-                <label htmlFor="restore-file">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    disabled={isRestoring}
-                    asChild
-                  >
-                    <span>
-                      {isRestoring ? (
-                        <>
-                          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                          복원 중...
-                        </>
-                      ) : (
-                        "백업 파일 선택"
-                      )}
-                    </span>
-                  </Button>
-                </label>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">데이터 관리</h1>
       </div>
-    </AdminCheck>
+
+      <Tabs defaultValue="initialize" className="w-full">
+        <TabsList>
+          <TabsTrigger value="initialize">데이터 초기화</TabsTrigger>
+          <TabsTrigger value="backup">데이터 백업</TabsTrigger>
+          <TabsTrigger value="restore">데이터 복원</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="initialize" className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-red-800">데이터 초기화</h3>
+            <p className="text-sm text-red-600 mt-1">
+              모든 데이터를 초기화합니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <Button
+              variant="destructive"
+              className="mt-4"
+              onClick={handleInitialize}
+              disabled={isInitializing}
+            >
+              {isInitializing ? (
+                <>
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  초기화 중...
+                </>
+              ) : (
+                "데이터 초기화"
+              )}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="backup" className="space-y-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-800">데이터 백업</h3>
+            <p className="text-sm text-blue-600 mt-1">
+              현재 데이터베이스의 모든 데이터를 JSON 파일로 백업합니다.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={handleBackup}
+              disabled={isBackingUp}
+            >
+              {isBackingUp ? (
+                <>
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  백업 중...
+                </>
+              ) : (
+                "데이터 백업"
+              )}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="restore" className="space-y-4">
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-green-800">데이터 복원</h3>
+            <p className="text-sm text-green-600 mt-1">
+              백업 파일에서 데이터를 복원합니다. 현재 데이터는 모두 삭제됩니다.
+            </p>
+            <div className="mt-4">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleRestore}
+                className="hidden"
+                id="restore-file"
+                disabled={isRestoring}
+              />
+              <label htmlFor="restore-file">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={isRestoring}
+                  asChild
+                >
+                  <span>
+                    {isRestoring ? (
+                      <>
+                        <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                        복원 중...
+                      </>
+                    ) : (
+                      "백업 파일 선택"
+                    )}
+                  </span>
+                </Button>
+              </label>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 } 
