@@ -18,6 +18,8 @@ const nextConfig = {
   experimental: {
     // 정적 내보내기 과정에서 동적 라우트를 제외
     excludeDefaultMomentLocales: true,
+    // next-auth를 서버 컴포넌트에서 사용할 수 있도록 설정
+    serverComponentsExternalPackages: ['next-auth'],
   },
 };
 
