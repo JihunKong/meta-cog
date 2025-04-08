@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider     = "mysql"
+  provider     = "postgresql"
   url          = env("DATABASE_URL")
   relationMode = "prisma"
 }
@@ -42,22 +42,49 @@ model Session {
 }
 
 model User {
-  id                 String               @id @default(uuid())
-  name               String?
-  email              String?              @unique
-  image              String?
-  role               UserRole             @default(STUDENT)
-  student_id         String?              @map("student_id")
-  created_at         DateTime             @default(now()) @map("created_at")
-  updated_at         DateTime             @default(now()) @updatedAt @map("updated_at")
-  recommendations    AIRecommendation[]
-  accounts           Account[]
-  curriculum         Curriculum[]
-  curriculum_progress CurriculumProgress[]
-  sessions           Session[]
-  study_plans        StudyPlan[]
+  id                    String    @id @default(uuid())
+  instance_id          String?   @db.Uuid
+  email                String?   @unique
+  encrypted_password   String?   @db.VarChar
+  email_confirmed_at   DateTime?
+  invited_at           DateTime?
+  confirmation_token   String?   @db.VarChar
+  confirmation_sent_at DateTime?
+  recovery_token       String?   @db.VarChar
+  recovery_sent_at     DateTime?
+  email_change_token   String?   @db.VarChar
+  email_change         String?   @db.VarChar
+  email_change_sent_at DateTime?
+  last_sign_in_at      DateTime?
+  raw_app_meta_data    Json?
+  raw_user_meta_data   Json?
+  is_super_admin       Boolean?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  phone                String?
+  phone_confirmed_at   DateTime?
+  phone_change        String?   @db.VarChar
+  phone_change_token   String?   @db.VarChar
+  phone_change_sent_at DateTime?
+  identities          Identity[]
+  sessions            Session[]
+  role                String    @default("STUDENT")
 
-  @@map("User")
+  @@map("users")
+}
+
+model Identity {
+  id              String   @id @default(uuid())
+  user_id         String   @db.Uuid
+  identity_data   Json
+  provider        String
+  last_sign_in_at DateTime
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  email          String?
+  user           User     @relation(fields: [user_id], references: [id])
+
+  @@map("identities")
 }
 
 model VerificationToken {
