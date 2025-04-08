@@ -20,16 +20,16 @@ const createSupabaseConnectionString = () => {
 
 // 데이터베이스 URL 가져오기
 const getDatabaseUrl = () => {
-  // 1. 직접 설정된 DATABASE_URL 사용
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl?.startsWith('postgresql://') || databaseUrl?.startsWith('postgres://')) {
-    return databaseUrl;
-  }
-  
-  // 2. Supabase 연결 문자열 생성
+  // 1. Supabase 연결 문자열 생성
   const supabaseUrl = createSupabaseConnectionString();
   if (supabaseUrl) {
     return supabaseUrl;
+  }
+  
+  // 2. 직접 설정된 DATABASE_URL 사용
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl?.startsWith('postgresql://') || databaseUrl?.startsWith('postgres://')) {
+    return databaseUrl;
   }
   
   throw new Error("유효한 데이터베이스 URL을 찾을 수 없습니다.");
@@ -49,17 +49,10 @@ export const prisma =
 // 데이터베이스 연결 상태 확인
 prisma.$connect()
   .then(() => {
-    console.log("데이터베이스 연결 성공");
-    return prisma.user.count();
+    console.log("✅ Supabase PostgreSQL 데이터베이스에 성공적으로 연결되었습니다.");
   })
-  .then((count: number) => {
-    console.log(`데이터베이스 내 사용자 수: ${count}`);
-  })
-  .catch((error: Error) => {
-    console.error("데이터베이스 연결 오류:", error.message);
-    if (error.message.includes('password authentication failed')) {
-      console.error("인증 실패: 데이터베이스 자격 증명을 확인하세요.");
-    }
+  .catch((error) => {
+    console.error("❌ Supabase PostgreSQL 데이터베이스 연결 실패:", error);
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma; 
