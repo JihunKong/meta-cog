@@ -69,6 +69,11 @@ model User {
   identities          Identity[]
   sessions            Session[]
   role                String    @default("STUDENT")
+  accounts            Account[]
+  studyPlans          StudyPlan[]
+  createdCurriculums  Curriculum[]        @relation("CreatedCurriculums")
+  curriculumProgress  CurriculumProgress[]
+  recommendations     AIRecommendation[]
 
   @@map("users")
 }
@@ -123,7 +128,7 @@ model Curriculum {
   created_by  String               @map("created_by")
   created_at  DateTime             @default(now()) @map("created_at")
   updated_at  DateTime             @updatedAt @map("updated_at")
-  creator     User                 @relation(fields: [created_by], references: [id], onDelete: Cascade)
+  creator     User                 @relation("CreatedCurriculums", fields: [created_by], references: [id], onDelete: Cascade)
   progress    CurriculumProgress[]
 
   @@map("Curriculum")
