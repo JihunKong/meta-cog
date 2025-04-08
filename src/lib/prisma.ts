@@ -6,19 +6,16 @@ const globalForPrisma = globalThis as unknown as {
 
 // Supabase 연결 URL 생성
 const createSupabaseConnectionString = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const projectId = "ljrrinokzegzjbovssjy";
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("Supabase 환경 변수가 설정되지 않았습니다.");
+  if (!serviceRoleKey) {
+    console.error("Supabase 서비스 롤 키가 설정되지 않았습니다.");
     return null;
   }
 
-  // Supabase URL에서 프로젝트 ID 추출
-  const projectId = supabaseUrl.split('.')[0].replace('https://', '');
-  
-  // PostgreSQL 연결 문자열 생성
-  return `postgresql://postgres.${projectId}:${supabaseServiceKey}@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres.${projectId}`;
+  // Supabase Direct Connection URL 형식 사용
+  return `postgres://postgres:${serviceRoleKey}@db.${projectId}.supabase.co:5432/postgres`;
 };
 
 // 데이터베이스 URL 가져오기
