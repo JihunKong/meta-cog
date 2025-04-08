@@ -23,8 +23,8 @@ ON CONFLICT (id) DO NOTHING;
 -- 
 -- SELECT supabase_admin.create_auth_user(
 --  '00000000-0000-0000-0000-000000000000',
---  'admin@metacog.kr', 
---  'strong_password_here',
+--  'admin@pof.com', 
+--  'admin1234',
 --  'admin@metacog.kr',
 --  '관리자'
 -- ); 

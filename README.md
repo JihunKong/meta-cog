@@ -1,78 +1,58 @@
-# 청해FLAME
+# 청해FLAME 기술 사양서
 
-청해FLAME은 학생들의 학습 현황을 관리하고 분석하는 교육 관리 플랫폼입니다.
-
-## 주요 기능
-
-- 학생 대시보드: 학습 계획, 달성률, AI 추천
-- 교사 대시보드: 학생 현황 모니터링, 통계, 학습 계획 관리
-- 관리자 기능: 사용자 관리, 데이터 관리, 시스템 설정
-
-## 개발 환경 설정
-
-```bash
-# 저장소 복제
-git clone <repository-url>
-cd meta-cog
-
-# 의존성 설치
-npm install
-
-# 개발 서버 실행
-npm run dev
-```
-
-## 빌드 및 배포
-
-```bash
-# 프로덕션 빌드
-npm run build
-
-# 프로덕션 서버 실행
-npm run start
-```
-
-## AWS Lightsail 배포 가이드
-
-AWS Lightsail 컨테이너 서비스에 배포하기 위한 자세한 가이드는 [lightsail-deploy-guide.md](./lightsail-deploy-guide.md) 문서를 참조하세요.
-
-주요 배포 단계:
-1. Docker 이미지 빌드 및 테스트
-2. AWS Lightsail 컨테이너 서비스 생성
-3. 환경 변수 및 스토리지 설정
-4. 배포 및 모니터링
+## 프로젝트 개요
+청해FLAME은 학생들이 스스로 SMART 목표를 설정하고 그 목표의 달성 정도를 스스로 평가하여 관리할 수 있는 자기주도 학습 관리 애플리케이션입니다. 본 앱은 학생의 자신감을 높이고 자기 성찰 능력을 강화하는 데 초점을 맞추고 있습니다.
 
 ## 기술 스택
+- 프레임워크: Next.js
+- 데이터베이스: Supabase
 
-- Frontend: React.js, Next.js, TailwindCSS
-- Backend: Node.js, Next.js API Routes
-- 데이터베이스: SQLite (Prisma ORM)
-- 인증: NextAuth.js
-- AI: Claude API
+## 주요 기능 및 권한
 
-## 환경 변수 설정
+### 권한별 로그인
+- 학생: 학습 목표 설정, 달성도 기록, 학습 반성 작성
+- 교사: 학생 학습 현황 조회, 개별 피드백 작성 및 AI 피드백 관리
+- 관리자: 사용자 계정 관리 (아이디 생성, 비밀번호 변경, 권한 설정)
 
-`.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
+### 학생 페이지
+- 다섯 가지 주요 학습 영역 관리 (국어, 영어, 수학, 과학, 사회)
+- SMART 목표 기반 서술형 학습 계획 작성
+- 학습 세션별 달성도 (%) 입력 및 학습 반성 서술
+  - 세션 구성은 최대 3세션, 최소 1세션 가능
+- AI 기반 학습 분석 및 응원 메시지 제공
+- 날짜별 학습 기록 및 성취 대시보드
 
-```
-# Authentication
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key
+### 교사 페이지
+- 전체 학생들의 학습 현황 시각화 (그래프 및 퍼센트 기반)
+- 개별 학생 학습 기록 열람 및 서술식 피드백 작성
+- AI를 활용한 학습 추천 및 응원 메시지 추가 제공
 
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+### 관리자 페이지
+- 사용자 관리 (아이디 생성, 비밀번호 변경, 권한 변경)
+- 사용자 권한 설정 및 변경 기능
 
-# Claude API
-ANTHROPIC_API_KEY=your-anthropic-api-key
+## 데이터베이스
+Supabase 스키마는 첨부된 이미지의 구조와 정확히 일치해야 하며, 주요 테이블은 다음을 포함합니다.
+- users
+- sessions
+- refresh_tokens
+- flow_state
+- identities
 
-# Database
-DATABASE_URL="file:./dev.db"
+기타 학습 관련 테이블은 애플리케이션 요구사항에 따라 생성되어야 하며, Supabase의 구조에 일관되게 유지됩니다.
 
-# Admin Emails
-ADMIN_EMAILS="admin@example.com"
-```
+## 환경변수 관리
+- 환경변수는 `.env` 파일에서 관리되지 않으며, 반드시 Netlify의 환경변수 설정을 통해 직접 관리되어야 합니다.
+- 환경변수는 Git에서 무시되어야 하며, Netlify 환경변수를 통해 배포 시점에 설정됩니다.
 
-## 라이센스
 
-Copyright © 2023
+## 개발 환경 구성
+- Node.js LTS 버전 사용 권장
+- 환경 변수는 Netlify의 설정에서 직접 관리합니다.
+
+## 기여
+- 코드 리뷰 및 병합 전 반드시 테스트 수행
+- 주요 변경 사항은 문서화 필요
+
+## 문의 및 지원
+기술 지원 및 기능 개선 제안은 프로젝트 관리자를 통해 문의 바랍니다.
