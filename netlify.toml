@@ -11,9 +11,6 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[plugins.inputs]
-  debug = "true"
-
 [functions]
   node_bundler = "esbuild"
   included_files = ["!node_modules/.pnpm/**/*"]
