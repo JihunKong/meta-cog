@@ -1,7 +1,5 @@
 import { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { withAdminAuth } from "@/lib/auth/withAdminAuth";
 import SubjectsClient from "./SubjectsClient";
 
 export const metadata: Metadata = {
@@ -11,16 +9,8 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function SubjectsPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    redirect("/auth/login");
-  }
-
-  if (session.user.role !== "ADMIN") {
-    redirect("/dashboard");
-  }
-
+function SubjectsPage() {
   return <SubjectsClient />;
-} 
+}
+
+export default withAdminAuth(SubjectsPage, { metadata }); 
