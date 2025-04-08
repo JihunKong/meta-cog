@@ -28,8 +28,9 @@ const nextConfig = {
     };
     return config;
   },
-  // App Router와 함께 사용하기 위한 설정
-  output: 'standalone',
+  // 정적 내보내기 비활성화
+  output: 'export',
+  distDir: 'out',
 };
 
 module.exports = nextConfig; 
