@@ -1,8 +1,13 @@
 "use client";
 
+import { User } from "next-auth";
 import SubjectsList from "@/components/admin/SubjectsList";
 
-export default function SubjectsClient() {
+interface SubjectsClientProps {
+  user: User;
+}
+
+export default function SubjectsClient({ user }: SubjectsClientProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

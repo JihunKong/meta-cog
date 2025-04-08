@@ -20,5 +20,5 @@ export default async function SubjectsPage() {
     redirect("/dashboard");
   }
 
-  return <SubjectsClient />;
+  return <SubjectsClient user={session.user} />;
 } 
