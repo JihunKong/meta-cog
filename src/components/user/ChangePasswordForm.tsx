@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ChangePasswordForm() {
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -23,6 +25,11 @@ export default function ChangePasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!session?.user) {
+      toast.error("로그인이 필요합니다.");
+      return;
+    }
     
     // 입력 검증
     if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
