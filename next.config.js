@@ -29,9 +29,6 @@ const nextConfig = {
   },
   // 정적 생성을 위한 설정
   trailingSlash: true,
-  // 정적 내보내기 비활성화
-  output: 'export',
-  distDir: 'out',
 };
 
 module.exports = nextConfig; 

@@ -5,6 +5,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { ApiError, successResponse, errorResponse } from "@/lib/api-utils";
 import { RecommendationType } from "@/types";
 
+// 정적 내보내기(static export)를 위한 설정
+export const dynamic = "force-static";
+
 // Supabase 클라이언트 생성 - 런타임에만 초기화
 const getSupabaseClient = () => {
   // Netlify 환경변수 이름과 일치하도록 수정

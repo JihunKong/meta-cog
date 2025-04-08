@@ -4,6 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { StudyPlan } from "@prisma/client";
 
+// 정적 내보내기(static export)를 위한 설정
+export const dynamic = "force-static";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
