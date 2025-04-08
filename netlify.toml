@@ -11,6 +11,14 @@
 [functions]
   node_bundler = "esbuild"
 
+# 모든 보호된 경로에 대한 SPA 처리
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = {Role = ["admin", "teacher", "student"]}
+
 # 리디렉션 규칙 추가
 [[redirects]]
   from = "/api/auth/signout"
