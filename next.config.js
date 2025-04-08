@@ -13,9 +13,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // 서버 컴포넌트에서 외부 패키지 사용 설정
+  serverExternalPackages: ['next-auth'],
   experimental: {
-    serverActions: true,
-    serverComponentsExternalPackages: ['next-auth']
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
+    }
   },
   webpack: (config) => {
     config.resolve.fallback = {
