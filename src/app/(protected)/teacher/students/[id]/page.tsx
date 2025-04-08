@@ -27,4 +27,11 @@ export default function StudentDetailPage({ params }: StudentDetailPageProps) {
       </div>
     </TeacherCheck>
   );
+}
+
+// 정적 내보내기를 위한 더미 파라미터
+export async function generateStaticParams() {
+  return [
+    { id: "fallback" },
+  ];
 } 

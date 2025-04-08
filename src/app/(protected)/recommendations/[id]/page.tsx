@@ -14,6 +14,14 @@ interface RecommendationDetailPageProps {
   };
 }
 
+// 정적 내보내기를 위한 더미 파라미터
+export async function generateStaticParams() {
+  // 정적 내보내기를 위한 미리 생성할 페이지 목록
+  return [
+    { id: "fallback" },
+  ];
+}
+
 export default function RecommendationDetailPage({ params }: RecommendationDetailPageProps) {
   const { id } = params;
 

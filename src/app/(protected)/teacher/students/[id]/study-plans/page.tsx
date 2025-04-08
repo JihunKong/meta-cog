@@ -6,6 +6,13 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 
+// 정적 내보내기를 위한 더미 파라미터 (client 컴포넌트 외부에 선언)
+export const generateStaticParams = async () => {
+  return [
+    { id: "fallback" },
+  ];
+};
+
 export default function StudentStudyPlansPage() {
   const params = useParams();
   const router = useRouter();
