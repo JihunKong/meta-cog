@@ -25,7 +25,8 @@ function validateDatabaseUrl(url: string): boolean {
     return (
       parsedUrl.protocol === 'postgresql:' &&
       parsedUrl.hostname.includes('supabase.co') &&
-      parsedUrl.pathname === '/postgres'
+      parsedUrl.pathname === '/postgres' &&
+      (parsedUrl.port === '5432' || parsedUrl.port === '')
     );
   } catch {
     return false;
@@ -41,7 +42,7 @@ if (!databaseUrl) {
 
 if (!validateDatabaseUrl(databaseUrl)) {
   throw new Error(
-    '유효하지 않은 Supabase 데이터베이스 URL입니다. URL은 postgresql://로 시작하고 supabase.co를 포함해야 합니다.'
+    '유효하지 않은 Supabase 데이터베이스 URL입니다. URL은 postgresql://로 시작하고, supabase.co를 포함하며, 포트는 5432여야 합니다.'
   );
 }
 
