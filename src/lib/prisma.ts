@@ -12,10 +12,10 @@ const validateDatabaseUrl = (url: string | undefined) => {
   }
   
   // URL 형식 검증
-  const isValidFormat = url.startsWith('postgresql://') || url.startsWith('postgres://');
+  const isValidFormat = url.startsWith('mysql://');
   if (!isValidFormat) {
     console.error(`잘못된 데이터베이스 URL 형식입니다: ${url.substring(0, 20)}...`);
-    console.error("URL은 'postgresql://' 또는 'postgres://'로 시작해야 합니다.");
+    console.error("URL은 'mysql://'로 시작해야 합니다.");
     return false;
   }
   
@@ -29,7 +29,7 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!validateDatabaseUrl(databaseUrl)) {
   console.error("데이터베이스 연결을 위한 환경 변수를 확인하세요:");
   console.error("1. DATABASE_URL이 설정되어 있는지 확인");
-  console.error("2. URL이 'postgresql://' 또는 'postgres://'로 시작하는지 확인");
+  console.error("2. URL이 'mysql://'로 시작하는지 확인");
   console.error("3. Netlify 환경 변수 설정에서 DATABASE_URL을 확인");
   
   // 개발 환경에서는 에러를 던지고, 프로덕션에서는 기본값 사용
