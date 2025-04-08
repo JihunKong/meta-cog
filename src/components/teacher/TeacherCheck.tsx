@@ -2,8 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Icons } from "@/components/ui/icons";
+import { useEffect } from "react";
 
 interface TeacherCheckProps {
   children: React.ReactNode;
@@ -12,11 +11,8 @@ interface TeacherCheckProps {
 export function TeacherCheck({ children }: TeacherCheckProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log("TeacherCheck useEffect", status, session);
     if (status === "loading") return;
 
     if (!session) {
@@ -24,27 +20,21 @@ export function TeacherCheck({ children }: TeacherCheckProps) {
       return;
     }
 
-    if (session.user?.role !== "TEACHER" && session.user?.role !== "ADMIN") {
-      router.push("/dashboard");
+    if (session.user.role !== "TEACHER") {
+      router.push("/");
       return;
     }
-
-    setIsAuthorized(true);
-    setIsLoading(false);
   }, [session, status, router]);
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="text-center">
-          <Icons.spinner className="h-10 w-10 animate-spin text-primary mx-auto" />
-          <p className="mt-4 text-lg font-medium text-gray-800 dark:text-gray-200">권한을 확인하는 중입니다...</p>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (!isAuthorized) {
+  if (!session || session.user.role !== "TEACHER") {
     return null;
   }
 
