@@ -12,6 +12,13 @@ const nextConfig = {
     // 타입 체크를 무시하고 빌드 진행
     ignoreBuildErrors: true,
   },
+  // 정적 내보내기 설정
+  output: 'standalone',
+  // 정적 내보내기 과정에서 제외할 페이지
+  experimental: {
+    // 정적 내보내기 과정에서 동적 라우트를 제외
+    excludeDefaultMomentLocales: true,
+  },
 };
 
 module.exports = nextConfig; 
