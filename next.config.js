@@ -14,7 +14,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // 서버 컴포넌트에서 외부 패키지 사용 설정
-  serverExternalPackages: ['next-auth'],
+  serverComponentsExternalPackages: ['next-auth'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
@@ -27,8 +27,6 @@ const nextConfig = {
     };
     return config;
   },
-  // 정적 생성을 위한 설정
-  trailingSlash: true,
 };
 
 module.exports = nextConfig; 

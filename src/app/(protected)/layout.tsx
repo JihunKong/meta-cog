@@ -1,8 +1,4 @@
-"use client";
-
-import { SessionProvider } from "next-auth/react";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import MainLayout from "@/components/layout/MainLayout";
+import ProtectedLayoutClient from "@/components/layout/ProtectedLayoutClient";
 
 export default function ProtectedLayout({
   children,
@@ -10,10 +6,8 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider>
-      <ProtectedRoute>
-        <MainLayout>{children}</MainLayout>
-      </ProtectedRoute>
-    </SessionProvider>
+    <ProtectedLayoutClient>
+      {children}
+    </ProtectedLayoutClient>
   );
 } 

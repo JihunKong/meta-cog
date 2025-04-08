@@ -12,13 +12,6 @@
 [functions]
   node_bundler = "esbuild"
 
-# 기본 리디렉션
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
-
 # 로그아웃 관련 리디렉션
 [[redirects]]
   from = "/api/auth/signout"
