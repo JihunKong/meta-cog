@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   description: "학습 계획을 수정하세요.",
 };
 
+// 정적 내보내기를 위한 더미 파라미터
+export async function generateStaticParams() {
+  return [
+    { id: "fallback" },
+  ];
+}
+
 interface StudyPlanEditPageProps {
   params: {
     id: string;
