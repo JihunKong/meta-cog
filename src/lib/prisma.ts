@@ -18,14 +18,15 @@ const createSupabaseConnectionString = () => {
   const projectId = supabaseUrl.split('.')[0].replace('https://', '');
   
   // PostgreSQL 연결 문자열 생성
-  return `postgresql://postgres:${supabaseServiceKey}@db.${projectId}.supabase.co:5432/postgres`;
+  return `postgresql://postgres.${projectId}:${supabaseServiceKey}@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres.${projectId}`;
 };
 
 // 데이터베이스 URL 가져오기
 const getDatabaseUrl = () => {
   // 1. 직접 설정된 DATABASE_URL 사용
-  if (process.env.DATABASE_URL?.startsWith('postgresql://')) {
-    return process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl?.startsWith('postgresql://') || databaseUrl?.startsWith('postgres://')) {
+    return databaseUrl;
   }
   
   // 2. Supabase 연결 문자열 생성
@@ -39,9 +40,9 @@ const getDatabaseUrl = () => {
     throw new Error("유효한 데이터베이스 URL을 찾을 수 없습니다.");
   }
   
-  // 4. 프로덕션에서는 경고 로그만 출력
+  // 4. 프로덕션에서는 경고 로그만 출력하고 기본 URL 반환
   console.warn("데이터베이스 URL이 설정되지 않았습니다. 기본값을 사용합니다.");
-  return process.env.DATABASE_URL;
+  return databaseUrl || "";
 };
 
 export const prisma =
