@@ -15,7 +15,7 @@ const createSupabaseConnectionString = () => {
   }
 
   // Supabase Direct Connection URL 형식 사용
-  return `postgres://postgres:${serviceRoleKey}@db.${projectId}.supabase.co:5432/postgres`;
+  return `postgresql://postgres.${projectId}:${serviceRoleKey}@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres`;
 };
 
 // 데이터베이스 URL 가져오기
@@ -32,14 +32,7 @@ const getDatabaseUrl = () => {
     return supabaseUrl;
   }
   
-  // 3. 개발 환경에서는 에러 발생
-  if (process.env.NODE_ENV === 'development') {
-    throw new Error("유효한 데이터베이스 URL을 찾을 수 없습니다.");
-  }
-  
-  // 4. 프로덕션에서는 경고 로그만 출력하고 기본 URL 반환
-  console.warn("데이터베이스 URL이 설정되지 않았습니다. 기본값을 사용합니다.");
-  return databaseUrl || "";
+  throw new Error("유효한 데이터베이스 URL을 찾을 수 없습니다.");
 };
 
 export const prisma =
