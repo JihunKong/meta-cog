@@ -11,9 +11,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  output: 'export',
-  distDir: 'out',
-  trailingSlash: true,
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

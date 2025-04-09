@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && NEXT_TELEMETRY_DISABLED=1 next build && next export -o out",
-    "start": "npx serve out",
+    "build": "prisma generate && NODE_OPTIONS='--max_old_space_size=4096' next build",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@netlify/plugin-nextjs": "^5.10.2",
+    "@netlify/plugin-nextjs": "^5.10.4",
     "@types/node": "^20.17.24",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
