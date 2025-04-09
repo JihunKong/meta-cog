@@ -1,13 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import dynamic from "next/dynamic";
-
-// 클라이언트 컴포넌트를 동적으로 임포트
-const RecommendationDetail = dynamic(
-  () => import("@/components/recommendations/RecommendationDetail"),
-  { ssr: false }
-);
+import RecommendationDetailWrapper from "./RecommendationDetailWrapper";
 
 export const metadata: Metadata = {
   title: "AI 추천 상세 - 청해FLAME",
@@ -40,7 +34,7 @@ export default function RecommendationDetailPage({ params }: RecommendationDetai
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
-        <RecommendationDetail id={id} />
+        <RecommendationDetailWrapper id={id} />
       </div>
     </div>
   );

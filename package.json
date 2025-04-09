@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && NODE_OPTIONS='--max_old_space_size=4096' NEXT_PUBLIC_NETLIFY_CONTEXT=production next build",
+    "build": "prisma generate && NODE_OPTIONS='--max_old_space_size=4096' NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint"
   },
