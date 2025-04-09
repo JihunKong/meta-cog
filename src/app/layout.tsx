@@ -1,3 +1,5 @@
+"use client";
+
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -7,11 +9,6 @@ import { Navigation } from "@/components/layout/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "청해FLAME - 자기주도 학습 관리",
-  description: "학생들을 위한 SMART 목표 기반 자기주도 학습 관리 애플리케이션",
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -19,6 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <title>청해FLAME - 자기주도 학습 관리</title>
+        <meta name="description" content="학생들을 위한 SMART 목표 기반 자기주도 학습 관리 애플리케이션" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <ThemeProvider

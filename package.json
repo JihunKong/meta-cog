@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && NODE_OPTIONS='--max_old_space_size=4096' NODE_ENV=production next build",
-    "start": "next start",
+    "build": "prisma generate && NEXT_TELEMETRY_DISABLED=1 next build && next export -o out",
+    "start": "npx serve out",
     "lint": "next lint"
   },
   "dependencies": {

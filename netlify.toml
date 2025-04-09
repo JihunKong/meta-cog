@@ -1,30 +1,21 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_PUBLIC_NETLIFY_CONTEXT = "production"
+  NEXT_TELEMETRY_DISABLED = "1"
   NODE_OPTIONS = "--max_old_space_size=4096"
   NPM_FLAGS = "--no-audit --no-fund"
-  NEXT_PRIVATE_STANDALONE = "true"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-[functions]
-  node_bundler = "esbuild"
-  included_files = ["!node_modules/.pnpm/**/*"]
-
-# SPA 리디렉션 설정
+# SPA 설정: 모든 요청을 index.html로 리디렉션
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  force = false
-  conditions = {Role = ["admin", "teacher", "student"]}
+  force = true
 
-# 로그아웃 관련 리디렉션
+# NextAuth 리디렉션
 [[redirects]]
   from = "/api/auth/signout"
   to = "/auth/signin"
