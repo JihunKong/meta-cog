@@ -1,7 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import RecommendationDetail from "@/components/recommendations/RecommendationDetail";
+import dynamic from "next/dynamic";
+
+// 클라이언트 컴포넌트를 동적으로 임포트
+const RecommendationDetail = dynamic(
+  () => import("@/components/recommendations/RecommendationDetail"),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: "AI 추천 상세 - 청해FLAME",
@@ -12,14 +18,6 @@ interface RecommendationDetailPageProps {
   params: {
     id: string;
   };
-}
-
-// 정적 내보내기를 위한 더미 파라미터
-export async function generateStaticParams() {
-  // 정적 내보내기를 위한 미리 생성할 페이지 목록
-  return [
-    { id: "fallback" },
-  ];
 }
 
 export default function RecommendationDetailPage({ params }: RecommendationDetailPageProps) {

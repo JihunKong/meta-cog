@@ -4,9 +4,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_TELEMETRY_DISABLED = "1"
-  NETLIFY_USE_YARN = "false"
-  NEXT_USE_NETLIFY_EDGE = "true"
+  NEXT_PUBLIC_NETLIFY_CONTEXT = "production"
+  NODE_OPTIONS = "--max_old_space_size=4096"
+  NPM_FLAGS = "--no-audit --no-fund"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
