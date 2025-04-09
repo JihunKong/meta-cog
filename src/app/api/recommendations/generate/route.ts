@@ -25,8 +25,12 @@ interface CurriculumProgress {
 
 // API 스키마 정의
 const generateRecommendationSchema = z.object({
+  title: z.string().min(1, "제목은 필수입니다"),
+  description: z.string().min(1, "설명은 필수입니다"),
+  subject: z.string().min(1, "과목은 필수입니다"),
+  grade: z.string().min(1, "학년은 필수입니다"),
+  difficulty: z.string().optional().default("중간"),
   type: z.enum(["STRATEGY", "SCHEDULE", "SUBJECT", "UNIT"]).optional(),
-  subject: z.string().optional(),
 });
 
 type GenerateRecommendationInput = z.infer<typeof generateRecommendationSchema>;
@@ -51,11 +55,12 @@ export async function POST(request: Request) {
     }
 
     // 요청 데이터 검증
-    let validatedData: GenerateRecommendationInput = {};
+    let validatedData;
     
     try {
       const body = await request.json();
       validatedData = generateRecommendationSchema.parse(body);
+      console.log('검증된 요청 데이터:', validatedData);
     } catch (validationError) {
       console.error('요청 데이터 검증 실패:', validationError);
       throw new ApiError(400, "유효하지 않은 요청 데이터입니다");
@@ -138,6 +143,7 @@ export async function POST(request: Request) {
       {
         recentStudyPlans,
         subjectProgress,
+        formData: validatedData,
         user: {
           name: session.user.name || '학생',
           email: session.user.email || ''
