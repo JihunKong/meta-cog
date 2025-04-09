@@ -1,40 +1,62 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./package-lock.json"
 
 [build.environment]
   NODE_VERSION = "20"
+  NODE_ENV = "production"
   NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_DISABLE_STATIC_GENERATION = "true"
+  NEXT_MINIMAL = "true"
+  GENERATE_SOURCEMAP = "false"
   NPM_FLAGS = "--no-audit --no-fund"
-  NETLIFY_NEXT_PLUGIN_SKIP = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
-  included_files = ["node_modules/**", "prisma/**", ".env"]
+  node_bundler = "esbuild"
+  included_files = ["dist/**", ".next/**"]
+  excluded_files = ["*.md", "*.txt", "*.ts", "*.map", "*.lock", ".git/**", ".github/**", "node_modules/.cache/**"]
+  external_node_modules = ["@prisma/client", "@supabase/supabase-js", "next-auth", "pg", "sharp"]
+  node_bundler = "esbuild"
+  external_node_modules = ["next"]
+  directory = "netlify/functions"
+  timeout = 60
+  max_bundle_size = "50mb"
 
-# 모든 페이지를 Next.js 서버로 리디렉션
+[build.processing]
+  skip_processing = true
+
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/nextjs-server"
+  to = "/index.html"
   status = 200
+  force = false
+  conditions = {Role = ["anonymous"]}
 
-# NextAuth 리디렉션
 [[redirects]]
-  from = "/api/auth/signout"
-  to = "/auth/signin"
-  status = 302
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
   force = true
 
 [[redirects]]
-  from = "/api/auth/signout/*"
-  to = "/auth/signin"
-  status = 302
-  force = true
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
 
-[[redirects]]
-  from = "/api/auth/logout"
-  to = "/auth/signin"
-  status = 302
-  force = true 
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable" 
