@@ -1,221 +1,190 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, PlusCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import toast from "react-hot-toast";
 import Link from "next/link";
-import { toast } from "react-hot-toast";
-import { Icons } from "@/components/ui/icons";
-import { formatDate } from "@/lib/utils";
-import { checkUserRole } from "@/lib/utils";
+import { RecommendationType } from "@/types";
 
 interface Recommendation {
   id: string;
-  type: "STRATEGY" | "SCHEDULE" | "SUBJECT" | "UNIT";
+  user_id: string;
   subject: string;
   content: string;
-  createdAt: string;
+  type: RecommendationType;
+  created_at: string;
 }
 
 export default function RecommendationList() {
-  const { data: session } = useSession();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const isTeacher = session?.user && checkUserRole(session.user, ["TEACHER", "ADMIN"]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<RecommendationType | "ALL">("ALL");
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      if (!session?.user) return;
-
-      try {
-        setLoading(true);
-        
-        // 검색 파라미터 구성
-        const params = new URLSearchParams();
-        const type = searchParams.get("type");
-        const subject = searchParams.get("subject");
-        
-        if (type) {
-          params.append("type", type);
-        }
-        
-        if (subject) {
-          params.append("subject", subject);
-        }
-
-        console.log('추천 목록 조회 - 사용자 ID:', session.user.id);
-        const response = await fetch(`/api/recommendations?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error("추천 목록을 불러오는데 실패했습니다.");
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          console.log('받은 추천 데이터:', data.data.length, '개 항목');
-          
-          // 안전을 위해 클라이언트측에서도 한번 더 필터링
-          const filteredRecommendations = data.data.filter(rec => rec.userId === session.user.id);
-          console.log('필터링 후 추천 데이터:', filteredRecommendations.length, '개 항목');
-          
-          if (filteredRecommendations.length !== data.data.length) {
-            console.warn('다른 사용자의 추천이 포함되어 있었습니다. 필터링 적용됨.');
-          }
-          
-          setRecommendations(filteredRecommendations);
-        } else {
-          throw new Error(data.error?.message || "추천 목록을 불러오는데 실패했습니다.");
-        }
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRecommendations();
-  }, [session, searchParams]);
+  }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("정말로 이 추천을 삭제하시겠습니까?")) {
-      return;
-    }
-
+  const fetchRecommendations = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`/api/recommendations/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("추천을 삭제하는데 실패했습니다.");
-      }
-
+      const response = await fetch("/api/recommendations");
       const data = await response.json();
+      
       if (data.success) {
-        // 삭제 성공 후 목록 업데이트
-        setRecommendations(recommendations.filter((rec) => rec.id !== id));
-        toast.success("추천이 삭제되었습니다.");
+        setRecommendations(data.data);
       } else {
-        throw new Error(data.error?.message || "추천을 삭제하는데 실패했습니다.");
+        toast.error("추천 목록을 불러오는데 실패했습니다.");
       }
-    } catch (err) {
-      toast.error((err as Error).message);
+    } catch (error) {
+      toast.error("서버 오류가 발생했습니다.");
+      console.error("추천 목록 조회 오류:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "STRATEGY":
-        return "학습 전략";
-      case "SCHEDULE":
-        return "일정 계획";
-      case "SUBJECT":
-        return "과목 추천";
-      case "UNIT":
-        return "단원 추천";
-      default:
-        return "기타";
+  const generateRecommendations = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success("새로운 추천이 생성되었습니다!");
+        fetchRecommendations();
+      } else {
+        toast.error(data.error?.message || "추천 생성에 실패했습니다.");
+      }
+    } catch (error) {
+      toast.error("서버 오류가 발생했습니다.");
+      console.error("추천 생성 오류:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "STRATEGY":
-        return "bg-blue-100 text-blue-800";
-      case "SCHEDULE":
-        return "bg-green-100 text-green-800";
-      case "SUBJECT":
-        return "bg-purple-100 text-purple-800";
-      case "UNIT":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const filteredRecommendations = activeTab === "ALL" 
+    ? recommendations 
+    : recommendations.filter(rec => rec.type === activeTab);
 
-  // 날짜 포맷팅 함수
-  const formatRecommendationDate = (dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return formatDate(date);
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Icons.spinner className="animate-spin h-8 w-8 text-gray-500" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8 text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
-  if (recommendations.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-500">
-        <p>AI 추천이 없습니다.</p>
-        <p className="text-sm mt-2">
-          <Link href="/recommendations/generate" className="text-blue-500 hover:underline">
-            새 추천 생성하기
-          </Link>
-        </p>
-      </div>
-    );
-  }
+  const getTypeLabel = (type: RecommendationType) => {
+    switch(type) {
+      case "STRATEGY": return "학습 전략";
+      case "SCHEDULE": return "학습 일정";
+      case "SUBJECT": return "과목 추천";
+      case "UNIT": return "단원 학습";
+      default: return type;
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {recommendations.map((recommendation) => (
-        <div key={recommendation.id} className="border rounded-lg overflow-hidden bg-white shadow-sm">
-          <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <span className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(recommendation.type)}`}>
-                {getTypeLabel(recommendation.type)}
-              </span>
-              <span className="text-sm font-medium text-gray-700">{recommendation.subject}</span>
-            </div>
-            <span className="text-xs text-gray-500">
-              {formatRecommendationDate(recommendation.createdAt)}
-            </span>
-          </div>
-          <div className="p-4">
-            {isTeacher ? (
-              // 교사용 뷰: 내용 요약 + 자세히 보기/삭제 버튼
-              <>
-                <p className="text-gray-700 line-clamp-3">{recommendation.content}</p>
-                <div className="p-4 bg-gray-50 border-t flex justify-between">
-                  <Link
-                    href={`/recommendations/${recommendation.id}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    자세히 보기
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(recommendation.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    삭제
-                  </button>
-                </div>
-              </>
-            ) : (
-              // 학생용 뷰: 전체 내용 바로 표시
-              <div className="whitespace-pre-line text-gray-700">
-                {recommendation.content}
-              </div>
-            )}
-          </div>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">AI 추천 목록</h2>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchRecommendations}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={generateRecommendations}
+            disabled={isLoading}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            새 추천 생성
+          </Button>
         </div>
-      ))}
+      </div>
+
+      <Tabs defaultValue="ALL" value={activeTab} onValueChange={(value) => setActiveTab(value as RecommendationType | "ALL")}>
+        <TabsList className="grid grid-cols-5 mb-4">
+          <TabsTrigger value="ALL">전체</TabsTrigger>
+          <TabsTrigger value="STRATEGY">학습 전략</TabsTrigger>
+          <TabsTrigger value="SCHEDULE">학습 일정</TabsTrigger>
+          <TabsTrigger value="SUBJECT">과목 추천</TabsTrigger>
+          <TabsTrigger value="UNIT">단원 학습</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab}>
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-1/3" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-24 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredRecommendations.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-gray-500 mb-4">아직 추천이 없습니다.</p>
+              <Button onClick={generateRecommendations}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                추천 생성하기
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredRecommendations.map((recommendation) => (
+                <Card key={recommendation.id} className="overflow-hidden">
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>
+                          {recommendation.subject === "전체" 
+                            ? getTypeLabel(recommendation.type) 
+                            : `${recommendation.subject} - ${getTypeLabel(recommendation.type)}`}
+                        </CardTitle>
+                        <CardDescription>
+                          {formatDate(recommendation.created_at)}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="whitespace-pre-line">
+                      {recommendation.content}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 
