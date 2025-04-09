@@ -6,6 +6,9 @@
   NODE_VERSION = "20"
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_DISABLE_STATIC_GENERATION = "true"
+  NEXT_USE_MINIFY = "1"
+  NEXT_PRIVATE_PREBUNDLED_REACT = "1"
+  NEXT_PRIVATE_OUTPUT_TRACE_TO_DISK = "1"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
@@ -13,6 +16,12 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["node_modules/**", "prisma/**", ".env"]
+  external_node_modules = ["next", "sharp", "@prisma/client", "pg", "@babel/runtime"]
+  directory = "netlify/functions"
+  ignore_node_version = true
+  
+[build.processing]
+  skip_processing = true
 
 [[redirects]]
   from = "/api/auth/signout"

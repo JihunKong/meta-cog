@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && NODE_OPTIONS='--max_old_space_size=4096' next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "NEXT_TELEMETRY_DISABLED=1 NEXT_DISABLE_STATIC_GENERATION=true NEXT_PRIVATE_STANDALONE=true NODE_ENV=production NODE_OPTIONS='--max-old-space-size=4096' next build",
+    "start": "NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -68,6 +70,7 @@
     "prisma": "^6.5.0",
     "supabase": "^2.20.5",
     "typescript": "^5",
-    "vercel": "^41.4.1"
+    "vercel": "^41.4.1",
+    "@next/bundle-analyzer": "^14.1.0"
   }
 }
