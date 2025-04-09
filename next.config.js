@@ -16,9 +16,12 @@ const nextConfig = {
   // 서버 컴포넌트에서 사용할 외부 패키지 지정
   serverExternalPackages: ['next-auth'],
   experimental: {
+    // 서버 액션 설정
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
     },
+    // 캐시 관련 설정
+    disableStaticServer: true,
   },
   webpack: (config) => {
     config.resolve.fallback = {
@@ -27,7 +30,7 @@ const nextConfig = {
     };
     return config;
   },
-  // 정적 내보내기 대신 서버 렌더링 사용
+  // 서버 렌더링 모드 사용
   output: 'standalone',
 };
 
