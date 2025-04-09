@@ -17,11 +17,9 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["dist/**", ".next/**"]
-  excluded_files = ["*.md", "*.txt", "*.ts", "*.map", "*.lock", ".git/**", ".github/**", "node_modules/.cache/**"]
-  external_node_modules = ["@prisma/client", "@supabase/supabase-js", "next-auth", "pg", "sharp"]
-  node_bundler = "esbuild"
-  external_node_modules = ["next"]
+  included_files = ["dist/**", ".next/**", "node_modules/**", "prisma/**", ".env"]
+  excluded_files = ["*.md", "*.txt", "*.map", "*.lock", ".git/**", ".github/**", "node_modules/.cache/**"]
+  external_node_modules = ["@prisma/client", "@supabase/supabase-js", "next-auth", "pg", "sharp", "next"]
   directory = "netlify/functions"
   timeout = 60
   max_bundle_size = "50mb"
