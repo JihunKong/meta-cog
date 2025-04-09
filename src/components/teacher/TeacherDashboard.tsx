@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { Icons } from "@/components/ui/icons";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import { User } from "next-auth";
 
-interface User {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string;
-  image?: string | null;
+interface TeacherDashboardProps {
+  user: User & {
+    role: string;
+    student_id?: string | null;
+  };
 }
 
 interface StudyPlanSummary {
@@ -21,8 +20,7 @@ interface StudyPlanSummary {
   averageAchievement: number;
 }
 
-export default function TeacherDashboard() {
-  const { data: session } = useSession();
+export default function TeacherDashboard({ user }: TeacherDashboardProps) {
   const [students, setStudents] = useState<User[]>([]);
   const [studyPlanSummaries, setStudyPlanSummaries] = useState<Record<string, StudyPlanSummary>>({});
   const [loading, setLoading] = useState(true);
@@ -32,7 +30,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!session?.user) return;
+      if (!user) return;
 
       try {
         setLoading(true);
@@ -90,10 +88,10 @@ export default function TeacherDashboard() {
     };
 
     fetchStudents();
-  }, [session]);
+  }, [user]);
 
   const generateRecommendationsForAll = async () => {
-    if (!session?.user) return;
+    if (!user) return;
     
     try {
       setGeneratingRecommendations(true);
