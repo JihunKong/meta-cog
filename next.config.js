@@ -20,8 +20,6 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app']
     },
-    // 캐시 관련 설정
-    disableStaticServer: true,
   },
   webpack: (config) => {
     config.resolve.fallback = {
