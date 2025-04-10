@@ -45,8 +45,8 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
-    },
+      bodySizeLimit: '2mb'
+    }
   },
 };
 
