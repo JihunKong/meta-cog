@@ -6,10 +6,9 @@ export const metadata: Metadata = {
   description: "AI 추천 목록을 관리합니다."
 };
 
-// 정적 내보내기를 위한 더미 파라미터
-export async function generateStaticParams() {
-  return [{}];
-}
+// 동적 라우팅 설정
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function RecommendationsPage() {
   return <RecommendationsClient />;
