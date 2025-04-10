@@ -44,9 +44,9 @@ const nextConfig = {
   transpilePackages: ['lucide-react'],
   output: 'standalone',
   experimental: {
-    serverActions: true,
-    serverComponentsExternalPackages: ['next-auth'],
-    disableStaticServer: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
+    },
   },
 };
 
