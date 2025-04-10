@@ -30,18 +30,16 @@ const nextConfig = {
       skipDefaultConversion: true,
     },
   },
-  experimental: {
-    optimizeCss: {
-      inline: true,
-      critters: {
-        logLevel: 'error',
-        preload: 'media',
-        inlineFonts: true,
-      },
+  optimizeCss: {
+    inline: true,
+    critters: {
+      logLevel: 'error',
+      preload: 'media',
+      inlineFonts: true,
     },
-    serverActions: {
-      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
-    },
+  },
+  serverActions: {
+    allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
   },
   serverExternalPackages: ['next-auth'],
   webpack: (config) => {
