@@ -57,7 +57,7 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ['lucide-react'],
-  output: 'export',
+  output: 'standalone',
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

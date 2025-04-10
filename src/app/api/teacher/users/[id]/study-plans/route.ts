@@ -1,3 +1,7 @@
+// 동적 라우팅 설정
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
