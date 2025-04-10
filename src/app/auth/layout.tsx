@@ -1,5 +1,7 @@
+'use client';
+
 import { Metadata } from "next";
-import AuthProvider from "@/components/auth/AuthProvider";
+import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   title: "인증 - 청해FLAME",
@@ -11,5 +13,9 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <SessionProvider>
+      {children}
+    </SessionProvider>
+  );
 } 

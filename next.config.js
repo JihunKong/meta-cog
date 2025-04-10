@@ -42,7 +42,6 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
     },
-    disableStaticServer: true,
   },
   serverExternalPackages: ['next-auth'],
   webpack: (config) => {
