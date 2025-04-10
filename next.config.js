@@ -6,7 +6,6 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   images: {
     domains: ['localhost', 'meta-cog.netlify.app'],
     remotePatterns: [
@@ -57,7 +56,6 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ['lucide-react'],
-  output: 'standalone',
 };
 
 module.exports = withBundleAnalyzer(nextConfig);

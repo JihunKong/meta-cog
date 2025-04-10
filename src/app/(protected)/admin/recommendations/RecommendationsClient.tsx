@@ -14,6 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Trash } from "lucide-react";
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 // AIRecommendation 타입 정의
 interface AIRecommendation {
@@ -26,28 +30,41 @@ interface AIRecommendation {
 }
 
 export default function RecommendationsClient() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchRecommendations() {
-      try {
-        const response = await fetch('/api/recommendations');
-        if (!response.ok) {
-          throw new Error('AI 추천 데이터를 불러오는데 실패했습니다.');
-        }
-        const data = await response.json();
-        setRecommendations(data.data || []);
-      } catch (error) {
-        console.error(error);
-        toast.error('AI 추천 데이터를 불러오는데 실패했습니다.');
-      } finally {
-        setLoading(false);
-      }
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
     }
 
+    const fetchRecommendations = async () => {
+      try {
+        const response = await fetch('/api/recommendations');
+        if (!response.ok) throw new Error('추천 목록을 불러오는데 실패했습니다.');
+        const data = await response.json();
+        setRecommendations(data.recommendations);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+        toast.error('추천 목록을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchRecommendations();
-  }, []);
+  }, [status, router]);
+
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   const handleDelete = async (id: string) => {
     if (!confirm('이 AI 추천을 삭제하시겠습니까?')) return;
@@ -102,9 +119,7 @@ export default function RecommendationsClient() {
           </div>
         </div>
 
-        {loading ? (
-          <p className="text-center py-10">로딩 중...</p>
-        ) : recommendations.length === 0 ? (
+        {recommendations.length === 0 ? (
           <p className="text-center py-10">등록된 AI 추천이 없습니다.</p>
         ) : (
           <Table>
