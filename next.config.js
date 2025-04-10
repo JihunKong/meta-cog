@@ -32,7 +32,14 @@ const nextConfig = {
     },
   },
   experimental: {
-    optimizeCss: true,
+    optimizeCss: {
+      inline: true,
+      critters: {
+        logLevel: 'error',
+        preload: 'media',
+        inlineFonts: true,
+      },
+    },
     serverActions: true,
     serverComponentsExternalPackages: ['next-auth'],
   },
