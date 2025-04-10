@@ -1,44 +1,30 @@
 [build]
-  command = "CI=false npm run build"
+  command = "npm run build"
   publish = ".next"
-  functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
-  NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_PUBLIC_SUPABASE_URL = "NEXT_PUBLIC_SUPABASE_URL"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  NEXTAUTH_URL = "NEXTAUTH_URL"
+  NEXTAUTH_SECRET = "NEXTAUTH_SECRET"
   NEXT_DISABLE_STATIC_GENERATION = "true"
-  NEXT_PRIVATE_STANDALONE = "true"
-  NODE_ENV = "production"
-  NODE_OPTIONS = "--max-old-space-size=4096"
-  CI = "false"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-[functions]
-  node_bundler = "esbuild"
-  included_files = ["node_modules/**", "prisma/**", ".env"]
-  directory = "netlify/functions"
 
 [[redirects]]
   from = "/api/auth/signout"
   to = "/auth/signin"
   status = 302
-  force = true
 
 [[redirects]]
   from = "/api/auth/signout/*"
   to = "/auth/signin"
   status = 302
-  force = true
 
 [[redirects]]
   from = "/api/auth/logout"
   to = "/auth/signin"
   status = 302
-  force = true
 
 [[headers]]
-  for = "/_next/static/*"
+  for = "/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable" 
+    Cache-Control = "public, max-age=0, must-revalidate" 
