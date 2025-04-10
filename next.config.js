@@ -30,17 +30,6 @@ const nextConfig = {
       skipDefaultConversion: true,
     },
   },
-  optimizeCss: {
-    inline: true,
-    critters: {
-      logLevel: 'error',
-      preload: 'media',
-      inlineFonts: true,
-    },
-  },
-  serverActions: {
-    allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
-  },
   serverExternalPackages: ['next-auth'],
   webpack: (config) => {
     config.resolve.fallback = {
