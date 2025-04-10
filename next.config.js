@@ -42,6 +42,12 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ['lucide-react'],
+  output: 'standalone',
+  experimental: {
+    serverActions: true,
+    serverComponentsExternalPackages: ['next-auth'],
+    disableStaticServer: true,
+  },
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
