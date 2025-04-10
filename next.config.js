@@ -40,9 +40,11 @@ const nextConfig = {
         inlineFonts: true,
       },
     },
-    serverActions: true,
-    serverComponentsExternalPackages: ['next-auth'],
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'meta-cog.netlify.app'],
+    },
   },
+  serverExternalPackages: ['next-auth'],
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
