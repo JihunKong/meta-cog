@@ -14,6 +14,7 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+    unoptimized: process.env.NODE_ENV === 'development' ? false : true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -48,6 +49,12 @@ const nextConfig = {
       bodySizeLimit: '2mb'
     }
   },
+  // Netlify 최적화 설정
+  staticPageGenerationTimeout: 180,
+  // SSG 완전 비활성화
+  env: {
+    NEXT_DISABLE_STATIC_GENERATION: 'true'
+  }
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
