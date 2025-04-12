@@ -1,37 +1,22 @@
 [build]
-  command = "npx prisma generate && npm run build"
-  publish = ".next"
+  command = "npm run build"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# 개발 서버 설정
+[dev]
+  command = "npm run dev"
+  port = 5173
+  publish = "dist"
 
+# 함수 설정
 [functions]
   node_bundler = "esbuild"
 
-# 리디렉션 규칙 추가
-[[redirects]]
-  from = "/api/auth/signout"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-[[redirects]]
-  from = "/api/auth/signout/*"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-[[redirects]]
-  from = "/api/auth/logout"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-# 모든 경로를 Next.js에 위임
+# 모든 경로를 index.html로 리디렉션하여 SPA 지원
 [[redirects]]
   from = "/*"
   to = "/index.html"
