@@ -1,9 +1,10 @@
 [build]
-  command = "npm run build"
+  command = "npx prisma generate && npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
@@ -28,4 +29,10 @@
   from = "/api/auth/logout"
   to = "/auth/signin"
   status = 302
-  force = true 
+  force = true
+
+# 모든 경로를 Next.js에 위임
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
