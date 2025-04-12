@@ -25,5 +25,16 @@ export default async function StudentsPage() {
     redirect("/");
   }
   
-  return <StudentsClient user={session.user} />;
+  // next-auth의 SessionProvider가 필요하지 않도록 구성
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">학생 목록</h1>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-800">
+        <StudentsClient user={session.user} />
+      </div>
+    </div>
+  );
 } 
