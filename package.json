@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NEXT_TELEMETRY_DISABLED=1 NEXT_DISABLE_STATIC_GENERATION=true NODE_ENV=production NODE_OPTIONS='--max-old-space-size=4096' next build",
+    "build": "prisma generate && NEXT_TELEMETRY_DISABLED=1 NEXT_DISABLE_STATIC_GENERATION=true NODE_ENV=production NODE_OPTIONS='--max-old-space-size=4096' next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@netlify/plugin-nextjs": "^5.10.4",
+    "@netlify/plugin-nextjs": "^5.10.5",
     "@next/bundle-analyzer": "^14.1.0",
     "@types/node": "^20.17.24",
     "@types/react": "^19.0.10",
