@@ -4,21 +4,32 @@
 
 [build.environment]
   NEXT_DISABLE_STATIC_GENERATION = "true"
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/api/auth/signout"
   to = "/auth/signin"
   status = 302
+  force = true
 
 [[redirects]]
   from = "/api/auth/signout/*"
   to = "/auth/signin"
   status = 302
+  force = true
 
 [[redirects]]
   from = "/api/auth/logout"
   to = "/auth/signin"
   status = 302
+  force = true
 
 [[headers]]
   for = "/*"
