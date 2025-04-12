@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import NextAuth from "next-auth/next";
 import { UserRole } from "@/types";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import { checkSupabaseClient, checkSupabaseAdmin } from "@/lib/supabase";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -33,6 +33,10 @@ export const authOptions: NextAuthOptions = {
             console.log("이메일 또는 비밀번호 누락");
             throw new Error("이메일과 비밀번호를 입력해주세요");
           }
+
+          // Supabase 클라이언트 초기화 확인
+          const supabase = checkSupabaseClient();
+          const supabaseAdmin = checkSupabaseAdmin();
 
           // Supabase로 로그인 시도
           const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({

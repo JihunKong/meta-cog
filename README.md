@@ -45,6 +45,14 @@ Supabase 스키마는 첨부된 이미지의 구조와 정확히 일치해야 �
 - 환경변수는 `.env` 파일에서 관리되지 않으며, 반드시 Netlify의 환경변수 설정을 통해 직접 관리되어야 합니다.
 - 환경변수는 Git에서 무시되어야 하며, Netlify 환경변수를 통해 배포 시점에 설정됩니다.
 
+### Netlify에서 필요한 Supabase 환경변수
+Netlify 대시보드의 Site settings > Build & deploy > Environment에서 다음 환경변수를 설정해야 합니다:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase 익명 키
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase 서비스 역할 키 (관리자 권한)
+
+이 환경변수들은 하드코딩되지 않고 배포 환경에서 안전하게 로드됩니다.
 
 ## 개발 환경 구성
 - Node.js LTS 버전 사용 권장

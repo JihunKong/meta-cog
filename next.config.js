@@ -1,20 +1,11 @@
 /** @type {import('next').NextConfig} */
 
-const withBundleAnalyzer = process.env.ANALYZE === 'true'
-  ? require('@next/bundle-analyzer')({ enabled: true })
-  : (config) => config;
-
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
   images: {
-    domains: ['localhost', 'meta-cog.netlify.app'],
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
-    unoptimized: process.env.NODE_ENV === 'development' ? false : true,
+    domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com', 'images.unsplash.com'],
+    unoptimized: process.env.NODE_ENV === 'production',
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -22,39 +13,32 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  compress: true,
-  poweredByHeader: false,
-  productionBrowserSourceMaps: false,
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{member}}',
-      skipDefaultConversion: true,
-    },
-  },
-  serverExternalPackages: ['next-auth'],
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-      dns: false,
-    };
+  // Netlify 특화 설정
+  target: 'serverless',
+  webpack: (config, { isServer }) => {
+    // 외부 패키지를 위한 폴백 제공
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+      };
+    }
     return config;
   },
-  transpilePackages: ['lucide-react'],
-  output: 'standalone',
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    }
-  },
-  // Netlify 최적화 설정
+  // Netlify에서 정적 페이지 생성 타임아웃 방지
   staticPageGenerationTimeout: 180,
-  // SSG 완전 비활성화
+  distDir: process.env.BUILD_DIR || '.next',
+  poweredByHeader: false,
+  experimental: {
+    serverComponentsExternalPackages: ['bcrypt', '@prisma/client'],
+    optimizeCss: true,
+  },
   env: {
-    NEXT_DISABLE_STATIC_GENERATION: 'true'
-  }
+    BASE_URL: process.env.BASE_URL || 'http://localhost:3000',
+  },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+module.exports = nextConfig;

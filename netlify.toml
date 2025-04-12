@@ -1,37 +1,53 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./package-lock.json"
 
 [build.environment]
-  NEXT_DISABLE_STATIC_GENERATION = "true"
-  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NODE_VERSION = "20.10.0"
   NPM_FLAGS = "--legacy-peer-deps"
-  SKIP_STATIC_GENERATION = "true"
+  CI = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["node_modules/@netlify/plugin-nextjs/**"]
 
+# Next.js Image 최적화 캐시 설정
+[[headers]]
+  for = "/_next/image/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 정적 자산 캐시 설정
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 인증 관련 리디렉션
 [[redirects]]
-  from = "/api/auth/signout"
+  from = "/auth/callback"
   to = "/auth/signin"
   status = 302
   force = true
 
 [[redirects]]
-  from = "/api/auth/signout/*"
+  from = "/auth/signout"
   to = "/auth/signin"
   status = 302
   force = true
 
+# SPA 지원을 위한 폴백 리디렉션
 [[redirects]]
-  from = "/api/auth/logout"
-  to = "/auth/signin"
-  status = 302
-  force = true
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
+# 모든 라우트에 대한 캐시 컨트롤 헤더 설정
 [[headers]]
   for = "/*"
   [headers.values]
