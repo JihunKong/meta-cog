@@ -6,6 +6,7 @@
   NEXT_DISABLE_STATIC_GENERATION = "true"
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+  SKIP_STATIC_GENERATION = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

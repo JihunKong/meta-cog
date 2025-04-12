@@ -51,6 +51,10 @@ const nextConfig = {
   },
   // Netlify 최적화 설정
   staticPageGenerationTimeout: 180,
+  // SSG 완전 비활성화
+  env: {
+    NEXT_DISABLE_STATIC_GENERATION: 'true'
+  }
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
