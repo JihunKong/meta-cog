@@ -1,10 +1,15 @@
 "use client";
 
+// 정적 생성 비활성화
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function DebugSessionPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({ required: false });
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

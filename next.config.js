@@ -41,11 +41,9 @@ const nextConfig = {
   // 정적 생성 완전 비활성화
   output: 'standalone',
   // Next.js 15 빌드 오류 해결
+  skipTrailingSlashRedirect: true,
   experimental: {
-    // 정적 생성 비활성화
-    disableStaticGeneration: true,
-    // 정적 페이지 생성 중 오류가 발생해도 빌드 계속 진행
-    skipTrailingSlashRedirect: true,
+    // 정적 생성 중 오류가 발생해도 빌드 계속 진행
     scrollRestoration: true,
     optimizeCss: true,
     // React 후크 오류 해결
