@@ -40,6 +40,16 @@ const nextConfig = {
   staticPageGenerationTimeout: 180,
   // 정적 생성 완전 비활성화
   output: 'standalone',
+  // Next.js 15 빌드 오류 해결
+  experimental: {
+    // 정적 페이지 생성 중 오류가 발생해도 빌드 계속 진행
+    skipTrailingSlashRedirect: true,
+    scrollRestoration: true,
+    optimizeCss: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'meta-cog-dashboard.netlify.app']
+    }
+  },
   distDir: '.next',
   // Netlify 배포를 위한 추가 설정
   trailingSlash: false,

@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function SignInForm() {
+interface SignInFormProps {
+  callbackUrl?: string;
+}
+
+export default function SignInForm({ callbackUrl = '/dashboard' }: SignInFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
