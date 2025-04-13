@@ -1,5 +1,8 @@
 "use client";
 
+// 정적 생성 비활성화
+export const dynamic = "force-dynamic";
+
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -11,7 +14,7 @@ import {
 } from "@mui/material";
 
 export default function Home() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({ required: false });
   const router = useRouter();
   const theme = useTheme();
 

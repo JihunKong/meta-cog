@@ -2,8 +2,6 @@
 
 // 정적 생성 비활성화
 export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
