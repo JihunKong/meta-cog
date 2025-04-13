@@ -32,6 +32,20 @@
   status = 302
   force = true
 
+# 로그인 성공 후 대시보드로 리디렉션
+[[redirects]]
+  from = "/auth/signin?callbackUrl=*"
+  to = "/dashboard"
+  status = 200
+  force = false
+  conditions = {Role = ["admin", "ADMIN"]}
+
+# 모든 클라이언트 사이드 라우팅을 위한 설정
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

@@ -2,10 +2,10 @@
 
 import "./globals.css";
 import { Inter } from "next/font/google";
+import { Navigation } from "@/components/layout/navigation";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/components/auth/auth-provider";
-import { Navigation } from "@/components/layout/navigation";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,7 +21,7 @@ export default function RootLayout({
         <meta name="description" content="학생들을 위한 SMART 목표 기반 자기주도 학습 관리 애플리케이션" />
       </head>
       <body className={inter.className}>
-        <AuthProvider>
+        <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -34,7 +34,7 @@ export default function RootLayout({
             </div>
             <Toaster />
           </ThemeProvider>
-        </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

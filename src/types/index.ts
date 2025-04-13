@@ -10,6 +10,7 @@ export interface User {
   image: string | null;
   role: UserRole;
   student_id?: string | null;
+  isTest?: boolean; // 테스트 계정 여부
 }
 
 export interface StudyPlan {

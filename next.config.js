@@ -5,9 +5,9 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
   : (config) => config;
 
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   images: {
-    domains: ['localhost', 'meta-cog.netlify.app'],
+    domains: ['localhost', 'meta-cog.netlify.app', 'pure-ocean.netlify.app'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -25,13 +25,6 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
-  modularizeImports: {
-    'lucide-react': {
-      transform: 'lucide-react/dist/esm/icons/{{member}}',
-      skipDefaultConversion: true,
-    },
-  },
-  serverExternalPackages: ['next-auth'],
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -42,18 +35,24 @@ const nextConfig = {
     };
     return config;
   },
-  transpilePackages: ['lucide-react'],
-  output: 'standalone',
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    }
-  },
+  transpilePackages: ['lucide-react', 'next-auth'],
   // Netlify 최적화 설정
   staticPageGenerationTimeout: 180,
-  // SSG 완전 비활성화
-  env: {
-    NEXT_DISABLE_STATIC_GENERATION: 'true'
+  // 정적 생성 완전 비활성화
+  output: 'standalone',
+  distDir: '.next',
+  // Netlify 배포를 위한 추가 설정
+  trailingSlash: false,
+  // 페이지 정적 생성 옵션
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  experimental: {
+    // React 후크 오류 해결
+    serverActions: {
+      bodySizeLimit: '2mb'
+    },
+    // Netlify 배포를 위한 추가 설정
+    optimizeCss: true,
+    scrollRestoration: true
   }
 };
 

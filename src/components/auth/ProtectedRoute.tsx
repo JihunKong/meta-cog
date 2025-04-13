@@ -50,7 +50,17 @@ export default function ProtectedRoute({
     console.log("[ProtectedRoute] 권한 확인 결과:", hasRequiredRole);
     
     if (!hasRequiredRole) {
-      console.log("[ProtectedRoute] 권한 없음, 대시보드로 이동");
+      console.log("[ProtectedRoute] 권한 없음, 접근 거부");
+      // 권한이 없는 경우 접근 거부 페이지로 이동하는 대신 대시보드에 그대로 남겨둡니다.
+      // 관리자는 모든 페이지에 접근 가능하도록 설정
+      if (session.user.role === "ADMIN") {
+        console.log("[ProtectedRoute] 관리자 계정 - 접근 허용");
+        setAuthorized(true);
+        return;
+      }
+      
+      // 권한 없음 알림
+      alert("접근 권한이 없습니다.");
       router.push("/dashboard");
       return;
     }

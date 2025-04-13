@@ -19,6 +19,24 @@ export default function AdminStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // 로컬 테스트용 임시 데이터 사용
+        console.log('로컬 테스트용 임시 통계 데이터 사용');
+        
+        // 임시 테스트 데이터
+        const mockData: StatsData = {
+          totalUsers: 125,
+          totalSubjects: 8,
+          totalCurriculums: 42,
+          totalStudyPlans: 356,
+          completedStudyPlans: 289
+        };
+        
+        setStats(mockData);
+        setLoading(false);
+        return;
+        
+        // 아래 API 호출 코드는 서버가 준비되면 사용
+        /*
         const response = await fetch("/api/admin/stats");
         
         if (!response.ok) {
@@ -31,6 +49,7 @@ export default function AdminStats() {
         } else {
           throw new Error(data.error?.message || "통계 데이터를 불러오는데 실패했습니다.");
         }
+        */
       } catch (err) {
         console.error("통계 데이터 로딩 오류:", err);
         setError((err as Error).message);
@@ -46,9 +65,9 @@ export default function AdminStats() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
           </div>
         ))}
       </div>
@@ -57,7 +76,7 @@ export default function AdminStats() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded relative">
         <strong className="font-medium">오류 발생:</strong>
         <span className="block sm:inline"> {error}</span>
       </div>
@@ -103,15 +122,15 @@ export default function AdminStats() {
       {statCards.map((card, index) => (
         <div
           key={index}
-          className="bg-white p-6 rounded-lg shadow flex items-start justify-between"
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex items-start justify-between"
         >
           <div>
-            <h3 className="text-sm font-medium text-gray-500">{card.title}</h3>
-            <p className="text-2xl font-bold mt-1">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.title}</h3>
+            <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">
               {card.value.toLocaleString()}{card.suffix || ''}
             </p>
           </div>
-          <div className={`p-3 rounded-full ${card.color.split(" ")[0]}`}>{card.icon}</div>
+          <div className={`p-3 rounded-full ${card.color.split(" ")[0]} dark:bg-opacity-20`}>{card.icon}</div>
         </div>
       ))}
     </div>
