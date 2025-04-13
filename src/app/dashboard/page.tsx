@@ -3,8 +3,24 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardActions, 
+  Button, 
+  CircularProgress,
+  Paper,
+  Divider,
+  useTheme
+} from "@mui/material";
+import SchoolIcon from "@mui/icons-material/School";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import TimelineIcon from "@mui/icons-material/Timeline";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -68,83 +84,224 @@ export default function DashboardPage() {
     }
   }, [session, status, router]);
 
+  const theme = useTheme();
+
   // 로딩 중일 때
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        <p className="ml-3">대시보드 로딩 중...</p>
-      </div>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh' 
+        }}
+      >
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" sx={{ mt: 2, color: theme.palette.text.secondary }}>
+          대시보드 로딩 중...
+        </Typography>
+      </Box>
     );
   }
   
   // 개발 환경에서 관리자 페이지로 바로 접근하는 버튼 추가
   if (process.env.NODE_ENV === 'development') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen space-y-6">
-        <h1 className="text-2xl font-bold">대시보드</h1>
-        <p>세션 상태: {status}</p>
-        <p>사용자 정보: {session?.user?.email || '로그인되지 않음'}</p>
-        
-        <div className="space-y-4">
-          <Button onClick={handleDirectLogin} className="bg-blue-600 hover:bg-blue-700">
-            관리자 페이지로 바로 이동
-          </Button>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          p: 3
+        }}
+      >
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 4, 
+            borderRadius: 2, 
+            maxWidth: 500, 
+            width: '100%',
+            textAlign: 'center' 
+          }}
+        >
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            대시보드
+          </Typography>
           
-          <Button onClick={() => router.push('/auth/signin')} className="bg-gray-600 hover:bg-gray-700">
-            로그인 페이지로 이동
-          </Button>
-        </div>
-      </div>
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="body1" paragraph>
+            세션 상태: <strong>{status}</strong>
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            사용자 정보: <strong>{session?.user?.email || '로그인되지 않음'}</strong>
+          </Typography>
+          
+          <Box sx={{ mt: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleDirectLogin}
+              size="large"
+              sx={{ 
+                py: 1.5,
+                background: 'linear-gradient(to right, #3b82f6, #4f46e5)',
+                '&:hover': {
+                  background: 'linear-gradient(to right, #2563eb, #4338ca)'
+                }
+              }}
+            >
+              관리자 페이지로 바로 이동
+            </Button>
+            
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={() => router.push('/auth/signin')}
+              size="large"
+              sx={{ py: 1.5 }}
+            >
+              로그인 페이지로 이동
+            </Button>
+          </Box>
+        </Paper>
+      </Box>
     );
   }
   
   // 학생용 대시보드
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">학생 대시보드</h1>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" sx={{ mb: 4 }}>
+        학생 대시보드
+      </Typography>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>환영합니다, {session?.user?.name || '학생'}님!</CardTitle>
-            <CardDescription>
-              역할: {session?.user?.role || '학생'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>이메일: {session?.user?.email || '정보 없음'}</p>
-            <p className="mt-4">청해FLAME 학생 대시보드에 오신 것을 환영합니다.</p>
-          </CardContent>
-          <CardFooter>
-            <p className="text-sm text-gray-500">마지막 로그인: {new Date().toLocaleString()}</p>
-          </CardFooter>
-        </Card>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+        <Box>
+          <Card 
+            elevation={2} 
+            sx={{ 
+              height: '100%',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: 6
+              }
+            }}
+          >
+            <CardHeader
+              title={
+                <Typography variant="h6" fontWeight="bold">
+                  환영합니다, {session?.user?.name || '학생'}님!
+                </Typography>
+              }
+              subheader={
+                <Typography variant="subtitle2" color="text.secondary">
+                  역할: {session?.user?.role || '학생'}
+                </Typography>
+              }
+              avatar={<SchoolIcon color="primary" fontSize="large" />}
+            />
+            <CardContent>
+              <Typography variant="body1" paragraph>
+                이메일: {session?.user?.email || '정보 없음'}
+              </Typography>
+              <Typography variant="body1">
+                Meta-Cog 학생 대시보드에 오신 것을 환영합니다.
+              </Typography>
+            </CardContent>
+            <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
+              <Typography variant="caption" color="text.secondary">
+                마지막 로그인: {new Date().toLocaleString()}
+              </Typography>
+            </CardActions>
+          </Card>
+        </Box>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>학습 기능</CardTitle>
-            <CardDescription>자주 사용하는 학습 기능</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button className="w-full" variant="outline">학습 계획 관리</Button>
-            <Button className="w-full" variant="outline">성취도 분석</Button>
-            <Button className="w-full" variant="outline">학습 자료 탐색</Button>
-          </CardContent>
-        </Card>
+        <Box>
+          <Card 
+            elevation={2} 
+            sx={{ 
+              height: '100%',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: 6
+              }
+            }}
+          >
+            <CardHeader
+              title={
+                <Typography variant="h6" fontWeight="bold">
+                  학습 기능
+                </Typography>
+              }
+              subheader={
+                <Typography variant="subtitle2" color="text.secondary">
+                  자주 사용하는 학습 기능
+                </Typography>
+              }
+              avatar={<AssignmentIcon color="primary" fontSize="large" />}
+            />
+            <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button variant="outlined" startIcon={<TimelineIcon />}>학습 계획 관리</Button>
+              <Button variant="outlined" startIcon={<TimelineIcon />}>성취도 분석</Button>
+              <Button variant="outlined" startIcon={<MenuBookIcon />}>학습 자료 탐색</Button>
+            </CardContent>
+          </Card>
+        </Box>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>학습 현황</CardTitle>
-            <CardDescription>현재 학습 현황</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-green-500 font-medium">● 정상 진행 중</p>
-            <p className="mt-2">세션 ID: {session?.user?.id || '정보 없음'}</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <Box>
+          <Card 
+            elevation={2} 
+            sx={{ 
+              height: '100%',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: 6
+              }
+            }}
+          >
+            <CardHeader
+              title={
+                <Typography variant="h6" fontWeight="bold">
+                  학습 현황
+                </Typography>
+              }
+              subheader={
+                <Typography variant="subtitle2" color="text.secondary">
+                  현재 학습 현황
+                </Typography>
+              }
+              avatar={<TimelineIcon color="primary" fontSize="large" />}
+            />
+            <CardContent>
+              <Typography variant="body1" color="success.main" sx={{ display: 'flex', alignItems: 'center', fontWeight: 500 }}>
+                <Box component="span" sx={{ 
+                  display: 'inline-block', 
+                  width: 10, 
+                  height: 10, 
+                  borderRadius: '50%', 
+                  bgcolor: 'success.main', 
+                  mr: 1 
+                }} />
+                정상 진행 중
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 2 }}>
+                세션 ID: {session?.user?.id || '정보 없음'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+    </Container>
   );
   
 

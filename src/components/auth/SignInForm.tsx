@@ -3,10 +3,21 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Icons } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { 
+  TextField, 
+  Button, 
+  Box, 
+  Typography, 
+  Alert, 
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Paper
+} from "@mui/material";
+import EmailIcon from "@mui/icons-material/Email";
+import LockIcon from "@mui/icons-material/Lock";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 interface SignInFormProps {
   callbackUrl?: string;
@@ -102,73 +113,123 @@ export default function SignInForm({ callbackUrl = '/dashboard' }: SignInFormPro
     router.push('/dashboard');
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="p-6 bg-gray-100 rounded-lg shadow-md border border-gray-300">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <Box sx={{ width: '100%', maxWidth: 400, mx: 'auto' }}>
+      <Paper elevation={0} sx={{ p: 3, borderRadius: 2 }}>
+        <form onSubmit={handleSubmit}>
           {/* 오류 메시지 표시 영역 */}
           {error && (
-            <div className="p-3 bg-red-100 text-red-800 rounded-md mb-4 font-medium">
+            <Alert severity="error" sx={{ mb: 3 }}>
               {error}
-            </div>
+            </Alert>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="email" className="block text-gray-900 font-bold">이메일</Label>
-            <input
+          <Box sx={{ mb: 3 }}>
+            <TextField
+              fullWidth
               id="email"
+              label="이메일"
               type="email"
               placeholder="이메일 주소"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon color="primary" />
+                  </InputAdornment>
+                ),
+              }}
             />
-          </div>
+          </Box>
           
-          <div className="space-y-2">
-            <Label htmlFor="password" className="block text-gray-900 font-bold">비밀번호</Label>
-            <input
+          <Box sx={{ mb: 4 }}>
+            <TextField
+              fullWidth
               id="password"
-              type="password"
+              label="비밀번호"
+              type={showPassword ? "text" : "password"}
               placeholder="비밀번호"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockIcon color="primary" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={togglePasswordVisibility}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
-          </div>
+          </Box>
           
-          <button
+          <Button
             type="submit"
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors"
+            fullWidth
+            variant="contained"
+            color="primary"
             disabled={loading}
+            sx={{ 
+              py: 1.5,
+              mb: 2,
+              background: 'linear-gradient(to right, #3b82f6, #4f46e5)',
+              '&:hover': {
+                background: 'linear-gradient(to right, #2563eb, #4338ca)'
+              }
+            }}
           >
             {loading ? (
-              <>
-                <Icons.spinner className="animate-spin inline-block mr-2 h-4 w-4" />
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
                 로그인 중...
-              </>
+              </Box>
             ) : "로그인"}
-          </button>
+          </Button>
 
           {/* 개발 환경에서만 표시되는 직접 접근 버튼 */}
           {process.env.NODE_ENV === 'development' && (
-            <button
+            <Button
               type="button"
               onClick={handleDirectAccess}
-              className="w-full mt-4 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition-colors"
+              fullWidth
+              variant="contained"
+              color="success"
+              sx={{ py: 1.5 }}
             >
               관리자 대시보드로 바로 이동
-            </button>
+            </Button>
           )}
         </form>
         
-        <div className="mt-6 text-center text-sm text-gray-700 font-medium">
-          <p>관리자가 발급한 계정으로 로그인하세요.</p>
-          <p>계정이 없으시면 관리자에게 문의하세요.</p>
-        </div>
-      </div>
-    </div>
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            관리자가 발급한 계정으로 로그인하세요.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            계정이 없으시면 관리자에게 문의하세요.
+          </Typography>
+        </Box>
+      </Paper>
+    </Box>
   );
 } 

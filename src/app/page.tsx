@@ -3,11 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Image from "next/image";
+import { 
+  Box, 
+  CircularProgress, 
+  Typography,
+  useTheme
+} from "@mui/material";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const theme = useTheme();
 
   useEffect(() => {
     // 로딩 중일 때는 아무 작업도 하지 않음
@@ -34,9 +40,21 @@ export default function Home() {
   // 로딩 상태일 때 표시할 UI
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          background: theme.palette.background.default
+        }}
+      >
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" sx={{ mt: 2, color: theme.palette.text.secondary }}>
+          로딩 중...
+        </Typography>
+      </Box>
     );
   }
 
