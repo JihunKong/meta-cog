@@ -1,39 +1,15 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
-  NEXT_DISABLE_STATIC_GENERATION = "true"
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
-  SKIP_STATIC_GENERATION = "true"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-[functions]
-  node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/api/auth/signout"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-[[redirects]]
-  from = "/api/auth/signout/*"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-[[redirects]]
-  from = "/api/auth/logout"
-  to = "/auth/signin"
-  status = 302
-  force = true
-
-# 로그인 성공 후 대시보드로 리디렉션
-[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
   from = "/auth/signin?callbackUrl=*"
   to = "/dashboard"
   status = 200
