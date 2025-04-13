@@ -11,7 +11,7 @@ interface AdminCheckProps {
 }
 
 export function AdminCheck({ children }: AdminCheckProps) {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({ required: false });
   const router = useRouter();
 
   useEffect(() => {

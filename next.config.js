@@ -4,6 +4,10 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
   ? require('@next/bundle-analyzer')({ enabled: true })
   : (config) => config;
 
+// 환경 변수 설정
+const NEXT_DISABLE_STATIC_GENERATION = process.env.NEXT_DISABLE_STATIC_GENERATION === 'true' || true;
+const SKIP_STATIC_GENERATION = process.env.SKIP_STATIC_GENERATION === 'true' || true;
+
 const nextConfig = {
   reactStrictMode: false,
   images: {
@@ -14,7 +18,7 @@ const nextConfig = {
         hostname: '**',
       },
     ],
-    unoptimized: process.env.NODE_ENV === 'development' ? false : true,
+    unoptimized: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -42,6 +46,10 @@ const nextConfig = {
   output: 'standalone',
   // Next.js 15 빌드 오류 해결
   experimental: {
+    // 정적 생성 비활성화
+    disableStaticGeneration: NEXT_DISABLE_STATIC_GENERATION,
+    // 서버 컴포넌트만 사용
+    serverComponents: true,
     // 정적 페이지 생성 중 오류가 발생해도 빌드 계속 진행
     skipTrailingSlashRedirect: true,
     scrollRestoration: true,
