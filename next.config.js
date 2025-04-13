@@ -54,24 +54,32 @@ const nextConfig = {
     skipTrailingSlashRedirect: true,
     scrollRestoration: true,
     optimizeCss: true,
+    // React 후크 오류 해결
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'meta-cog-dashboard.netlify.app']
-    }
+      allowedOrigins: ['localhost:3000', 'meta-cog-dashboard.netlify.app'],
+      bodySizeLimit: '2mb'
+    },
+    // Netlify 호환성 개선
+    forceSwcTransforms: true,
+    // 정적 생성 중 오류 무시
+    skipMiddlewareUrlNormalize: true,
+    // 빌드 중 오류 무시
+    swcPlugins: [],
+    // 서버 컴포넌트 사용
+    serverComponentsExternalPackages: ['next-auth']
+  },
+  // 정적 생성 중 오류 무시
+  onDemandEntries: {
+    // 서버 생성 페이지 캐시 시간 증가
+    maxInactiveAge: 60 * 60 * 1000,
+    // 동시에 캐시할 페이지 수 증가
+    pagesBufferLength: 5,
   },
   distDir: '.next',
   // Netlify 배포를 위한 추가 설정
   trailingSlash: false,
   // 페이지 정적 생성 옵션
-  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
-  experimental: {
-    // React 후크 오류 해결
-    serverActions: {
-      bodySizeLimit: '2mb'
-    },
-    // Netlify 배포를 위한 추가 설정
-    optimizeCss: true,
-    scrollRestoration: true
-  }
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx']
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
