@@ -1,23 +1,15 @@
 [build]
-  command = "npm run build || true"
+  command = "npm run build"
   publish = ".next"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ./"
 
 [build.environment]
   NEXT_DISABLE_STATIC_GENERATION = "true"
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   SKIP_STATIC_GENERATION = "true"
-  # 정적 생성 중 데이터베이스 오류 무시
-  NEXT_IGNORE_STATIC_GENERATION_ERRORS = "true"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    # 빌드 오류 무시
-    skipBuildCommand = true
-    # 빌드 출력 디렉토리 설정
-    publishDir = ".next"
 
 [functions]
   node_bundler = "esbuild"
