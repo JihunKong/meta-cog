@@ -6,17 +6,7 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  from = "/auth/signin?callbackUrl=*"
-  to = "/dashboard"
-  status = 200
-  force = false
-  conditions = {Role = ["admin", "ADMIN"]}
-
-# 모든 클라이언트 사이드 라우팅을 위한 설정
+# 기본 리다이렉트 - 모든 클라이언트 사이드 라우팅을 위한 설정
 [[redirects]]
   from = "/*"
   to = "/index.html"
