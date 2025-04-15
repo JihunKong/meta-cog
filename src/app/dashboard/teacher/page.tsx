@@ -11,6 +11,10 @@ interface Student {
   last_login: string;
 }
 
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
 export default function TeacherDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   // [설명] 검색어를 저장하는 state입니다. 사용자가 입력창에 값을 입력하면 이 값이 바뀝니다.
@@ -24,6 +28,17 @@ export default function TeacherDashboard() {
   const [studentReflections, setStudentReflections] = useState<Record<string, any[]>>({});
   // 목표별 달성률 변화 차트 모달 상태
   const [openGoalChartId, setOpenGoalChartId] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    getUserRole().then((r) => {
+      setRole(r);
+      if (r !== "TEACHER") router.replace("/login");
+    });
+  }, [router]);
+
+  if (role !== "TEACHER") return null;
 
   // 교사 코멘트: { targetType, targetId, teacher, comment, created_at }
   const [comments, setComments] = useState<any[]>([]);

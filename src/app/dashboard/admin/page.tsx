@@ -9,6 +9,10 @@ interface User {
   role: "STUDENT" | "TEACHER" | "ADMIN";
 }
 
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [editRoleId, setEditRoleId] = useState<string | null>(null);
@@ -18,6 +22,17 @@ export default function AdminDashboard() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<"STUDENT"|"TEACHER"|"ADMIN">("STUDENT");
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    getUserRole().then((r) => {
+      setRole(r);
+      if (r !== "ADMIN") router.replace("/login");
+    });
+  }, [router]);
+
+  if (role !== "ADMIN") return null;
 
   // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 users에 추가합니다.
   const handleAddUser = () => {

@@ -11,12 +11,6 @@ export default function Home() {
       const role = await getUserRole();
       if (!role) {
         router.replace("/login");
-      } else if (role === "STUDENT") {
-        router.replace("/dashboard/student");
-      } else if (role === "TEACHER") {
-        router.replace("/dashboard/teacher");
-      } else if (role === "ADMIN") {
-        router.replace("/dashboard/admin");
       } else {
         router.replace("/dashboard");
       }

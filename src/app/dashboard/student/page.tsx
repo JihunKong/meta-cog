@@ -30,6 +30,10 @@ interface GoalSession {
 
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
 export default function StudentDashboard() {
   // SMART 목표 및 기타 상태
   const [goals, setGoals] = useState<SmartGoal[]>([]);
@@ -57,6 +61,17 @@ export default function StudentDashboard() {
   const [goalAverages, setGoalAverages] = useState<Record<string, number>>({});
   // 목표별 누적 달성률
   const [goalTotalAverages, setGoalTotalAverages] = useState<Record<string, number>>({});
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    getUserRole().then((r) => {
+      setRole(r);
+      if (r !== "STUDENT") router.replace("/login");
+    });
+  }, [router]);
+
+  if (role !== "STUDENT") return null;
   // 반성문 전체 보기 모달 상태
   const [openReflectionGoalId, setOpenReflectionGoalId] = useState<string | null>(null);
   // 달성률 변화 모달 상태
