@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { getUserRole } from "@/lib/auth";
 
 export default async function DashboardPage() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const role = user?.user_metadata?.role;
+  const role = await getUserRole();
   if (role === "STUDENT") redirect("/dashboard/student");
   else if (role === "TEACHER") redirect("/dashboard/teacher");
   else if (role === "ADMIN") redirect("/dashboard/admin");
