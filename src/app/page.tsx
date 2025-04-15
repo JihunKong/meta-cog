@@ -1,64 +1,29 @@
-import React from 'react';
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
 
 export default function Home() {
-  return (
-    <div style={{
-      fontFamily: 'system-ui, sans-serif',
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '2rem',
-      color: '#333'
-    }}>
-      <header style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 style={{
-          fontSize: '3rem',
-          fontWeight: 'bold',
-          marginBottom: '1rem',
-          color: '#3f51b5'
-        }}>
-          Meta-Cog
-        </h1>
-        <p style={{ fontSize: '1.25rem', color: '#666', maxWidth: '600px', margin: '0 auto' }}>
-          인지 학습 분석 플랫폼
-        </p>
-      </header>
-      
-      <main>
-        <section style={{
-          background: '#3f51b5',
-          color: 'white',
-          padding: '3rem',
-          borderRadius: '1rem',
-          marginBottom: '3rem',
-          boxShadow: '0 10px 25px rgba(92, 107, 192, 0.2)'
-        }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem', fontWeight: 'bold' }}>
-              인지 학습의 미래
-            </h2>
-            <p style={{ fontSize: '1.1rem', marginBottom: '2rem', lineHeight: 1.6 }}>
-              Meta-Cog는 학습자의 인지 과정을 분석하여 최적의 학습 경험을 제공합니다.
-              학습 데이터를 기반으로 개인화된 학습 경로를 제시하고, 교사와 학생 모두에게
-              유용한 인사이트를 제공합니다.
-            </p>
-          </div>
-        </section>
-        
-        <section style={{ marginBottom: '3rem' }}>
-          <h2 style={{
-            fontSize: '2rem',
-            textAlign: 'center',
-            marginBottom: '2rem',
-            color: '#3f51b5',
-            fontWeight: 'bold'
-          }}>
-            주요 기능
-          </h2>
-          
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '2rem',
+  const router = useRouter();
+
+  useEffect(() => {
+    (async () => {
+      const role = await getUserRole();
+      if (!role) {
+        router.replace("/login");
+      } else if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (role === "TEACHER") {
+        router.replace("/dashboard/teacher");
+      } else if (role === "ADMIN") {
+        router.replace("/dashboard/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+    })();
+  }, [router]);
+  return null;
+
             justifyContent: 'center'
           }}>
             <div style={{
