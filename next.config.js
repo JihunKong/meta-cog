@@ -14,8 +14,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 정적 내보내기를 위한 설정
-  output: 'export',
+
   distDir: '.next',
   // Netlify 배포를 위한 추가 설정
   trailingSlash: false,
