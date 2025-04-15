@@ -244,6 +244,28 @@ export default function StudentDashboard() {
       setAddLoading(false);
       return;
     }
+    
+    // 목표 개수 제한 검사 (3개 이하로 제한)
+    if (!editId) {
+      // 현재 목표 개수 확인
+      const { count, error: countError } = await supabase
+        .from("smart_goals")
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+        
+      if (countError) {
+        setError(countError.message);
+        setAddLoading(false);
+        return;
+      }
+      
+      if (count && count >= 3) {
+        setError("목표는 최대 3개까지만 생성할 수 있습니다. 기존 목표를 삭제한 후 새 목표를 추가해주세요.");
+        setAddLoading(false);
+        return;
+      }
+    }
+    
     if (editId) {
       // 수정
       const { error } = await supabase.from("smart_goals").update({
@@ -493,11 +515,13 @@ export default function StudentDashboard() {
         <List>
           {goals.length === 0 && <ListItem><ListItemText primary="등록된 목표가 없습니다." /></ListItem>}
           {goals.map(goal => (
-            <Accordion key={goal.id} sx={{ mb: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Box flex={1} display="flex" alignItems="center">
-                  <Box flex={1}>
-                    <Typography variant="subtitle1">{goal.subject}</Typography>
+            <Accordion key={goal.id} sx={{ mb: 2, borderRadius: 1, overflow: 'hidden' }}>
+              <AccordionSummary
+                sx={{ backgroundColor: '#f5f5f5', '&:hover': { backgroundColor: '#f0f0f0' } }}
+              >
+                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{goal.subject}</Typography>
                     <Typography variant="body2" color="text.secondary">{goal.description}</Typography>
                     {/* 목표별 누적 달성률 ProgressBar 및 최근 7일 평균 */}
                     <Box mt={1} mb={1}>
@@ -533,13 +557,24 @@ export default function StudentDashboard() {
                     })()}
 
                   </Box>
-                  <IconButton edge="end" aria-label="edit" onClick={e => {e.stopPropagation(); handleEdit(goal);}}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton edge="end" aria-label="delete" onClick={e => {e.stopPropagation(); setDeleteId(goal.id);}}>
-                    <DeleteIcon />
-                  </IconButton>
+                  <Box>
+                    <IconButton aria-label="edit" onClick={e => {e.stopPropagation(); handleEdit(goal);}} size="small" sx={{ mx: 0.5 }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton aria-label="delete" onClick={e => {e.stopPropagation(); setDeleteId(goal.id);}} size="small" color="error" sx={{ mx: 0.5 }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
                 </Box>
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  onClick={e => e.stopPropagation()}
+                  sx={{ mt: 1, width: '100%' }}
+                  endIcon={<ExpandMoreIcon />}
+                >
+                  세션 보기
+                </Button>
               </AccordionSummary>
               <AccordionDetails>
                 <Typography fontWeight={600} mb={1}>세션별 달성도 및 반성</Typography>
@@ -549,14 +584,46 @@ export default function StudentDashboard() {
                       const session = sessions[goal.id]?.find(s => s.session_no === sessionNo);
                       const isEditing = sessionEdit && sessionEdit.goalId === goal.id && sessionEdit.sessionNo === sessionNo;
                       return (
-                        <Box key={sessionNo} mb={2} p={1} border={1} borderRadius={2} borderColor="grey.200">
-                          <Grid container alignItems="center" spacing={1}>
-                            <Grid item xs={12} sm={2}>
-                              <Typography fontWeight={500}>세션 {sessionNo}</Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={10}>
+                        <Box key={sessionNo} mb={2} p={2} border={1} borderRadius={2} borderColor="grey.200" sx={{ 
+                          backgroundColor: '#fafafa', 
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
+                        }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            backgroundColor: '#f0f0f0',
+                            p: 1,
+                            mb: 1.5,
+                            borderRadius: 1
+                          }}>
+                            <Typography fontWeight={600} sx={{ color: '#555' }}>세션 {sessionNo}</Typography>
+                            {!isEditing && (
+                              <Box>
+                                <Button 
+                                  size="small" 
+                                  variant="outlined"
+                                  onClick={() => openSessionEdit(goal.id, sessionNo)}
+                                  sx={{ minWidth: 0, px: 1.5 }}
+                                >
+                                  {session ? "수정" : "입력"}
+                                </Button>
+                                {session && (
+                                  <Button 
+                                    size="small" 
+                                    color="error" 
+                                    variant="outlined"
+                                    onClick={() => handleSessionDelete(goal.id, sessionNo)}
+                                    sx={{ ml: 1, minWidth: 0, px: 1.5 }}
+                                  >
+                                    삭제
+                                  </Button>
+                                )}
+                              </Box>
+                            )}
+                          </Box>
                               {isEditing ? (
-                                <Box component="form" onSubmit={e => {e.preventDefault(); handleSessionSave(goal.id, sessionNo);}}>
+                                <Box component="form" onSubmit={e => {e.preventDefault(); handleSessionSave(goal.id, sessionNo);}} sx={{ mt: 2 }}>
                                   <TextField
                                     label="달성도(%)"
                                     type="number"
@@ -564,7 +631,8 @@ export default function StudentDashboard() {
                                     onChange={e => setSessionForm(f => ({...f, percent: e.target.value}))}
                                     inputProps={{ min: 0, max: 100 }}
                                     size="small"
-                                    sx={{ mr: 1, width: 100 }}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
                                     required
                                   />
                                   <TextField

@@ -58,68 +58,160 @@ export default function TeacherDashboard() {
     setCommentInputs(inputs => ({ ...inputs, [key]: "" }));
   };
 
-  useEffect(() => {
-    async function fetchStudents() {
-      setLoading(true);
-      setError(null);
-      // TODO: 실제 Supabase에서 학생 데이터 가져오기
-      // 임시 더미 데이터
-      const dummyStudents = [
-        { id: "1", email: "student1@email.com", name: "홍길동", last_login: "2025-04-10" },
-        { id: "2", email: "student2@email.com", name: "김영희", last_login: "2025-04-12" },
-      ];
-      setStudents(dummyStudents);
-      // 각 학생별 목표/세션/반성문 더미 데이터 생성
-      setStudentGoals({
-        "1": [
-          { id: "g1", subject: "수학 실력 향상", description: "매일 30분 수학 공부", created_at: "2025-03-01" },
-          { id: "g2", subject: "영어 독해력 강화", description: "주 3회 영어 기사 읽기", created_at: "2025-03-10" },
-        ],
-        "2": [
-          { id: "g3", subject: "코딩 실습", description: "매주 2회 알고리즘 문제 풀기", created_at: "2025-03-05" },
-        ]
-      });
-      setStudentSessions({
-        "g1": [
-          { id: "s1", created_at: "2025-04-01", percent: 80, reflection: "오늘은 집중이 잘 됐다." },
-          { id: "s2", created_at: "2025-04-02", percent: 90, reflection: "문제풀이가 쉬웠다." },
-        ],
-        "g2": [
-          { id: "s3", created_at: "2025-04-01", percent: 60, reflection: "영어가 어려웠다." }
-        ],
-        "g3": [
-          { id: "s4", created_at: "2025-04-03", percent: 100, reflection: "알고리즘 문제를 전부 풀었다." }
-        ]
-      });
-      setStudentReflections({
-        "1": [
-          { id: "s1", goalId: "g1", date: "2025-04-01", text: "오늘은 집중이 잘 됐다." },
-          { id: "s2", goalId: "g1", date: "2025-04-02", text: "문제풀이가 쉬웠다." },
-          { id: "s3", goalId: "g2", date: "2025-04-01", text: "영어가 어려웠다." }
-        ],
-        "2": [
-          { id: "s4", goalId: "g3", date: "2025-04-03", text: "알고리즘 문제를 전부 풀었다." }
-        ]
-      });
-      // 전체 요약 통계 계산
-      const allSessions = [
-        ...studentSessions["g1"] ?? [],
-        ...studentSessions["g2"] ?? [],
-        ...studentSessions["g3"] ?? [],
-      ];
-      const allReflections = [
-        ...studentReflections["1"] ?? [],
-        ...studentReflections["2"] ?? [],
-      ];
-      setSummary({
-        goalCount: 3,
-        sessionCount: allSessions.length,
-        reflectionCount: allReflections.length,
-        avgPercent: allSessions.length ? Math.round(allSessions.reduce((a, b) => a + b.percent, 0) / allSessions.length) : 0
-      });
+  // 학생 데이터 가져오기
+  async function fetchStudentData() {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Supabase에서 STUDENT 역할을 가진 사용자 가져오기
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, created_at')
+        .eq('role', 'STUDENT');
+
+      if (profilesError) {
+        throw new Error("학생 정보를 가져올 수 없습니다: " + profilesError.message);
+      }
+      
+      // 사용자 데이터 포맷팅
+      const formattedStudents = profiles.map(profile => ({
+        id: profile.id,
+        email: profile.email || "이메일 없음",
+        name: profile.email?.split('@')[0] || "이름 없음", // 이메일에서 임시 사용자명 생성
+        last_login: new Date(profile.created_at).toLocaleDateString() || "-"
+      }));
+      
+      setStudents(formattedStudents);
+      
+      // 학생 목표 가져오기
+      await fetchStudentGoals(formattedStudents);
+    } catch (err) {
+      console.error('학생 데이터 로딩 오류:', err);
+      setError("학생 데이터를 불러오는 중 오류가 발생했습니다.");
       setLoading(false);
     }
-    fetchStudents();
+  }
+  
+  // 학생 목표 데이터 가져오기
+  async function fetchStudentGoals(studentsList: Student[]) {
+    try {
+      const goalsData: Record<string, any[]> = {};
+      
+      // 각 학생별로 목표 가져오기
+      for (const student of studentsList) {
+        const { data: goals, error } = await supabase
+          .from('smart_goals')
+          .select('id, subject, description, created_at')
+          .eq('user_id', student.id);
+          
+        if (error) {
+          console.error(`학생 ${student.id} 목표 조회 오류:`, error);
+          continue;
+        }
+        
+        if (goals && goals.length > 0) {
+          goalsData[student.id] = goals;
+        }
+      }
+      
+      setStudentGoals(goalsData);
+      
+      // 목표 정보가 있을 경우 세션 데이터도 가져오기
+      await fetchSessionsAndReflections(goalsData);
+    } catch (error) {
+      console.error('학생 목표 데이터 조회 오류:', error);
+    }
+  }
+  
+  // 세션 및 반성문 데이터 가져오기
+  async function fetchSessionsAndReflections(goalsData: Record<string, any[]>) {
+    try {
+      // 학생별 목표 정보가 있을 경우에만 세션 가져오기
+      if (Object.keys(goalsData).length > 0) {
+        const sessionsData: Record<string, any[]> = {};
+        const reflectionsData: Record<string, any[]> = {};
+        
+        // 각 학생의 목표마다 세션 가져오기
+        for (const studentId in goalsData) {
+          // 반성문 데이터를 위한 배열 초기화
+          reflectionsData[studentId] = [];
+          
+          const goals = goalsData[studentId] || [];
+          for (const goal of goals) {
+            const { data: sessions, error } = await supabase
+              .from('goal_sessions')
+              .select('id, goal_id, created_at, percent, reflection')
+              .eq('goal_id', goal.id);
+              
+            if (error) {
+              console.error(`목표 ${goal.id} 세션 조회 오류:`, error);
+              continue;
+            }
+            
+            if (sessions && sessions.length > 0) {
+              sessionsData[goal.id] = sessions;
+              
+              // 반성문이 있는 세션만 반성문 데이터로 추가
+              const validReflections = sessions
+                .filter(s => s.reflection && s.reflection.trim() !== '')
+                .map(session => ({
+                  id: session.id,
+                  goalId: goal.id,
+                  date: new Date(session.created_at).toLocaleDateString(),
+                  text: session.reflection
+                }));
+                
+              if (validReflections.length > 0) {
+                reflectionsData[studentId].push(...validReflections);
+              }
+            }
+          }
+          
+          // 반성문이 없는 학생은 삭제
+          if (reflectionsData[studentId].length === 0) {
+            delete reflectionsData[studentId];
+          }
+        }
+        
+        setStudentSessions(sessionsData);
+        setStudentReflections(reflectionsData);
+        
+        // 전체 요약 통계 계산
+        const allSessions = Object.values(sessionsData).flat();
+        const allReflections = Object.values(reflectionsData).flat();
+        const goalCount = Object.values(goalsData).flat().length;
+        
+        let totalPercent = 0;
+        allSessions.forEach(session => {
+          totalPercent += (session.percent || 0);
+        });
+        
+        setSummary({
+          goalCount: goalCount,
+          sessionCount: allSessions.length,
+          reflectionCount: allReflections.length,
+          avgPercent: allSessions.length ? Math.round(totalPercent / allSessions.length) : 0
+        });
+      } else {
+        // 목표가 없는 경우 기본값 설정
+        setSummary({
+          goalCount: 0,
+          sessionCount: 0,
+          reflectionCount: 0,
+          avgPercent: 0
+        });
+      }
+    } catch (error) {
+      console.error('세션 및 반성문 데이터 조회 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+  
+  // 초기 로드
+  useEffect(() => {
+    fetchStudentData();
   }, []);
 
   // 역할에 따른 조건부 렌더링

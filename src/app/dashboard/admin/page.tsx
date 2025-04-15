@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Chip, MenuItem, Select } from "@mui/material";
+import { supabase } from "@/lib/supabase";
 
 interface User {
   id: string;
@@ -25,16 +26,34 @@ export default function AdminDashboard() {
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
-  // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 users에 추가합니다.
-  const handleAddUser = () => {
+  // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 추가합니다.
+  const handleAddUser = async () => {
     if (!newName.trim() || !newEmail.trim()) return;
-    setUsers(prev => [
-      ...prev,
-      { id: Math.random().toString(36).slice(2,10), name: newName, email: newEmail, role: newRole }
-    ]);
-    setNewName(""); setNewEmail(""); setNewRole("STUDENT");
+    try {
+      // 실제 Supabase에 새 사용자 추가 (auth_user는 직접 수정할 수 없으므로, profiles 테이블만 추가)
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          // id는 UUID 형태로 자동 생성됨 (진짜 사용자 등록은 auth 기능 사용)
+          email: newEmail,
+          role: newRole
+        })
+        .select();
+        
+      if (error) throw error;
+      
+      // UI 업데이트 및 페이지 새로고침
+      fetchUsers();
+      setNewName(""); 
+      setNewEmail(""); 
+      setNewRole("STUDENT");
+    } catch (error: any) {
+      console.error('사용자 추가 오류:', error.message);
+      alert('사용자 추가 실패: ' + error.message);
+    }
   };
   
+  // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {
     getUserRole().then((r) => {
       setRole(r);
@@ -42,20 +61,56 @@ export default function AdminDashboard() {
     });
   }, [router]);
 
+  // 사용자 데이터 가져오기
+  const fetchUsers = async () => {
+    try {
+      setUsers([]); // 기존 데이터 초기화
+      
+      // Supabase에서 실제 사용자 데이터 가져오기
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, email, role, created_at')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // 사용자 데이터 포맷팅
+      const formattedUsers = profiles.map(profile => ({
+        id: profile.id,
+        email: profile.email || '이메일 없음',
+        name: profile.email?.split('@')[0] || '이름 없음', // 이메일에서 임시 표시
+        role: profile.role as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
+      }));
+      
+      setUsers(formattedUsers);
+    } catch (error: any) {
+      console.error('사용자 데이터 로드 오류:', error.message);
+    }
+  };
+  
+  // 초기 로드
   useEffect(() => {
-    // TODO: 실제 Supabase에서 사용자 데이터 fetch
-    setUsers([
-      { id: "1", email: "student1@email.com", name: "홍길동", role: "STUDENT" },
-      { id: "2", email: "teacher1@email.com", name: "이선생", role: "TEACHER" },
-      { id: "3", email: "admin@email.com", name: "관리자", role: "ADMIN" },
-      { id: "4", email: "student2@email.com", name: "김영희", role: "STUDENT" },
-    ]);
+    fetchUsers();
   }, []);
 
-  // 역할 변경 핸들러(더미)
-  const handleRoleChange = (id: string, newRole: "STUDENT"|"TEACHER"|"ADMIN") => {
-    setUsers(prev => prev.map(u => u.id===id ? { ...u, role: newRole } : u));
-    setEditRoleId(null);
+  // 역할 변경 핸들러 - 실제 Supabase 데이터 업데이트
+  const handleRoleChange = async (id: string, newRole: "STUDENT"|"TEACHER"|"ADMIN") => {
+    try {
+      // Supabase 프로필 테이블 업데이트
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // UI 업데이트 및 상태 초기화
+      fetchUsers();
+      setEditRoleId(null);
+    } catch (error: any) {
+      console.error('역할 변경 오류:', error.message);
+      alert('역할 변경 실패: ' + error.message);
+    }
   };
 
   // 역할에 따른 조건부 렌더링
