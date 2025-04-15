@@ -2,6 +2,12 @@ import { supabase } from './supabase';
 
 export async function signInWithEmail(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  // 로그인 성공 시 사용자 프로필 자동 확인/생성
+  if (!error && data?.user) {
+    await ensureProfile(data.user);
+  }
+  
   return { data, error };
 }
 
@@ -28,11 +34,16 @@ export async function getUserRole() {
     console.error('No user found');
     return null;
   }
+  
+  // 프로필 조회 전 프로필이 있는지 확인하고, 없으면 생성 시도
+  await ensureProfile(user);
+  
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
+    
   if (profileError) {
     console.error('Profile fetch error:', profileError);
     return null;
@@ -44,9 +55,15 @@ export async function getUserRole() {
   return profile.role || null;
 }
 
+// Supabase 사용자 타입 정의
+interface User {
+  id: string;
+  email?: string;
+}
+
 // 로그인/회원가입 후 profiles row가 없으면 자동 생성
-export async function ensureProfile(user) {
-  if (!user) return;
+export async function ensureProfile(user: User) {
+  if (!user || !user.email) return;
   const { data: profile } = await supabase
     .from('profiles')
     .select('id')

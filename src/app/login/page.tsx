@@ -15,18 +15,35 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error } = await signInWithEmail(email, password);
-    if (error) {
-      setError(error.message);
+    
+    try {
+      // 로그인 시도
+      const { error, data } = await signInWithEmail(email, password);
+      if (error) {
+        setError(error.message || '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!data?.user) {
+        setError('사용자 정보를 가져오는데 실패했습니다.');
+        setLoading(false);
+        return;
+      }
+      
+      // 역할에 따라 분기
+      const role = await getUserRole();
+      
+      // role이 없으면 기본 대시보드로 이동
+      if (role === "STUDENT") router.replace("/dashboard/student");
+      else if (role === "TEACHER") router.replace("/dashboard/teacher");
+      else if (role === "ADMIN") router.replace("/dashboard/admin");
+      else router.replace("/dashboard"); // 역할이 없으면 기본 대시보드로
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       setLoading(false);
-      return;
     }
-    // 역할에 따라 분기
-    const role = await getUserRole();
-    if (role === "STUDENT") router.push("/dashboard/student");
-    else if (role === "TEACHER") router.push("/dashboard/teacher");
-    else if (role === "ADMIN") router.push("/dashboard/admin");
-    else router.push("/dashboard");
   };
 
   return (
