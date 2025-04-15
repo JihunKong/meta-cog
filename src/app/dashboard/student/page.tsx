@@ -298,7 +298,10 @@ export default function StudentDashboard() {
 
   return (
     <Box p={4}>
-      <Typography variant="h4" gutterBottom>학생 대시보드</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>학생 대시보드</Typography>
+        <LogoutButton />
+      </Box>
       <Typography variant="h6" gutterBottom>나의 SMART 목표</Typography>
 
       {/* 오늘 세션 입력이 없으면 안내 알림 */}
@@ -565,12 +568,16 @@ export default function StudentDashboard() {
                                     required
                                   />
                                   <TextField
-                                    label="학습 반성"
+                                    label="학습 반성 및 성찰"
                                     value={sessionForm.reflection}
                                     onChange={e => setSessionForm(f => ({...f, reflection: e.target.value}))}
+                                    multiline
+                                    rows={3}
+                                    placeholder="오늘의 학습에 대한 반성과 성찰을 적어보세요. (예: 무엇을 잘했는지, 어떤 점을 개선해야 하는지, 다음 학습에서 어떤 전략을 사용할 것인지 등)"
                                     size="small"
-                                    sx={{ mr: 1, width: 250 }}
+                                    sx={{ mr: 1, width: '100%', mt: 2, mb: 1 }}
                                     required
+                                    helperText="자신의 학습 과정을 돌아보고 성찰하는 것은 메타인지 향상에 중요합니다"
                                   />
                                   <Button type="submit" variant="contained" size="small" disabled={sessionSaveLoading} sx={{ mr: 1 }}>
                                     {sessionSaveLoading ? "저장 중..." : "저장"}

@@ -61,7 +61,10 @@ export default function AdminDashboard() {
   // 역할에 따른 조건부 렌더링
   return role !== "ADMIN" ? null : (
     <Box p={4}>
-      <Typography variant="h4" gutterBottom>관리자 대시보드</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>관리자 대시보드</Typography>
+        <LogoutButton />
+      </Box>
       <Typography variant="subtitle1" gutterBottom>전체 사용자 목록 및 역할</Typography>
       <Card sx={{ mt: 2 }}>
         <CardContent>

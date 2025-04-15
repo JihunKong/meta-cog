@@ -125,7 +125,10 @@ export default function TeacherDashboard() {
   // 역할에 따른 조건부 렌더링
   return role !== "TEACHER" ? null : (
     <Box p={4}>
-      <Typography variant="h4" gutterBottom>교사 대시보드</Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>교사 대시보드</Typography>
+        <LogoutButton />
+      </Box>
       {/* [설명] 학생 이름 또는 이메일로 검색할 수 있는 입력창입니다. */}
       <Box mb={2}>
         <input
