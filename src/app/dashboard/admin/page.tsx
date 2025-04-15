@@ -25,15 +25,6 @@ export default function AdminDashboard() {
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    getUserRole().then((r) => {
-      setRole(r);
-      if (r !== "ADMIN") router.replace("/login");
-    });
-  }, [router]);
-
-  if (role !== "ADMIN") return null;
-
   // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 users에 추가합니다.
   const handleAddUser = () => {
     if (!newName.trim() || !newEmail.trim()) return;
@@ -43,6 +34,13 @@ export default function AdminDashboard() {
     ]);
     setNewName(""); setNewEmail(""); setNewRole("STUDENT");
   };
+  
+  useEffect(() => {
+    getUserRole().then((r) => {
+      setRole(r);
+      if (r !== "ADMIN") router.replace("/login");
+    });
+  }, [router]);
 
   useEffect(() => {
     // TODO: 실제 Supabase에서 사용자 데이터 fetch
@@ -60,7 +58,8 @@ export default function AdminDashboard() {
     setEditRoleId(null);
   };
 
-  return (
+  // 역할에 따른 조건부 렌더링
+  return role !== "ADMIN" ? null : (
     <Box p={4}>
       <Typography variant="h4" gutterBottom>관리자 대시보드</Typography>
       <Typography variant="subtitle1" gutterBottom>전체 사용자 목록 및 역할</Typography>

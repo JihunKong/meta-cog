@@ -28,6 +28,11 @@ export default function TeacherDashboard() {
   const [studentReflections, setStudentReflections] = useState<Record<string, any[]>>({});
   // 목표별 달성률 변화 차트 모달 상태
   const [openGoalChartId, setOpenGoalChartId] = useState<string | null>(null);
+  // 교사 코멘트: { targetType, targetId, teacher, comment, created_at }
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({}); // key: targetType-targetId
+  const teacherName = "이선생"; // 임시
+  
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
@@ -38,13 +43,9 @@ export default function TeacherDashboard() {
     });
   }, [router]);
 
-  if (role !== "TEACHER") return null;
-
-  // 교사 코멘트: { targetType, targetId, teacher, comment, created_at }
-  const [comments, setComments] = useState<any[]>([]);
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({}); // key: targetType-targetId
-  const teacherName = "이선생"; // 임시
-
+  // 전체 요약 통계
+  const [summary, setSummary] = useState<{goalCount:number, sessionCount:number, reflectionCount:number, avgPercent:number} | null>(null);
+  
   // 코멘트 등록 함수
   const handleAddComment = (targetType: string, targetId: string) => {
     const key = `${targetType}-${targetId}`;
@@ -56,9 +57,6 @@ export default function TeacherDashboard() {
     ]);
     setCommentInputs(inputs => ({ ...inputs, [key]: "" }));
   };
-
-  // 전체 요약 통계
-  const [summary, setSummary] = useState<{goalCount:number, sessionCount:number, reflectionCount:number, avgPercent:number} | null>(null);
 
   useEffect(() => {
     async function fetchStudents() {
@@ -124,7 +122,8 @@ export default function TeacherDashboard() {
     fetchStudents();
   }, []);
 
-  return (
+  // 역할에 따른 조건부 렌더링
+  return role !== "TEACHER" ? null : (
     <Box p={4}>
       <Typography variant="h4" gutterBottom>교사 대시보드</Typography>
       {/* [설명] 학생 이름 또는 이메일로 검색할 수 있는 입력창입니다. */}

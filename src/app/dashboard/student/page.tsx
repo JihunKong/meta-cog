@@ -61,21 +61,27 @@ export default function StudentDashboard() {
   const [goalAverages, setGoalAverages] = useState<Record<string, number>>({});
   // 목표별 누적 달성률
   const [goalTotalAverages, setGoalTotalAverages] = useState<Record<string, number>>({});
+  // 반성문 전체 보기 모달 상태
+  const [openReflectionGoalId, setOpenReflectionGoalId] = useState<string | null>(null);
+  // 달성률 변화 모달 상태
+  const [openProgressGoalId, setOpenProgressGoalId] = useState<string | null>(null);
+  // AI 피드백 상태 (목표별 관리 - map 내부에서 useState 호출 방지)
+  const [aiFeedbacks, setAiFeedbacks] = useState<Record<string, {
+    feedback: string | null;
+    loading: boolean;
+    error: string | null;
+  }>>({});
+  // 역할 상태
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
+  // 인증 및 권한 체크
   useEffect(() => {
     getUserRole().then((r) => {
       setRole(r);
       if (r !== "STUDENT") router.replace("/login");
     });
   }, [router]);
-
-  if (role !== "STUDENT") return null;
-  // 반성문 전체 보기 모달 상태
-  const [openReflectionGoalId, setOpenReflectionGoalId] = useState<string | null>(null);
-  // 달성률 변화 모달 상태
-  const [openProgressGoalId, setOpenProgressGoalId] = useState<string | null>(null);
 
   // 날짜별 집계 및 그래프 데이터 가공
   useEffect(() => {
@@ -329,9 +335,6 @@ export default function StudentDashboard() {
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>AI 피드백</Typography>
               {goals.map(g => {
-                const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-                const [loading, setLoading] = useState(false);
-                const [error, setError] = useState<string | null>(null);
                 // 최근 7일 세션/반성
                 const last7 = Array.from({length: 7}, (_, i) => {
                   const date = new Date();
@@ -341,8 +344,17 @@ export default function StudentDashboard() {
                 const recentSessions = (sessions[g.id] || []).filter(s => last7.includes(s.created_at.slice(0, 10)));
                 const reflections = recentSessions.map(s => s.reflection).filter(r => !!r);
                 const avg = goalAverages[g.id] ?? 0;
+                
+                // Hook 사용하지 않고 상태 참조
+                const feedback = aiFeedbacks[g.id] || { feedback: null, loading: false, error: null };
+                
                 const handleRequest = async () => {
-                  setLoading(true); setError(null); setAiFeedback(null);
+                  // 상태 변경을 객체로 관리
+                  setAiFeedbacks(prev => ({
+                    ...prev,
+                    [g.id]: { ...prev[g.id], loading: true, error: null, feedback: null }
+                  }));
+                  
                   try {
                     const res = await fetch("/api/ai-feedback", {
                       method: "POST",
@@ -351,24 +363,30 @@ export default function StudentDashboard() {
                     });
                     if (!res.ok) throw new Error(await res.text());
                     const data = await res.json();
-                    setAiFeedback(data.feedback);
+                    
+                    setAiFeedbacks(prev => ({
+                      ...prev,
+                      [g.id]: { ...prev[g.id], feedback: data.feedback, loading: false }
+                    }));
                   } catch (e: any) {
-                    setError(e.message || "AI 피드백 요청 실패");
-                  } finally {
-                    setLoading(false);
+                    setAiFeedbacks(prev => ({
+                      ...prev,
+                      [g.id]: { ...prev[g.id], error: e.message || "AI 피드백 요청 실패", loading: false }
+                    }));
                   }
                 };
+                
                 return (
                   <Box key={g.id} mb={2}>
                     <Typography variant="body2" gutterBottom>
                       <b>{g.subject}</b> 최근 7일 평균 <b>{avg}%</b>
                     </Typography>
                     <Box display="flex" alignItems="center" gap={2}>
-                      <button onClick={handleRequest} disabled={loading} style={{padding: '4px 12px', borderRadius: 4, border: '1px solid #1976d2', background: '#fff', color: '#1976d2', cursor: loading ? 'not-allowed' : 'pointer'}}>
-                        {loading ? '피드백 생성중...' : 'AI 피드백 요청'}
+                      <button onClick={handleRequest} disabled={feedback.loading} style={{padding: '4px 12px', borderRadius: 4, border: '1px solid #1976d2', background: '#fff', color: '#1976d2', cursor: feedback.loading ? 'not-allowed' : 'pointer'}}>
+                        {feedback.loading ? '피드백 생성중...' : 'AI 피드백 요청'}
                       </button>
-                      {aiFeedback && <span style={{color:'#1976d2'}}>{aiFeedback}</span>}
-                      {error && <span style={{color:'red'}}>{error}</span>}
+                      {feedback.feedback && <span style={{color:'#1976d2'}}>{feedback.feedback}</span>}
+                      {feedback.error && <span style={{color:'red'}}>{feedback.error}</span>}
                     </Box>
                   </Box>
                 );
