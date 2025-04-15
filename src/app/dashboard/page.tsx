@@ -1,10 +1,18 @@
-import { redirect } from "next/navigation";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getUserRole } from "@/lib/auth";
 
-export default async function DashboardPage() {
-  const role = await getUserRole();
-  if (role === "STUDENT") redirect("/dashboard/student");
-  else if (role === "TEACHER") redirect("/dashboard/teacher");
-  else if (role === "ADMIN") redirect("/dashboard/admin");
-  return <div>권한 정보가 없습니다.</div>;
+export default function DashboardPage() {
+  const router = useRouter();
+  useEffect(() => {
+    (async () => {
+      const role = await getUserRole();
+      if (role === "STUDENT") router.replace("/dashboard/student");
+      else if (role === "TEACHER") router.replace("/dashboard/teacher");
+      else if (role === "ADMIN") router.replace("/dashboard/admin");
+      else router.replace("/login");
+    })();
+  }, [router]);
+  return null;
 }
