@@ -23,58 +23,8 @@ export default function Home() {
     })();
   }, [router]);
   return null;
-
-            justifyContent: 'center'
-          }}>
-            <div style={{
-              flex: '1 1 300px',
-              padding: '2rem',
-              borderRadius: '1rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              background: 'white'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', fontWeight: 'bold', color: '#3f51b5' }}>
-                학생용 기능
-              </h3>
-              <p style={{ color: '#666', lineHeight: 1.6 }}>
-                자신의 학습 데이터를 분석하고 인지 학습 패턴을 파악하여 학습 효율을 극대화하세요.
-              </p>
-            </div>
-            
-            <div style={{
-              flex: '1 1 300px',
-              padding: '2rem',
-              borderRadius: '1rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              background: 'white'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', fontWeight: 'bold', color: '#f44336' }}>
-                교사용 기능
-              </h3>
-              <p style={{ color: '#666', lineHeight: 1.6 }}>
-                학생들의 학습 패턴을 한눈에 파악하고 개인화된 피드백을 제공하세요.
-              </p>
-            </div>
-            
-            <div style={{
-              flex: '1 1 300px',
-              padding: '2rem',
-              borderRadius: '1rem',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              background: 'white'
-            }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', fontWeight: 'bold', color: '#4caf50' }}>
-                관리자용 기능
-              </h3>
-              <p style={{ color: '#666', lineHeight: 1.6 }}>
-                전체 시스템을 관리하고 사용자 권한을 설정하세요.
-              </p>
-            </div>
-          </div>
-        </section>
-        
-        <section style={{
-          background: '#f5f5f5',
+}
+}}          background: '#f5f5f5',
           padding: '3rem',
           borderRadius: '1rem',
           textAlign: 'center'
