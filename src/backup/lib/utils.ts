@@ -1,5 +1,5 @@
 import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+// Tailwind merge removed; not needed for Material UI
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

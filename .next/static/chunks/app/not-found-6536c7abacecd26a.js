@@ -1,0 +1,9 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[160],{3332:function(e,r,t){Promise.resolve().then(t.bind(t,3335))},3335:function(e,r,t){"use strict";t.r(r),t.d(r,{default:function(){return s}});var n=t(7437);function s(){return(0,n.jsxs)("div",{className:"flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-2 py-10",children:[(0,n.jsx)("h1",{className:"text-4xl font-bold",children:"404"}),(0,n.jsx)("h2",{className:"text-xl",children:"페이지를 찾을 수 없습니다"}),(0,n.jsx)("p",{className:"text-muted-foreground",children:"요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다."}),(0,n.jsx)("a",{href:"/",className:"mt-4 rounded-md bg-primary px-4 py-2 text-white hover:bg-primary/90",children:"홈으로 돌아가기"})]})}},622:function(e,r,t){"use strict";/**
+ * @license React
+ * react-jsx-runtime.production.min.js
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */var n=t(2265),s=Symbol.for("react.element"),o=(Symbol.for("react.fragment"),Object.prototype.hasOwnProperty),c=n.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,i={key:!0,ref:!0,__self:!0,__source:!0};function l(e,r,t){var n,l={},f=null,u=null;for(n in void 0!==t&&(f=""+t),void 0!==r.key&&(f=""+r.key),void 0!==r.ref&&(u=r.ref),r)o.call(r,n)&&!i.hasOwnProperty(n)&&(l[n]=r[n]);if(e&&e.defaultProps)for(n in r=e.defaultProps)void 0===l[n]&&(l[n]=r[n]);return{$$typeof:s,type:e,key:f,ref:u,props:l,_owner:c.current}}r.jsx=l,r.jsxs=l},7437:function(e,r,t){"use strict";e.exports=t(622)}},function(e){e.O(0,[971,596,744],function(){return e(e.s=3332)}),_N_E=e.O()}]);

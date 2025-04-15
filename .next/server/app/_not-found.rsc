@@ -1,0 +1,9 @@
+1:HL["/_next/static/css/8f06da350f4e5d0a.css",{"as":"style"}]
+0:["fRb9YfH-Z0_jSRcGe3QKI",[[["",{"children":["__PAGE__",{}]},"$undefined","$undefined",true],"$L2",[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/8f06da350f4e5d0a.css","precedence":"next"}]],"$L3"]]]]
+4:I{"id":7767,"chunks":["272:static/chunks/webpack-5c8b0b915064c65f.js","971:static/chunks/fd9d1056-a99b58d3cc150217.js","596:static/chunks/596-e2423207a32cf54e.js"],"name":"default","async":false}
+5:I{"id":7920,"chunks":["272:static/chunks/webpack-5c8b0b915064c65f.js","971:static/chunks/fd9d1056-a99b58d3cc150217.js","596:static/chunks/596-e2423207a32cf54e.js"],"name":"default","async":false}
+6:I{"id":3335,"chunks":["160:static/chunks/app/not-found-6536c7abacecd26a.js"],"name":"","async":false}
+8:I{"id":4839,"chunks":["272:static/chunks/webpack-5c8b0b915064c65f.js","971:static/chunks/fd9d1056-a99b58d3cc150217.js","596:static/chunks/596-e2423207a32cf54e.js"],"name":"default","async":false}
+2:[null,["$","html",null,{"lang":"ko","children":["$","body",null,{"children":["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children"],"loading":"$undefined","loadingStyles":"$undefined","hasLoading":false,"error":"$undefined","errorStyles":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","notFound":["$","$L6",null,{}],"notFoundStyles":[],"childProp":{"current":["$L7",["$","$L8",null,{"propsForComponent":{"params":{}},"Component":"$6"}],null],"segment":"__PAGE__"},"styles":[]}]}]}],null]
+3:[["$","meta","0",{"charSet":"utf-8"}],["$","title","1",{"children":"Meta-Cog - 학습 메타인지 플랫폼"}],["$","meta","2",{"name":"description","content":"학생들의 학습 과정을 추적하고 교사가 효과적으로 관리할 수 있는 메타인지 플랫폼"}],["$","meta","3",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","link","4",{"rel":"icon","href":"/favicon.ico","type":"image/x-icon","sizes":"16x16"}]]
+7:null

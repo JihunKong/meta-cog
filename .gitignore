@@ -6,9 +6,3 @@
 env.local.template
 temp-env-vars.txt
 node_modules
-
-# Next.js build output
-.next
-
-# Local Netlify folder
-.netlify

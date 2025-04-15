@@ -1,10 +1,4 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata = {
   title: "Meta-Cog - 학습 메타인지 플랫폼",
@@ -18,7 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={inter.className}>
+      <body>
         {children}
       </body>
     </html>
