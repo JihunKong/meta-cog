@@ -4,14 +4,13 @@ import { supabase } from "@/lib/supabase";
 import {
   Box, Typography, Button, List, ListItem, ListItemText, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton,
-  Accordion, AccordionSummary, AccordionDetails, Grid
+  Accordion, AccordionSummary, AccordionDetails, Grid, Card, CardContent, LinearProgress, Alert
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { Card, CardContent, LinearProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button as MuiButton, List as MuiList, ListItem as MuiListItem, ListItemText as MuiListItemText } from "@mui/material";
 
 interface SmartGoal {
   id: string;
@@ -32,7 +31,7 @@ interface GoalSession {
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
 export default function StudentDashboard() {
-  // SMART 목표
+  // SMART 목표 및 기타 상태
   const [goals, setGoals] = useState<SmartGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,16 +53,12 @@ export default function StudentDashboard() {
 
   // 날짜별 학습 기록 및 그래프 상태
   const [dateRecords, setDateRecords] = useState<{date: string, count: number, avgPercent: number}[]>([]);
-
   // 목표별 최근 7일 평균 달성률
   const [goalAverages, setGoalAverages] = useState<Record<string, number>>({});
-
   // 목표별 누적 달성률
   const [goalTotalAverages, setGoalTotalAverages] = useState<Record<string, number>>({});
-
   // 반성문 전체 보기 모달 상태
   const [openReflectionGoalId, setOpenReflectionGoalId] = useState<string | null>(null);
-
   // 달성률 변화 모달 상태
   const [openProgressGoalId, setOpenProgressGoalId] = useState<string | null>(null);
 
@@ -116,16 +111,7 @@ export default function StudentDashboard() {
   }, [sessions]);
 
   // ... 이하 기존 코드 유지
-  const [goals, setGoals] = useState<SmartGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [open, setOpen] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [description, setDescription] = useState("");
-  const [addLoading, setAddLoading] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  // (중복 선언 제거됨)
 
   const fetchGoals = async () => {
     setLoading(true);
@@ -328,9 +314,9 @@ export default function StudentDashboard() {
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>AI 피드백</Typography>
               {goals.map(g => {
-                const [aiFeedback, setAiFeedback] = React.useState<string | null>(null);
-                const [loading, setLoading] = React.useState(false);
-                const [error, setError] = React.useState<string | null>(null);
+                const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+                const [loading, setLoading] = useState(false);
+                const [error, setError] = useState<string | null>(null);
                 // 최근 7일 세션/반성
                 const last7 = Array.from({length: 7}, (_, i) => {
                   const date = new Date();
@@ -499,12 +485,12 @@ export default function StudentDashboard() {
                             최근 반성: "{latest.reflection ? latest.reflection.slice(0, 40) : '작성된 반성 없음'}{latest.reflection && latest.reflection.length > 40 ? '...' : ''}"
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <MuiButton size="small" onClick={e => { e.stopPropagation(); setOpenReflectionGoalId(goal.id); }}>
+                            <Button size="small" onClick={e => { e.stopPropagation(); setOpenReflectionGoalId(goal.id); }}>
                               반성문 전체 보기
-                            </MuiButton>
-                            <MuiButton size="small" color="secondary" onClick={e => { e.stopPropagation(); setOpenProgressGoalId(goal.id); }}>
+                            </Button>
+                            <Button size="small" color="secondary" onClick={e => { e.stopPropagation(); setOpenProgressGoalId(goal.id); }}>
                               달성률 변화
-                            </MuiButton>
+                            </Button>
                           </Box>
                         </>
                       );
@@ -591,15 +577,15 @@ export default function StudentDashboard() {
       <DialogTitle>반성문 전체 보기</DialogTitle>
       <DialogContent>
         {openReflectionGoalId && (
-          <MuiList>
+          <List>
             {(sessions[openReflectionGoalId] || []).length === 0 && (
-              <MuiListItem>
-                <MuiListItemText primary="반성문 기록이 없습니다." />
-              </MuiListItem>
+              <ListItem>
+                <ListItemText primary="반성문 기록이 없습니다." />
+              </ListItem>
             )}
             {(sessions[openReflectionGoalId] || []).map((s, idx) => (
-              <MuiListItem key={s.id || idx} alignItems="flex-start">
-                <MuiListItemText
+              <ListItem key={s.id || idx} alignItems="flex-start">
+                <ListItemText
                   primary={
                     <>
                       <b>{s.created_at.slice(0, 10)}</b> / 달성률: <b>{s.percent}%</b>
@@ -607,13 +593,13 @@ export default function StudentDashboard() {
                   }
                   secondary={s.reflection || <span style={{color:'#aaa'}}>반성문 없음</span>}
                 />
-              </MuiListItem>
+              </ListItem>
             ))}
-          </MuiList>
+          </List>
         )}
       </DialogContent>
       <DialogActions>
-        <MuiButton onClick={() => setOpenReflectionGoalId(null)}>닫기</MuiButton>
+        <Button onClick={() => setOpenReflectionGoalId(null)}>닫기</Button>
       </DialogActions>
     </Dialog>
 
@@ -640,7 +626,7 @@ export default function StudentDashboard() {
         )}
       </DialogContent>
       <DialogActions>
-        <MuiButton onClick={() => setOpenProgressGoalId(null)}>닫기</MuiButton>
+        <Button onClick={() => setOpenProgressGoalId(null)}>닫기</Button>
       </DialogActions>
     </Dialog>
     {/* 요일별 학습 빈도 바차트 */}
