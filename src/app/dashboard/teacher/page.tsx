@@ -31,26 +31,30 @@ export default function TeacherDashboard() {
   // 교사 코멘트: { targetType, targetId, teacher, comment, created_at }
   const [comments, setComments] = useState<any[]>([]);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({}); // key: targetType-targetId
-  const teacherName = "이선생"; // 임시
+  const teacherName = "이교사"; // 임시 - 실제 로그인 교사 이름 사용
   
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
+  // 교사 역할 확인 및 데이터 로딩
   useEffect(() => {
     let mounted = true; // 컴포넌트 마운트 상태 추적
 
     async function checkAuth() {
       try {
+        setLoading(true);
+        console.log('교사 대시보드 - 인증 확인 시작...');
+        
         const r = await getUserRole();
         
         // 컴포넌트가 언마운트된 경우 상태 업데이트 하지 않음
         if (!mounted) return;
         
-        console.log('Teacher dashboard - User role:', r, typeof r);
+        console.log('교사 대시보드 - 사용자 역할:', r, typeof r);
         
         // 소문자 'teacher'로 비교 (반환값이 enum으로 소문자로 변경됨)
         if (r !== "teacher") {
-          console.log('Redirecting from teacher dashboard - wrong role:', r);
+          console.log('역할 불일치: 교사 대시보드에서 ' + r + ' 역할로 리디렉션');
           // 즉시 리디렉션 실행 - replace 사용으로 히스토리 없이 이동
           window.location.replace("/dashboard/" + r);
           return;
@@ -58,13 +62,15 @@ export default function TeacherDashboard() {
         
         // teacher 역할인 경우만 상태 업데이트
         setRole(r);
+        console.log('교사 역할 확인 완료 - 학생 데이터 로딩 시작');
         
         // TEACHER 권한이 있으면 학생 데이터 가져오기
         fetchStudentData();
       } catch (err) {
-        console.error('Auth check error:', err);
+        console.error('인증 확인 오류:', err);
         if (mounted) {
-          window.location.replace("/login");
+          setError('인증에 실패했습니다. 다시 로그인해주세요.');
+          setLoading(false);
         }
       }
     }
@@ -96,26 +102,58 @@ export default function TeacherDashboard() {
   async function fetchStudentData() {
     setLoading(true);
     setError(null);
+    console.log('학생 데이터 로딩 시작...');
     
     try {
-      // Supabase에서 STUDENT 역할을 가진 사용자 가져오기
+      // Supabase에서 student 역할을 가진 사용자 가져오기 (소문자 역할로 변경)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, created_at')
-        .eq('role', 'STUDENT');
+        .select('id, email, name, created_at')
+        .eq('role', 'student');
 
       if (profilesError) {
+        console.error('프로필 조회 오류:', profilesError);
         throw new Error("학생 정보를 가져올 수 없습니다: " + profilesError.message);
       }
       
-      // 사용자 데이터 포맷팅
-      const formattedStudents = profiles.map(profile => ({
-        id: profile.id,
-        email: profile.email || "이메일 없음",
-        name: profile.email?.split('@')[0] || "이름 없음", // 이메일에서 임시 사용자명 생성
-        last_login: new Date(profile.created_at).toLocaleDateString() || "-"
-      }));
+      // User 테이블에서 추가 정보 가져오기
+      const ids = profiles.map(p => p.id);
+      const { data: userRows, error: userError } = await supabase
+        .from('User')
+        .select('id, name')
+        .in('id', ids);
+        
+      if (userError) {
+        console.error('User 테이블 조회 오류:', userError);
+      }
       
+      // 사용자명 맵 생성
+      const nameMap: Record<string, string> = {};
+      if (userRows && userRows.length > 0) {
+        userRows.forEach(user => {
+          if (user.name) nameMap[user.id] = user.name;
+        });
+      }
+      
+      // 특별 학생 매핑 (수동 매핑)
+      const specialStudentNames: Record<string, string> = {
+        '2201@pof.com': '김서윤'
+      };
+      
+      // 사용자 데이터 포맷팅
+      const formattedStudents = profiles.map(profile => {
+        // 이메일에 맞는 특별 이름이 있는지 확인
+        const specialName = profile.email ? specialStudentNames[profile.email] : null;
+        
+        return {
+          id: profile.id,
+          email: profile.email || "이메일 없음",
+          name: specialName || nameMap[profile.id] || profile.name || profile.email?.split('@')[0] || "이름 없음",
+          last_login: new Date(profile.created_at).toLocaleDateString() || "-"
+        };
+      });
+      
+      console.log('학생 데이터 로드 완료:', formattedStudents.length, '명');
       setStudents(formattedStudents);
       
       // 학생 목표 가져오기
@@ -123,6 +161,7 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error('학생 데이터 로딩 오류:', err);
       setError("학생 데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
       setLoading(false);
     }
   }
@@ -130,10 +169,12 @@ export default function TeacherDashboard() {
   // 학생 목표 데이터 가져오기
   async function fetchStudentGoals(studentsList: Student[]) {
     try {
+      console.log('학생 목표 가져오기 시작...');
       const goalsData: Record<string, any[]> = {};
       
       // 각 학생별로 목표 가져오기
       for (const student of studentsList) {
+        console.log(`학생 ${student.name}(${student.id}) 목표 조회 중...`);
         const { data: goals, error } = await supabase
           .from('smart_goals')
           .select('id, subject, description, created_at')
@@ -145,7 +186,10 @@ export default function TeacherDashboard() {
         }
         
         if (goals && goals.length > 0) {
+          console.log(`학생 ${student.name}의 목표 ${goals.length}개 발견`);
           goalsData[student.id] = goals;
+        } else {
+          console.log(`학생 ${student.name}의 목표 없음`);
         }
       }
       
@@ -201,60 +245,121 @@ export default function TeacherDashboard() {
               }
             }
           }
-          
-          // 반성문이 없는 학생은 삭제
-          if (reflectionsData[studentId].length === 0) {
-            delete reflectionsData[studentId];
-          }
         }
         
         setStudentSessions(sessionsData);
         setStudentReflections(reflectionsData);
         
-        // 전체 요약 통계 계산
-        const allSessions = Object.values(sessionsData).flat();
-        const allReflections = Object.values(reflectionsData).flat();
-        const goalCount = Object.values(goalsData).flat().length;
-        
-        let totalPercent = 0;
-        allSessions.forEach(session => {
-          totalPercent += (session.percent || 0);
-        });
-        
-        setSummary({
-          goalCount: goalCount,
-          sessionCount: allSessions.length,
-          reflectionCount: allReflections.length,
-          avgPercent: allSessions.length ? Math.round(totalPercent / allSessions.length) : 0
-        });
-      } else {
-        // 목표가 없는 경우 기본값 설정
-        setSummary({
-          goalCount: 0,
-          sessionCount: 0,
-          reflectionCount: 0,
-          avgPercent: 0
-        });
+        // 전체 통계 계산
+        calculateSummaryStats(goalsData, sessionsData);
       }
     } catch (error) {
       console.error('세션 및 반성문 데이터 조회 오류:', error);
-    } finally {
-      setLoading(false);
     }
   }
   
-  // 초기 로드
-  useEffect(() => {
-    fetchStudentData();
-  }, []);
+  // 전체 통계 계산
+  function calculateSummaryStats(goalsData: Record<string, any[]>, sessionsData: Record<string, any[]>) {
+    try {
+      let totalGoals = 0;
+      let totalSessions = 0;
+      let totalReflections = 0;
+      let totalPercent = 0;
+      let percentCount = 0;
+      
+      // 모든 학생의 목표 수 합산
+      for (const studentId in goalsData) {
+        const goals = goalsData[studentId];
+        totalGoals += goals.length;
+        
+        // 각 목표의 세션 수 합산
+        for (const goal of goals) {
+          const sessions = sessionsData[goal.id] || [];
+          totalSessions += sessions.length;
+          
+          // 반성문이 있는 세션 수 합산
+          totalReflections += sessions.filter(s => s.reflection && s.reflection.trim() !== '').length;
+          
+          // 목표 달성률 평균 계산
+          for (const session of sessions) {
+            if (session.percent !== undefined && session.percent !== null) {
+              totalPercent += session.percent;
+              percentCount++;
+            }
+          }
+        }
+      }
+      
+      // 평균 달성률 계산
+      const avgPercent = percentCount > 0 ? Math.round(totalPercent / percentCount) : 0;
+      
+      // 통계 요약 정보 업데이트
+      setSummary({
+        goalCount: totalGoals,
+        sessionCount: totalSessions,
+        reflectionCount: totalReflections,
+        avgPercent
+      });
+      
+    } catch (error) {
+      console.error('통계 계산 오류:', error);
+    }
+  }
 
-  // 역할에 따른 조건부 렌더링
-  return role !== "TEACHER" ? null : (
+  // 로딩 상태
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={40} />
+        <Typography sx={{ mt: 2 }}>학생 데이터 로딩 중...</Typography>
+      </Box>
+    );
+  }
+  
+  // 오류 상태
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error" variant="h6">
+          {error}
+        </Typography>
+        <MuiButton 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/login')}
+        >
+          로그인으로 이동
+        </MuiButton>
+      </Box>
+    );
+  }
+
+  // 역할이 교사가 아니면 접근 불가
+  if (role !== "teacher") {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="warning.main" variant="h6">
+          교사 권한이 없습니다.
+        </Typography>
+        <MuiButton 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/dashboard')}
+        >
+          대시보드로 이동
+        </MuiButton>
+      </Box>
+    );
+  }
+
+  // 교사 역할인 경우만 대시보드 렌더링
+  return (
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>교사 대시보드</Typography>
         <LogoutButton />
       </Box>
+      
       {/* [설명] 학생 이름 또는 이메일로 검색할 수 있는 입력창입니다. */}
       <Box mb={2}>
         <input
@@ -265,7 +370,9 @@ export default function TeacherDashboard() {
           style={{ padding: 8, width: 280, border: '1px solid #ccc', borderRadius: 4 }}
         />
       </Box>
+      
       <Typography variant="subtitle1" gutterBottom>전체 학생 목록 및 요약 통계</Typography>
+      
       {/* 전체 학생 요약 통계 */}
       {summary && (
         <Card sx={{ mb: 2 }}>
@@ -276,184 +383,198 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
       )}
-      {loading ? <CircularProgress /> : error ? <Typography color="error">{error}</Typography> : (
-        <Card sx={{ mt: 2 }}>
-          <CardContent>
-            <Typography variant="h6">학생 목록</Typography>
-            <List>
-              {/* [설명] 검색어가 비어 있으면 전체 학생, 검색어가 있으면 해당 학생만 보여줍니다. */}
-              {students.filter(stu =>
-                stu.name.includes(search) || stu.email.includes(search)
-              ).map(stu => (
-                <ListItem button key={stu.id} onClick={() => setSelected(stu)}>
-                  <ListItemText primary={stu.name} secondary={`${stu.email} / 최근 접속: ${stu.last_login}`} />
+      
+      {/* 학생 목록 */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>학생 목록</Typography>
+          <List>
+            {students
+              .filter(stu => 
+                stu.name.toLowerCase().includes(search.toLowerCase()) || 
+                stu.email.toLowerCase().includes(search.toLowerCase())
+              )
+              .map(stu => (
+                <ListItem 
+                  key={stu.id} 
+                  button 
+                  onClick={() => setSelected(stu)}
+                  sx={{ 
+                    bgcolor: selected?.id === stu.id ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    borderRadius: 1
+                  }}
+                >
+                  <ListItemText 
+                    primary={stu.name}
+                    secondary={`${stu.email} / 최근 활동: ${stu.last_login}`}
+                  />
                 </ListItem>
               ))}
-            </List>
-          </CardContent>
-        </Card>
-      )}
-      {/* 학생 상세 모달 */}
-      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="md" fullWidth>
-        <DialogTitle>학생 상세 정보</DialogTitle>
-        <DialogContent>
-          {selected && (
-            <>
-              <Typography variant="subtitle1">이름: {selected.name}</Typography>
-              <Typography variant="subtitle2">이메일: {selected.email}</Typography>
-              <Typography variant="body2" gutterBottom>최근 접속: {selected.last_login}</Typography>
-              <Box mt={2}>
-                <Typography variant="h6">SMART 목표</Typography>
-                {(studentGoals[selected.id] ?? []).length === 0 ? (
-                  <Typography color="text.secondary">등록된 목표가 없습니다.</Typography>
-                ) : (
-                  <List>
-                    {(studentGoals[selected.id] ?? []).map(goal => (
-                      <ListItem key={goal.id} alignItems="flex-start">
-                        <ListItemText
-                          primary={<b>{goal.subject}</b>}
-                          secondary={<>
-                            <Typography variant="body2">{goal.description}</Typography>
-                            <Typography variant="caption">생성일: {goal.created_at}</Typography>
-                            <Box mt={1}>
-                              <Typography variant="subtitle2">세션/달성률/반성문</Typography>
-                              {(studentSessions[goal.id] ?? []).length === 0 ? (
-                                <Typography color="text.secondary">세션 기록 없음</Typography>
-                              ) : (
-                                <>
-                                  <List dense>
-                                    {(studentSessions[goal.id] ?? []).map(sess => (
-                                      <ListItem key={sess.id} sx={{ pl: 2, flexDirection: 'column', alignItems: 'flex-start' }}>
-                                        <ListItemText
-                                          primary={<>날짜: {sess.created_at} / 달성률: {sess.percent}%</>}
-                                          secondary={sess.reflection ? `반성: ${sess.reflection}` : "반성문 없음"}
-                                        />
-                                        {/* 세션별 교사 코멘트 */}
-                                        <Box sx={{ width: '100%', mt: 1, mb: 1 }}>
-                                          <Typography variant="caption" color="secondary">교사 코멘트</Typography>
-                                          <List dense sx={{ pl: 2 }}>
-                                            {comments.filter(c => c.targetType === "session" && c.targetId === sess.id).map((c, idx) => (
-                                              <ListItem key={idx} sx={{ pl: 0 }}>
-                                                <ListItemText primary={c.comment} secondary={`by ${c.teacher} (${c.created_at.slice(0, 16).replace('T',' ')})`} />
-                                              </ListItem>
-                                            ))}
-                                          </List>
-                                          <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                            <input
-                                              style={{ flex: 1, padding: 4, border: '1px solid #ddd', borderRadius: 4 }}
-                                              placeholder="코멘트 입력..."
-                                              value={commentInputs[`session-${sess.id}`] || ""}
-                                              onChange={e => setCommentInputs(inputs => ({ ...inputs, [`session-${sess.id}`]: e.target.value }))}
-                                              onKeyDown={e => { if (e.key === 'Enter') handleAddComment('session', sess.id); }}
-                                            />
-                                            <MuiButton size="small" onClick={() => handleAddComment('session', sess.id)}>등록</MuiButton>
-                                          </Box>
-                                        </Box>
-                                      </ListItem>
-                                    ))}
-                                  </List>
-                                  <MuiButton size="small" sx={{ mt: 1 }} onClick={() => setOpenGoalChartId(goal.id)}>
-                                    달성률 변화 차트
-                                  </MuiButton>
-                                  {/* 목표별 교사 코멘트 */}
-                                  <Box sx={{ width: '100%', mt: 2 }}>
-                                    <Typography variant="caption" color="secondary">목표 코멘트</Typography>
-                                    <List dense sx={{ pl: 2 }}>
-                                      {comments.filter(c => c.targetType === "goal" && c.targetId === goal.id).map((c, idx) => (
-                                        <ListItem key={idx} sx={{ pl: 0 }}>
-                                          <ListItemText primary={c.comment} secondary={`by ${c.teacher} (${c.created_at.slice(0, 16).replace('T',' ')})`} />
-                                        </ListItem>
-                                      ))}
-                                    </List>
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                      <input
-                                        style={{ flex: 1, padding: 4, border: '1px solid #ddd', borderRadius: 4 }}
-                                        placeholder="코멘트 입력..."
-                                        value={commentInputs[`goal-${goal.id}`] || ""}
-                                        onChange={e => setCommentInputs(inputs => ({ ...inputs, [`goal-${goal.id}`]: e.target.value }))}
-                                        onKeyDown={e => { if (e.key === 'Enter') handleAddComment('goal', goal.id); }}
-                                      />
-                                      <MuiButton size="small" onClick={() => handleAddComment('goal', goal.id)}>등록</MuiButton>
-                                    </Box>
-                                  </Box>
-                                </>
-                              )}
+          </List>
+        </CardContent>
+      </Card>
+      
+      {/* 선택된 학생 상세 정보 */}
+      {selected && (
+        <Box>
+          <Typography variant="h5">{selected.name}님의 학습 현황</Typography>
+          
+          {/* 목표 목록 */}
+          <Card sx={{ mt: 2, mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>학습 목표</Typography>
+              {studentGoals[selected.id] ? (
+                <List>
+                  {studentGoals[selected.id].map(goal => (
+                    <ListItem key={goal.id}>
+                      <ListItemText 
+                        primary={goal.subject}
+                        secondary={goal.description}
+                      />
+                      
+                      {/* 목표 세션 및 달성률 정보 */}
+                      {studentSessions[goal.id] && (
+                        <Box>
+                          <Typography variant="body2">
+                            세션 수: {studentSessions[goal.id].length} / 
+                            최근 달성률: {studentSessions[goal.id][studentSessions[goal.id].length - 1]?.percent || 0}%
+                          </Typography>
+                          <MuiButton 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => setOpenGoalChartId(goal.id)}
+                          >
+                            달성률 추이 확인
+                          </MuiButton>
+                          
+                          {/* 목표별 코멘트 영역 */}
+                          <Box mt={1}>
+                            {comments
+                              .filter(c => c.targetType === 'goal' && c.targetId === goal.id)
+                              .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())
+                              .map((c, idx) => (
+                                <Box key={idx} sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mb: 0.5 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                    {c.teacher} ({new Date(c.created_at).toLocaleString()})
+                                  </Typography>
+                                  <Typography variant="body2">{c.comment}</Typography>
+                                </Box>
+                              ))}
+                            
+                            {/* 코멘트 입력 영역 */}
+                            <Box display="flex" mt={1}>
+                              <input
+                                style={{ flex: 1, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
+                                placeholder="목표에 대한 코멘트"
+                                value={commentInputs[`goal-${goal.id}`] || ''}
+                                onChange={e => setCommentInputs(inputs => ({ ...inputs, [`goal-${goal.id}`]: e.target.value }))}
+                              />
+                              <MuiButton size="small" onClick={() => handleAddComment('goal', goal.id)}>
+                                추가
+                              </MuiButton>
                             </Box>
-                          </>}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Box>
-              <Box mt={2}>
-                <Typography variant="h6">반성문 전체</Typography>
-                {(studentReflections[selected.id] ?? []).length === 0 ? (
-                  <Typography color="text.secondary">반성문 기록 없음</Typography>
-                ) : (
-                  <List>
-                    {(studentReflections[selected.id] ?? []).map(ref => (
-                      <ListItem key={ref.id} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <ListItemText primary={`[${ref.date}] ${ref.text}`} />
-                        {/* 반성문별 교사 코멘트 */}
-                        <Box sx={{ width: '100%', mt: 0.5 }}>
-                          <Typography variant="caption" color="secondary">반성문 코멘트</Typography>
-                          <List dense sx={{ pl: 2 }}>
-                            {comments.filter(c => c.targetType === "reflection" && c.targetId === ref.id).map((c, idx) => (
-                              <ListItem key={idx} sx={{ pl: 0 }}>
-                                <ListItemText primary={c.comment} secondary={`by ${c.teacher} (${c.created_at.slice(0, 16).replace('T',' ')})`} />
-                              </ListItem>
-                            ))}
-                          </List>
-                          <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                            <input
-                              style={{ flex: 1, padding: 4, border: '1px solid #ddd', borderRadius: 4 }}
-                              placeholder="코멘트 입력..."
-                              value={commentInputs[`reflection-${ref.id}`] || ""}
-                              onChange={e => setCommentInputs(inputs => ({ ...inputs, [`reflection-${ref.id}`]: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') handleAddComment('reflection', ref.id); }}
-                            />
-                            <MuiButton size="small" onClick={() => handleAddComment('reflection', ref.id)}>등록</MuiButton>
                           </Box>
                         </Box>
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Box>
-            </>
-          )}
-        {/* 목표별 달성률 변화 차트 모달 */}
-        <Dialog open={!!openGoalChartId} onClose={() => setOpenGoalChartId(null)} maxWidth="sm" fullWidth>
-          <DialogTitle>달성률 변화 차트</DialogTitle>
-          <DialogContent>
-            {openGoalChartId && (studentSessions[openGoalChartId] ?? []).length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={studentSessions[openGoalChartId]?.map((s, idx) => ({
-                  idx: idx + 1,
-                  date: s.created_at,
-                  percent: s.percent
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                  <Tooltip formatter={(v: number) => `${v}%`} />
-                  <Line type="monotone" dataKey="percent" stroke="#1976d2" name="달성률(%)" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <Typography color="text.secondary">달성률 기록이 없습니다.</Typography>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <MuiButton onClick={() => setOpenGoalChartId(null)}>닫기</MuiButton>
-          </DialogActions>
-        </Dialog>
-        </DialogContent>
-        <DialogActions>
-          <MuiButton onClick={() => setSelected(null)}>닫기</MuiButton>
-        </DialogActions>
-      </Dialog>
+                      )}
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="textSecondary">등록된 목표가 없습니다.</Typography>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* 반성문 목록 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>학습 반성문</Typography>
+              {studentReflections[selected.id] && studentReflections[selected.id].length > 0 ? (
+                <List>
+                  {studentReflections[selected.id].map(ref => (
+                    <ListItem key={ref.id}>
+                      <ListItemText 
+                        primary={`${ref.date} 작성`}
+                        secondary={ref.text}
+                      />
+                      
+                      {/* 반성문별 코멘트 영역 */}
+                      <Box ml={2}>
+                        {comments
+                          .filter(c => c.targetType === 'reflection' && c.targetId === ref.id)
+                          .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())
+                          .map((c, idx) => (
+                            <Box key={idx} sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mb: 0.5 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {c.teacher} ({new Date(c.created_at).toLocaleString()})
+                              </Typography>
+                              <Typography variant="body2">{c.comment}</Typography>
+                            </Box>
+                          ))}
+                        
+                        {/* 코멘트 입력 영역 */}
+                        <Box display="flex" mt={1}>
+                          <input
+                            style={{ flex: 1, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
+                            placeholder="반성문에 대한 코멘트"
+                            value={commentInputs[`reflection-${ref.id}`] || ''}
+                            onChange={e => setCommentInputs(inputs => ({ ...inputs, [`reflection-${ref.id}`]: e.target.value }))}
+                          />
+                          <MuiButton size="small" onClick={() => handleAddComment('reflection', ref.id)}>
+                            추가
+                          </MuiButton>
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="textSecondary">작성된 반성문이 없습니다.</Typography>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* 달성률 차트 모달 */}
+          <Dialog open={!!openGoalChartId} onClose={() => setOpenGoalChartId(null)} maxWidth="md">
+            <DialogTitle>
+              목표 달성률 추이
+            </DialogTitle>
+            <DialogContent>
+              {openGoalChartId && studentSessions[openGoalChartId] && (
+                <Box width={600} height={300}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={studentSessions[openGoalChartId].map((s, idx) => ({
+                        name: `세션 ${idx + 1}`,
+                        date: new Date(s.created_at).toLocaleDateString(),
+                        percent: s.percent || 0
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="percent" stroke="#8884d8" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <MuiButton onClick={() => setOpenGoalChartId(null)}>
+                닫기
+              </MuiButton>
+            </DialogActions>
+          </Dialog>
+          
+          {/* 학생 상세 화면 닫기 버튼 */}
+          <Box display="flex" justifyContent="center" mt={2}>
+            <MuiButton onClick={() => setSelected(null)}>
+              학생 목록으로 돌아가기
+            </MuiButton>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

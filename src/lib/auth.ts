@@ -126,6 +126,19 @@ export async function getUserName() {
     }
 
     console.log('Getting name for user:', user.id, user.email);
+    
+    // 사용자 정보 매핑
+    const specialUserNames: {[email: string]: string} = {
+      'admin@pof.com': '관리자',
+      '202@pof.com': '이교사',
+      '2201@pof.com': '김서윤'
+    };
+    
+    // 0. 특별 사용자 이름 찾기 (이메일에 따른 고정 이름)
+    if (user.email && specialUserNames[user.email]) {
+      console.log('Using mapped special name for:', user.email);
+      return specialUserNames[user.email];
+    }
 
     // 1. User 테이블에서 이름 가져오기 시도
     try {
@@ -135,8 +148,8 @@ export async function getUserName() {
         .eq('id', user.id)
         .single();
 
-      if (!userError && userData && userData.name) {
-        console.log('Found name in User table:', userData.name);
+      if (!userError && userData && userData.name && userData.name.length > 1) {
+        console.log('Found valid name in User table:', userData.name);
         return userData.name;
       }
     } catch (userQueryError) {
@@ -151,18 +164,33 @@ export async function getUserName() {
         .eq('id', user.id)
         .single();
 
-      if (!profileError && profileData && profileData.name) {
-        console.log('Found name in profiles table:', profileData.name);
+      if (!profileError && profileData && profileData.name && profileData.name.length > 1) {
+        console.log('Found valid name in profiles table:', profileData.name);
         return profileData.name;
       }
     } catch (profileQueryError) {
       console.error('Failed to query profiles table for name:', profileQueryError);
     }
+    
+    // 3. user_metadata에서 이름 가져오기 시도
+    if (user.user_metadata && user.user_metadata.name) {
+      console.log('Found name in user_metadata:', user.user_metadata.name);
+      return user.user_metadata.name;
+    }
 
-    // 3. 이메일에서 이름 추출
+    // 4. 이메일 처리: 2201@... 등은 클래스 ID가 아니라 사용자 이름처럼 표시
     if (user.email) {
-      const emailName = user.email.split('@')[0];
-      console.log('Using email-derived name:', emailName);
+      // 특정 패턴을 가진 이메일의 경우 문구 생성
+      const email = user.email.toLowerCase();
+      const emailName = email.split('@')[0];
+      
+      if (email.includes('student') || email.includes('teacher') || email.includes('admin')) {
+        const role = email.includes('student') ? '학생' : email.includes('teacher') ? '교사' : '관리자';
+        console.log('Using role-based description for email:', email);
+        return `${emailName} ${role}`;
+      }
+      
+      console.log('Using email username as name:', emailName);
       return emailName;
     }
 

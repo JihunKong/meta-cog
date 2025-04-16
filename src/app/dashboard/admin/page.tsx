@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Chip, MenuItem, Select, Button, CircularProgress } from "@mui/material";
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Chip, MenuItem, Select, Button, CircularProgress, TextField, FormControl, InputLabel } from "@mui/material";
 import { supabase } from "@/lib/supabase";
 
 interface User {
@@ -22,8 +22,10 @@ export default function AdminDashboard() {
   // [설명] 사용자 추가를 위한 입력값 state입니다.
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState(""); // 비밀번호 필드 추가
   // 역할을 소문자로 변경 (enum 형식에 맞춰서)
   const [newRole, setNewRole] = useState<"student"|"teacher"|"admin">("student");
+  const [addingUser, setAddingUser] = useState(false); // 사용자 추가 진행 상태
   
   // 인증 관련 상태
   const [role, setRole] = useState<string | null>(null);
@@ -33,7 +35,13 @@ export default function AdminDashboard() {
 
   // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 추가합니다.
   const handleAddUser = async () => {
-    if (!newName.trim() || !newEmail.trim()) return;
+    if (!newName.trim() || !newEmail.trim() || !newPassword.trim()) {
+      alert('이름, 이메일, 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+    
+    setAddingUser(true);
+    
     try {
       console.log('Adding new user with name:', newName);
       
@@ -58,7 +66,8 @@ export default function AdminDashboard() {
             id: profileData[0].id, // profiles의 id와 동일하게 설정
             email: newEmail,
             name: newName,
-            role: newRole
+            role: newRole,
+            password: newPassword // 비밀번호 저장
           });
         
         if (userError) {
@@ -67,14 +76,20 @@ export default function AdminDashboard() {
         }
       }
       
+      // 성공 메시지 표시
+      alert('사용자가 성공적으로 추가되었습니다.');
+      
       // UI 업데이트 및 입력창 초기화
       fetchUsers();
       setNewName(""); 
-      setNewEmail(""); 
+      setNewEmail("");
+      setNewPassword(""); 
       setNewRole("student"); // 소문자로 변경
     } catch (error: any) {
       console.error('사용자 추가 오류:', error.message);
       alert('사용자 추가 실패: ' + error.message);
+    } finally {
+      setAddingUser(false); // 상태 초기화
     }
   };
   
@@ -134,14 +149,7 @@ export default function AdminDashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
-
-  // 초기 데이터 로드 (별도 useEffect로 분리)
-  useEffect(() => {
-    if (role === "ADMIN") {
-      fetchUsers();
-    }
-  }, [role]);
+  }, [router]);
 
   // 사용자 데이터 가져오기
   const fetchUsers = async () => {
@@ -176,7 +184,7 @@ export default function AdminDashboard() {
         id: profile.id,
         email: profile.email || '이메일 없음',
         name: nameMap[profile.id] || profile.name || profile.email?.split('@')[0] || '이름 없음',
-        role: profile.role as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
+        role: profile.role?.toUpperCase() as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
       }));
       
       setUsers(formattedUsers);
@@ -184,11 +192,6 @@ export default function AdminDashboard() {
       console.error('사용자 데이터 로드 오류:', error.message);
     }
   };
-  
-  // 초기 로드
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   // 역할 변경 핸들러 - 실제 Supabase 데이터 업데이트
   const handleRoleChange = async (id: string, newRole: "STUDENT"|"TEACHER"|"ADMIN") => {
@@ -196,7 +199,7 @@ export default function AdminDashboard() {
       // Supabase 프로필 테이블 업데이트
       const { error } = await supabase
         .from('profiles')
-        .update({ role: newRole })
+        .update({ role: newRole.toLowerCase() }) // 소문자로 저장
         .eq('id', id);
         
       if (error) throw error;
@@ -264,36 +267,73 @@ export default function AdminDashboard() {
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>관리자 대시보드</Typography>
         <LogoutButton />
       </Box>
+      
       <Typography variant="subtitle1" gutterBottom>전체 사용자 목록 및 역할</Typography>
+      
       <Card sx={{ mt: 2 }}>
         <CardContent>
-          <Typography variant="h6">사용자 목록</Typography>
-          {/* [설명] 아래는 사용자 추가 입력창입니다. 이름, 이메일, 역할을 입력하고 '추가'를 누르면 목록에 바로 반영됩니다. */}
-          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-            <input
-              style={{ width: 120, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
-              placeholder="이름"
+          {/* 사용자 추가 폼 */}
+          <Box sx={{ mb: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              사용자 추가
+            </Typography>
+            
+            <TextField
+              label="이름"
               value={newName}
-              onChange={e => setNewName(e.target.value)}
+              onChange={(e) => setNewName(e.target.value)}
+              fullWidth
+              sx={{ mb: 1 }}
             />
-            <input
-              style={{ width: 180, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
-              placeholder="이메일"
+            
+            <TextField
+              label="이메일"
+              type="email"
               value={newEmail}
-              onChange={e => setNewEmail(e.target.value)}
+              onChange={(e) => setNewEmail(e.target.value)}
+              fullWidth
+              sx={{ mb: 1 }}
             />
-            <Select
-              size="small"
-              value={newRole}
-              onChange={e => setNewRole(e.target.value as "student"|"teacher"|"admin")}
-              sx={{ minWidth: 100 }}
+            
+            <TextField
+              label="비밀번호"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              fullWidth
+              sx={{ mb: 1 }}
+            />
+            
+            <FormControl fullWidth sx={{ mb: 1 }}>
+              <InputLabel id="role-select-label">역할</InputLabel>
+              <Select
+                labelId="role-select-label"
+                value={newRole}
+                label="역할"
+                onChange={(e) => setNewRole(e.target.value as "student"|"teacher"|"admin")}
+              >
+                <MenuItem value="student">학생</MenuItem>
+                <MenuItem value="teacher">교사</MenuItem>
+                <MenuItem value="admin">관리자</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <Button 
+              variant="contained" 
+              onClick={handleAddUser}
+              disabled={addingUser}
+              sx={{ mt: 1 }}
             >
-              <MenuItem value="student">STUDENT</MenuItem>
-              <MenuItem value="teacher">TEACHER</MenuItem>
-              <MenuItem value="admin">ADMIN</MenuItem>
-            </Select>
-            <Chip label="추가" color="primary" clickable onClick={handleAddUser} sx={{ cursor: 'pointer' }} />
+              {addingUser ? (
+                <>
+                  <CircularProgress size={24} color="inherit" sx={{ mr: 1 }} />
+                  추가 중...
+                </>
+              ) : '추가'}
+            </Button>
           </Box>
+          
+          <Typography variant="h6">사용자 목록</Typography>
           <List>
             {users.map(user => (
               <ListItem key={user.id}>
@@ -309,8 +349,8 @@ export default function AdminDashboard() {
                         onChange={e => setEditRole(e.target.value as "STUDENT"|"TEACHER"|"ADMIN")}
                         sx={{ minWidth: 100, mr: 1 }}
                       >
-                        <MenuItem value="STUDENT">STUDENT</MenuItem>
-                        <MenuItem value="TEACHER">TEACHER</MenuItem>
+                        <MenuItem value="STUDENT">학생</MenuItem>
+                        <MenuItem value="TEACHER">교사</MenuItem>
                       </Select>
                       <Chip label="저장" color="success" clickable sx={{ mr: 1 }} onClick={() => handleRoleChange(user.id, editRole)} />
                       <Chip label="취소" color="default" clickable onClick={() => setEditRoleId(null)} />
@@ -322,12 +362,6 @@ export default function AdminDashboard() {
               </ListItem>
             ))}
           </List>
-          {/* 실제 데이터 연동 시 Supabase RLS(행 수준 보안) 정책을 반드시 적용해야 합니다! */}
-          {/* 예: 학생은 본인 데이터만 SELECT/UPDATE, 교사/관리자는 전체 SELECT 등 */}
-          {/* 예시 정책:
-          CREATE POLICY "Students can view only their own records" ON goal_table FOR SELECT USING (auth.uid() = user_id);
-          CREATE POLICY "Teachers can view all" ON goal_table FOR SELECT USING (EXISTS (SELECT 1 FROM user_table WHERE id = auth.uid() AND role = 'TEACHER'));
-          */}
         </CardContent>
       </Card>
     </Box>
