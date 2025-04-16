@@ -78,7 +78,11 @@ export default function SessionDialog({
   };
 
   const handleSubmit = () => {
-    onSave(formData);
+    onSave({
+      ...formData,
+      percent: parseInt(formData.percent) || 0,
+      reflection: formData.reflection
+    });
   };
 
   return (

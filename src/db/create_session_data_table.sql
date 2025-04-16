@@ -1,7 +1,7 @@
--- 이전 테이블이 있다면 삭제 (주의: 프로덕션 환경에서는 백업 후 실행)
--- DROP TABLE IF EXISTS goal_progress CASCADE;
--- DROP TABLE IF EXISTS goal_sessions CASCADE;
--- DROP TABLE IF EXISTS smart_goals CASCADE;
+-- 이전 테이블 삭제 (주의: 데이터가 모두 삭제됩니다!)
+DROP TABLE IF EXISTS goal_progress CASCADE;
+DROP TABLE IF EXISTS goal_sessions CASCADE;
+DROP TABLE IF EXISTS smart_goals CASCADE;
 
 -- 새로운 smart_goals 테이블 생성
 -- 학생 학습 목표 정보 저장

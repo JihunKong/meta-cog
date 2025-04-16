@@ -60,7 +60,11 @@ export default function SessionItem({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSave(session.id, formData);
+    handleSave(session.id, {
+      ...formData,
+      percent: parseInt(formData.percent) || 0,
+      reflection: formData.reflection
+    });
   };
 
   // 날짜 포맷팅 (YYYY-MM-DD)
