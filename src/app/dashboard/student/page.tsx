@@ -41,13 +41,22 @@ export default function StudentDashboard() {
   });
   const [editId, setEditId] = useState<string | null>(null);
 
-  // 사용자 이름 로딩
+  // 사용자 이름 로딩 (public.User 테이블에서 name)
   useEffect(() => {
     const fetchUserName = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // 이름이 있으면 name, 없으면 email
-        setUserName(user.user_metadata?.name || user.email || "");
+        // public.User 테이블에서 name 가져오기
+        const { data, error } = await supabase
+          .from('User')
+          .select('name')
+          .eq('id', user.id)
+          .single();
+        if (data && data.name) {
+          setUserName(data.name);
+        } else {
+          setUserName(user.email || "");
+        }
       }
     };
     fetchUserName();
@@ -92,9 +101,9 @@ export default function StudentDashboard() {
     checkRole();
   }, [router]);
 
-  // 세션 데이터 로드
+  // 세션 데이터 로드 (학생만)
   useEffect(() => {
-    if (userRole) {
+    if (userRole === "STUDENT") {
       fetchSessions();
     }
   }, [userRole]);
