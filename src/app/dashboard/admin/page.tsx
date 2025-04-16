@@ -55,8 +55,12 @@ export default function AdminDashboard() {
   
   // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {
-    async function checkAuth() {
+    // 사용자 인증 정보 확인 및 리디렉션
+    let authCheckComplete = false;
+
+    const checkAuth = async () => {
       try {
+        console.log("Admin dashboard - Checking auth...");
         const r = await getUserRole();
         console.log('Admin dashboard - User role:', r); // 디버깅용 로그
         setRole(r);
@@ -68,15 +72,39 @@ export default function AdminDashboard() {
           return;
         }
         
+        // 인증 완료
+        authCheckComplete = true;
+        console.log('Admin dashboard - Auth success, fetching users');
         // ADMIN 권한이 있으면 사용자 데이터 가져오기
         fetchUsers();
       } catch (err) {
         console.error('Auth check error:', err);
         window.location.href = "/login";
       }
+    };
+
+    // 아직 인증 확인이 완료되지 않은 경우 진행
+    if (!authCheckComplete) {
+      checkAuth();
     }
-    checkAuth();
-  }, [router]);
+    
+    // 백업 타이머 - 5초 후에도 인증이 완료되지 않았으면 로그인 페이지로 이동
+    const failsafeTimer = setTimeout(() => {
+      if (!authCheckComplete) {
+        console.log('Admin dashboard - Auth check timeout, redirecting to login');
+        window.location.href = "/login";
+      }
+    }, 5000);
+    
+    return () => clearTimeout(failsafeTimer);
+  }, []);
+
+  // 초기 데이터 로드 (별도 useEffect로 분리)
+  useEffect(() => {
+    if (role === "ADMIN") {
+      fetchUsers();
+    }
+  }, [role]);
 
   // 사용자 데이터 가져오기
   const fetchUsers = async () => {
