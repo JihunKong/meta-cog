@@ -31,14 +31,27 @@ export default function LoginPage() {
         return;
       }
       
-      // 역할에 따라 분기
-      const role = await getUserRole();
+      // 사용자 정보가 완전히 로드되도록 지연 추가
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // role이 없으면 기본 대시보드로 이동
-      if (role === "STUDENT") router.replace("/dashboard/student");
-      else if (role === "TEACHER") router.replace("/dashboard/teacher");
-      else if (role === "ADMIN") router.replace("/dashboard/admin");
-      else router.replace("/dashboard"); // 역할이 없으면 기본 대시보드로
+      // 클라이언트 컴포넌트에서만 역할 분기 수행
+      const role = await getUserRole();
+      console.log('User role:', role); // 디버깅용 로그
+      
+      if (role === "STUDENT") {
+        // 직접 URL 변경을 통해 리디렉션
+        window.location.href = "/dashboard/student";
+      } else if (role === "TEACHER") {
+        window.location.href = "/dashboard/teacher";
+      } else if (role === "ADMIN") {
+        window.location.href = "/dashboard/admin";
+      } else {
+        // 역할이 없으면 기본 대시보드로
+        window.location.href = "/dashboard";
+      }
+      
+      // 리디렉션이 완료될 때까지 로딩 상태 유지
+      return;
     } catch (err) {
       console.error('Login error:', err);
       setError('로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
