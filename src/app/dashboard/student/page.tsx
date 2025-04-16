@@ -273,13 +273,7 @@ export default function StudentDashboard() {
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">학습 세션</Typography>
-            <Button 
-              variant="contained" 
-              startIcon={<AddIcon />}
-              onClick={handleDialogOpen}
-            >
-              새 세션 추가
-            </Button>
+  
           </Box>
 
           <SessionManager 
@@ -318,39 +312,6 @@ export default function StudentDashboard() {
           <AIAdviceView sessions={sessions} />
         </Box>
       )}
-
-      {/* 새 세션 추가 대화상자 */}
-      <Dialog open={isDialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>새 학습 세션 추가</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="subject-label">과목</InputLabel>
-            <Select
-              labelId="subject-label"
-              value={newSessionData.subject}
-              onChange={(e) => setNewSessionData({...newSessionData, subject: e.target.value})}
-              label="과목"
-            >
-              {SUBJECTS.map(subject => (
-                <MenuItem key={subject} value={subject}>{subject}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            margin="normal"
-            label="학습 내용"
-            fullWidth
-            multiline
-            rows={4}
-            value={newSessionData.description}
-            onChange={(e) => setNewSessionData({...newSessionData, description: e.target.value})}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDialogClose}>취소</Button>
-          <Button onClick={handleAddSession} color="primary" variant="contained">추가</Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 }

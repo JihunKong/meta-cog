@@ -47,11 +47,14 @@ export default function SessionManager({
     try {
       setLoading(true);
       setError("");
-
-      // 데이터베이스에 모든 필드 저장 (테이블 스키마 업데이트 완료)
+      // 현재 로그인된 사용자 정보 가져오기
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("로그인 정보가 없습니다. 다시 로그인 해주세요.");
+      // 데이터베이스에 모든 필드 저장 (user_id 포함)
       const { data, error } = await supabase
         .from('smart_goals')
         .insert([{
+          user_id: user.id,
           subject: sessionData.subject,
           description: sessionData.description,
           percent: 0,  // 새 세션은 초기값 0
@@ -128,21 +131,30 @@ export default function SessionManager({
     }
   };
 
-  // 세션 삭제 핸들러
-  const handleDeleteSession = async (id: string) => {
+  // 삭제 확인 다이얼로그 상태
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // 삭제 요청 시 다이얼로그 오픈
+  const handleDeleteRequest = (id: string) => {
+    setDeleteTargetId(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  // 실제 삭제 실행
+  const handleDeleteSession = async () => {
+    if (!deleteTargetId) return;
     try {
       setLoading(true);
       setError("");
-
       const { error } = await supabase
         .from('smart_goals')
         .delete()
-        .eq('id', id);
-
+        .eq('id', deleteTargetId);
       if (error) throw error;
-
-      // 세션 리스트에서 삭제
-      setSessions(sessions.filter(s => s.id !== id));
+      setSessions(sessions.filter(s => s.id !== deleteTargetId));
+      setDeleteConfirmOpen(false);
+      setDeleteTargetId(null);
     } catch (err: any) {
       console.error("세션 삭제 오류:", err.message);
       setError(err.message);
@@ -192,11 +204,22 @@ export default function SessionManager({
       <SessionList 
         sessions={sessions}
         onEdit={handleEditStart}
-        onDelete={handleDeleteSession}
+        onDelete={handleDeleteRequest}
         editingSessionId={editingSessionId}
         onUpdate={handleUpdateSession}
         loading={loading}
       />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle>정말로 삭제하시겠습니까?</DialogTitle>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)} disabled={loading}>취소</Button>
+          <Button onClick={handleDeleteSession} color="error" variant="contained" disabled={loading}>
+            삭제
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 세션 추가 다이얼로그 */}
       <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} fullWidth maxWidth="sm">
