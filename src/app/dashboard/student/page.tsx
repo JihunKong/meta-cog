@@ -25,6 +25,19 @@ interface Session {
 
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
+// AI 어드바이스 생성 함수
+const getAIAdvice = (subject: string, average: number): string => {
+  if (average >= 90) {
+    return `${subject} 학습에서 탁월한 성과를 보이고 있습니다! 현재의 학습 방식을 유지하되, 지식을 더 깊이 탐구하는 심화 학습을 시도해보세요. 다른 과목과의 연계성을 찾아보거나 실생활 적용 방안을 고민해보는 것도 좋은 방법입니다.`;
+  } else if (average >= 70) {
+    return `${subject} 학습에서 양호한 성과를 보이고 있습니다. 잘 이해하지 못한 개념을 다시 검토하고, 개념 간의 연결고리를 파악하는 데 집중해보세요. 다양한 문제 유형을 접하면 학습 효과가 더욱 높아질 것입니다.`;
+  } else if (average >= 50) {
+    return `${subject} 학습에서 기본적인 성과를 내고 있습니다. 기초 개념을 확실히 이해했는지 점검하고, 부족한 부분은 다양한 방식으로 반복 학습해보세요. 학습 시간을 조금 더 늘리고 집중도를 높이면 성과가 개선될 것입니다.`;
+  } else {
+    return `${subject} 학습에 어려움을 겪고 있군요. 기초 개념부터 차근차근 다시 학습해보는 것을 추천합니다. 짧은 시간이라도 매일 꾸준히 학습하고, 어려운 부분은 선생님이나 친구에게 도움을 요청해보세요. 학습 방식을 바꿔보는 것도 좋은 방법입니다.`;
+  }
+};
+
 export default function StudentDashboard() {
   // 세션 관련 상태
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -105,11 +118,28 @@ export default function StudentDashboard() {
                   reflection: metadata.reflection
                 };
               }
-              return session;
+              return {
+                ...session,
+                percent: null,
+                reflection: null
+              };
             });
           } catch (e) {
             console.error('Failed to parse session metadata:', e);
+            // 오류 발생 시 기본값 추가
+            sessionData = sessionData.map(session => ({
+              ...session,
+              percent: null,
+              reflection: null
+            }));
           }
+        } else {
+          // 메타데이터가 없을 경우 기본값 추가
+          sessionData = sessionData.map(session => ({
+            ...session,
+            percent: null,
+            reflection: null
+          }));
         }
       }
       
@@ -308,26 +338,40 @@ export default function StudentDashboard() {
     subjectPerformance: (() => {
       const subjectData: Record<string, {count: number, total: number}> = {};
       
+      // 모든 세션 개수 카운트
+      sessions.forEach(session => {
+        if (!subjectData[session.subject]) {
+          subjectData[session.subject] = { count: 0, total: 0 };
+        }
+        subjectData[session.subject].count++;
+      });
+
+      // percent가 있는 세션만 합계
       sessions.forEach(session => {
         if (session.percent) {
-          if (!subjectData[session.subject]) {
-            subjectData[session.subject] = { count: 0, total: 0 };
-          }
-          subjectData[session.subject].count++;
+          // 이미 카운트는 위에서 추가했으니 total만 추가
           subjectData[session.subject].total += session.percent;
         }
       });
       
       return Object.entries(subjectData).map(([subject, data]) => ({
         subject,
-        average: Math.round(data.total / data.count)
+        count: data.count,
+        // 달성률이 있는 경우에만 평균 계산, 아니면 0
+        average: data.total > 0 ? Math.round(data.total / data.count) : 0 
       }));
     })(),
     
     // 최근 달성률 추이
     recentPerformance: (() => {
-      return sessions
-        .filter(session => session.percent)
+      const sessionsWithPercent = sessions.filter(session => session.percent != null);
+      
+      // 달성률이 있는 세션이 없으면 빈 배열 반환
+      if (sessionsWithPercent.length === 0) {
+        return [];
+      }
+      
+      return sessionsWithPercent
         .slice(0, 10)
         .map(session => ({
           date: new Date(session.created_at).toLocaleDateString("ko-KR", {
@@ -352,12 +396,17 @@ export default function StudentDashboard() {
         value={activeTab} 
         onChange={(_, newValue) => setActiveTab(newValue)}
         sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+        variant="scrollable"
+        scrollButtons="auto"
       >
         <Tab label="학습 세션" />
+        <Tab label="달력 뷰" />
         <Tab label="통계 및 분석" />
+        <Tab label="AI 어드바이스" />
       </Tabs>
       
-      {activeTab === 0 ? (
+      {/* 탭 1: 학습 세션 관리 */}
+      {activeTab === 0 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
             <Typography variant="h6" sx={{ mb: 0 }}>학습 세션 관리</Typography>
@@ -385,7 +434,30 @@ export default function StudentDashboard() {
             closeEdit={closeEdit}
           />
         </Box>
-      ) : (
+      )}
+      
+      {/* 탭 2: 달력 뷰 */}
+      {activeTab === 1 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>일자별 학습 활동</Typography>
+          
+          {sessions.length === 0 ? (
+            <Alert severity="info" sx={{ my: 2 }}>
+              아직 등록된 학습 세션이 없습니다. 학습 세션을 추가해보세요.
+            </Alert>
+          ) : (
+            <Box sx={{ mt: 2 }}>
+              {/* 일자별 달력 뷰 내용은 이후 구현할 예정 */}
+              <Alert severity="info" sx={{ mb: 2 }}>
+                달력 뷰 기능은 구현 중입니다...
+              </Alert>
+            </Box>
+          )}
+        </Box>
+      )}
+      
+      {/* 탭 3: 통계 및 분석 */}
+      {activeTab === 2 && (
         <Box>
           <Typography variant="h6" gutterBottom>통계 및 학습 분석</Typography>
           
@@ -443,6 +515,54 @@ export default function StudentDashboard() {
                 </Box>
               </Grid>
             </Grid>
+          )}
+        </Box>
+      )}
+      
+      {/* 탭 4: AI 어드바이스 */}
+      {activeTab === 3 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>AI 학습 어드바이스</Typography>
+          
+          {sessions.filter(s => s.percent).length < 3 ? (
+            <Alert severity="info" sx={{ my: 2 }}>
+              AI 학습 어드바이스를 받으려면 최소 3개 이상의 학습 세션을 완료해야 합니다.
+            </Alert>
+          ) : (
+            <Box>
+              {statsData.subjectPerformance.map(subject => (
+                <Box key={subject.subject} sx={{ mb: 4, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, bgcolor: '#f9f9f9' }}>
+                  <Typography variant="h6" gutterBottom>
+                    {subject.subject} 학습 리포트
+                  </Typography>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body1" gutterBottom>
+                      <strong>평균 달성률:</strong> {subject.average}%
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      <strong>세션 횟수:</strong> {subject.count} 회
+                    </Typography>
+                  </Box>
+                  
+                  <Typography variant="subtitle1" gutterBottom>
+                    AI 학습 어드바이스
+                  </Typography>
+                  
+                  <Box sx={{ p: 2, bgcolor: '#e8f4fd', borderRadius: 1, mb: 2 }}>
+                    <Typography variant="body1" sx={{ fontStyle: 'italic' }}>
+                      {getAIAdvice(subject.subject, subject.average)}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button variant="outlined" size="small">
+                      새로운 어드바이스 요청
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
           )}
         </Box>
       )}
