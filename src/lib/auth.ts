@@ -35,22 +35,72 @@ export async function getUserRole() {
     return null;
   }
 
-  // User 테이블에서 role만 참조
-  const { data, error } = await supabase
+  // User row가 없으면 자동 생성 (STUDENT 기본)
+  let { data, error } = await supabase
     .from('User')
     .select('role')
     .eq('id', user.id)
     .single();
 
-  if (error) {
-    console.error('User fetch error:', error);
-    return null;
+  if (error && error.code === 'PGRST116') {
+    // Row not found, upsert
+    const upsertResult = await supabase.from('User').upsert({
+      id: user.id,
+      email: user.email,
+      name: user.email,
+      role: 'STUDENT',
+    });
+    if (upsertResult.error) {
+      console.error('User upsert error:', upsertResult.error);
+      return null;
+    }
+    // 재조회
+    const retry = await supabase
+      .from('User')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    data = retry.data;
   }
   if (!data) {
     console.error('No User row found for user:', user.id);
     return null;
   }
   return data.role || null;
+}
+
+export async function getUserName() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return null;
+
+  let { data, error } = await supabase
+    .from('User')
+    .select('name')
+    .eq('id', user.id)
+    .single();
+
+  if (error && error.code === 'PGRST116') {
+    // Row not found, upsert
+    const upsertResult = await supabase.from('User').upsert({
+      id: user.id,
+      email: user.email,
+      name: user.email,
+      role: 'STUDENT',
+    });
+    if (upsertResult.error) {
+      console.error('User upsert error:', upsertResult.error);
+      return null;
+    }
+    // 재조회
+    const retry = await supabase
+      .from('User')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+    data = retry.data;
+  }
+  if (!data) return null;
+  return data.name;
 }
 
 // Supabase 사용자 타입 정의

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getUserRole } from "@/lib/auth";
+import { getUserRole, getUserName } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import {
   Box, Container, Typography, Button, Dialog, DialogTitle, DialogContent,
@@ -41,24 +41,11 @@ export default function StudentDashboard() {
   });
   const [editId, setEditId] = useState<string | null>(null);
 
-  // 사용자 이름 로딩 (public.User 테이블에서 name)
+  // 사용자 이름 로딩 (User row 없으면 자동 생성)
   useEffect(() => {
     const fetchUserName = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // public.User 테이블에서 name 가져오기 (id 컬럼 사용)
-        const { data, error } = await supabase
-          .from('User')
-          .select('name')
-          .eq('id', user.id)
-          .single();
-        console.log('User name query result:', data, error);
-        if (data && data.name) {
-          setUserName(data.name);
-        } else {
-          setUserName(user.email || "");
-        }
-      }
+      const name = await getUserName();
+      if (name) setUserName(name);
     };
     fetchUserName();
   }, []);
@@ -102,7 +89,6 @@ export default function StudentDashboard() {
         setLoading(false);
       }
     };
-
     checkRole();
   }, [router]);
 
