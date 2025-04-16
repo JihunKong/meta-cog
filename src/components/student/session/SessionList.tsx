@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Box, Typography, Grid, Button, CircularProgress, Alert
+  Box, Typography, Grid, Button, CircularProgress, Alert, Chip
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import SessionItem from "./SessionItem";
@@ -127,17 +127,6 @@ export default function SessionList({
                   <Chip label="오늘" color="primary" size="small" sx={{ ml: 1 }} />
                 )}
               </Typography>
-              
-              {date === today && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddSession}
-                >
-                  세션 추가
-                </Button>
-              )}
             </Box>
             
             <Grid container spacing={3}>

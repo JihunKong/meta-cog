@@ -1,8 +1,17 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmail, getUserRole } from "@/lib/auth";
-import { Button, TextField, Typography, Box } from "@mui/material";
+import { 
+  Button, 
+  TextField, 
+  Typography, 
+  Box, 
+  Container, 
+  Paper,
+  CircularProgress
+} from "@mui/material";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,53 +48,100 @@ export default function LoginPage() {
       console.log('User role:', role); // 디버깅용 로그
       
       if (role === "STUDENT") {
-        // 직접 URL 변경을 통해 리디렉션
-        window.location.href = "/dashboard/student";
-      } else if (role === "TEACHER") {
-        window.location.href = "/dashboard/teacher";
+        router.push("/dashboard/student");
       } else if (role === "ADMIN") {
-        window.location.href = "/dashboard/admin";
+        router.push("/dashboard/admin");
       } else {
-        // 역할이 없으면 기본 대시보드로
-        window.location.href = "/dashboard";
+        setError('권한이 없는 사용자입니다.');
+        setLoading(false);
       }
-      
-      // 리디렉션이 완료될 때까지 로딩 상태 유지
-      return;
     } catch (err) {
       console.error('Login error:', err);
-      setError('로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      setError('로그인 중 오류가 발생했습니다.');
       setLoading(false);
     }
   };
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight="100vh">
-      <Typography variant="h4" gutterBottom>로그인</Typography>
-      <form onSubmit={handleSubmit} style={{ width: 300 }}>
-        <TextField
-          label="이메일"
-          type="email"
-          fullWidth
-          margin="normal"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <TextField
-          label="비밀번호"
-          type="password"
-          fullWidth
-          margin="normal"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        {error && <Typography color="error">{error}</Typography>}
-        <Button type="submit" variant="contained" color="primary" fullWidth disabled={loading} sx={{ mt: 2 }}>
-          {loading ? "로그인 중..." : "로그인"}
-        </Button>
-      </form>
-    </Box>
+    <Container maxWidth="sm" sx={{ height: "100vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <Box 
+        sx={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center",
+          mb: 4
+        }}
+      >
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          align="center" 
+          gutterBottom
+          color="primary"
+          sx={{ fontWeight: "bold", mb: 4 }}
+        >
+          메타인지 학습 시스템
+        </Typography>
+        
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: 4, 
+            width: '100%', 
+            borderRadius: 2,
+            backgroundColor: "#fff" 
+          }}
+        >
+          <Typography variant="h5" align="center" gutterBottom sx={{ mb: 3 }}>
+            로그인
+          </Typography>
+          
+          <form onSubmit={handleSubmit}>
+            <TextField
+              label="이메일"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              fullWidth
+              margin="normal"
+              required
+              variant="outlined"
+            />
+            
+            <TextField
+              label="비밀번호"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              required
+              variant="outlined"
+            />
+            
+            {error && (
+              <Typography color="error" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
+            
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              disabled={loading}
+              sx={{ mt: 3, py: 1.5, fontSize: "1rem" }}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "로그인"
+              )}
+            </Button>
+          </form>
+        </Paper>
+      </Box>
+    </Container>
   );
 }
