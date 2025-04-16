@@ -54,8 +54,17 @@ export default function StudentDashboard() {
     const checkRole = async () => {
       try {
         const role = await getUserRole();
+        if (role === "TEACHER") {
+          router.push("/dashboard/teacher");
+          return;
+        }
+        if (role === "ADMIN") {
+          router.push("/dashboard/admin");
+          return;
+        }
         if (role !== "STUDENT") {
-          router.push("/dashboard");
+          router.push("/login");
+          return;
         }
         setUserRole(role);
       } catch (error) {
@@ -272,7 +281,7 @@ export default function StudentDashboard() {
       {activeTab === 0 && (
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">학습 세션</Typography>
+            <Typography variant="h6">일자별 학습 기록</Typography>
   
           </Box>
 
