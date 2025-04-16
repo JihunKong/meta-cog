@@ -29,40 +29,63 @@ export async function getUserRole() {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError) {
       console.error('Auth error:', userError);
-      return 'STUDENT'; // 안전한 기본값 반환
+      return null; // 오류 시 null 반환
     }
     if (!user) {
       console.error('No user found');
-      return 'STUDENT'; // 안전한 기본값 반환
+      return null; // 오류 시 null 반환
     }
 
-    // User 테이블에서 role 조회 시도
+    // 1. 먼저 profiles 테이블에서 role 조회 시도
     try {
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!profileError && profileData && profileData.role) {
+        console.log('Found role in profiles:', profileData.role);
+        return profileData.role;
+      }
+    } catch (profileQueryError) {
+      console.error('Failed to query profiles table:', profileQueryError);
+    }
+
+    // 2. User 테이블에서 role 조회 시도
+    try {
+      const { data: userData, error: userDataError } = await supabase
         .from('User')
         .select('role')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('User fetch error:', error);
-        return 'STUDENT'; // 안전한 기본값 반환
+      if (!userDataError && userData && userData.role) {
+        console.log('Found role in User table:', userData.role);
+        return userData.role;
       }
-
-      if (!data || !data.role) {
-        console.log('No role data found, returning STUDENT default');
-        return 'STUDENT'; // 안전한 기본값 반환
-      }
-
-      console.log('Successfully found role:', data.role);
-      return data.role;
-    } catch (queryError) {
-      console.error('Failed to query User table:', queryError);
-      return 'STUDENT'; // 안전한 기본값 반환
+    } catch (userQueryError) {
+      console.error('Failed to query User table:', userQueryError);
     }
+
+    // 3. 이메일에서 권한 추측
+    if (user.email) {
+      const email = user.email.toLowerCase();
+      if (email.includes('admin')) {
+        return 'ADMIN';
+      } else if (email.startsWith('202')) {
+        return 'TEACHER';
+      } else if (email.startsWith('2201')) {
+        return 'STUDENT';
+      }
+    }
+
+    // 4. 모든 방법 실패시 최종 안전장치 (기본값)
+    console.log('All role detection methods failed, returning STUDENT default');
+    return 'STUDENT';
   } catch (error) {
     console.error('Unexpected error in getUserRole:', error);
-    return 'STUDENT'; // 안전한 기본값 반환
+    return 'STUDENT';
   }
 }
 

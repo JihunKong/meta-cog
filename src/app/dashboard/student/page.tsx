@@ -109,13 +109,25 @@ export default function StudentDashboard() {
   // 세션 데이터 가져오기
   const fetchSessions = async () => {
     try {
+      // 현재 로그인한 사용자의 ID 가져오기
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("사용자 정보가 없습니다.");
+        return;
+      }
+
+      console.log("Current user ID for sessions:", user.id);
+
+      // 현재 사용자의 데이터만 가져오기
       const { data, error } = await supabase
         .from('smart_goals')
         .select('*')
+        .eq('user_id', user.id)  // 현재 사용자의 데이터만 필터링
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
+      console.log("Fetched sessions for user:", user.id, "count:", data?.length || 0);
       setSessions(data || []);
     } catch (error) {
       console.error("세션 데이터 로드 오류:", error);
