@@ -31,6 +31,7 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,6 +40,18 @@ export default function StudentDashboard() {
     description: ""
   });
   const [editId, setEditId] = useState<string | null>(null);
+
+  // 사용자 이름 로딩
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // 이름이 있으면 name, 없으면 email
+        setUserName(user.user_metadata?.name || user.email || "");
+      }
+    };
+    fetchUserName();
+  }, []);
 
   // 통계 데이터
   const [statsData, setStatsData] = useState({
@@ -67,6 +80,7 @@ export default function StudentDashboard() {
           return;
         }
         setUserRole(role);
+        // 학생이면 그대로 진행
       } catch (error) {
         console.error("권한 확인 오류:", error);
         router.push("/login");
@@ -264,7 +278,14 @@ export default function StudentDashboard() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1">학생 대시보드</Typography>
+        <Box>
+          <Typography variant="h4" component="h1">학생 대시보드</Typography>
+          {userName && (
+            <Typography variant="subtitle1" sx={{ mt: 1 }}>
+              {userName}님! 환영합니다.
+            </Typography>
+          )}
+        </Box>
         <LogoutButton />
       </Box>
 
