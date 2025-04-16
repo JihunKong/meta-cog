@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Chip, MenuItem, Select } from "@mui/material";
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, Chip, MenuItem, Select, Button, CircularProgress } from "@mui/material";
 import { supabase } from "@/lib/supabase";
 
 interface User {
@@ -24,7 +24,11 @@ export default function AdminDashboard() {
   const [newEmail, setNewEmail] = useState("");
   // 역할을 소문자로 변경 (enum 형식에 맞춰서)
   const [newRole, setNewRole] = useState<"student"|"teacher"|"admin">("student");
+  
+  // 인증 관련 상태
   const [role, setRole] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState<boolean>(false); // 인증 확인 완료 여부
+  const [authError, setAuthError] = useState<string | null>(null); // 인증 오류 메시지
   const router = useRouter();
 
   // [설명] '추가' 버튼 클릭 시 실행되는 함수입니다. 입력값으로 새 사용자를 추가합니다.
@@ -76,18 +80,30 @@ export default function AdminDashboard() {
   
   // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {
-    // 사용자 인증 정보 확인 및 리디렉션
     let mounted = true; // 컴포넌트가 마운트된 상태인지 추적
 
     const checkAuth = async () => {
       try {
         console.log("Admin dashboard - Checking auth...");
+        // 인증 확인 시작
+        setAuthError(null);
+        
+        // 사용자 역할 조회
         const r = await getUserRole();
+        
         // 컴포넌트가 언마운트된 경우 상태 업데이트 중단
         if (!mounted) return;
         
         console.log('Admin dashboard - User role:', r);
         console.log('Admin dashboard - Role type check:', typeof r, r);
+        
+        // 역할이 없거나 확인되지 않음
+        if (!r) {
+          console.error('Admin dashboard - No role found');
+          setAuthError("역할을 확인할 수 없습니다. 다시 로그인해주세요.");
+          setAuthChecked(true);
+          return;
+        }
         
         // 소문자 'admin'으로 비교 (enum 데이터베이스 타입에 맞춰기)
         if (r !== "admin") {
@@ -99,12 +115,14 @@ export default function AdminDashboard() {
         
         // admin 역할인 경우만 상태 업데이트
         setRole(r);
+        setAuthChecked(true); // 인증 확인 완료
         console.log('Admin dashboard - Auth success, fetching users');
         fetchUsers();
       } catch (err) {
         console.error('Auth check error:', err);
         if (mounted) {
-          window.location.replace("/login");
+          setAuthError("인증 오류가 발생했습니다. 다시 로그인해주세요.");
+          setAuthChecked(true); // 인증 확인은 완료되었지만 오류 발생
         }
       }
     };
@@ -192,11 +210,49 @@ export default function AdminDashboard() {
     }
   };
 
-  // 로딩 상태 또는 역할이 admin이 아닌 경우 렌더링 차단
+  // 인증 상태에 따른 UI 렌더링
+  if (!authChecked) {
+    // 인증 확인 중
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={40} />
+        <Typography sx={{ mt: 2 }}>권한 확인 중...</Typography>
+      </Box>
+    );
+  }
+  
+  // 인증 오류 발생
+  if (authError) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error" variant="h6">
+          {authError}
+        </Typography>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/login')}
+        >
+          로그인으로 이동
+        </Button>
+      </Box>
+    );
+  }
+  
+  // 역할이 관리자가 아님
   if (!role || role !== "admin") {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Typography>권한 확인 중...</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="warning.main" variant="h6">
+          관리자 권한이 없습니다.
+        </Typography>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/dashboard')}
+        >
+          대시보드로 이동
+        </Button>
       </Box>
     );
   }
