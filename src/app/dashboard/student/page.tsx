@@ -1,6 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
 import {
   Box, Typography, Button, List, ListItem, ListItemText, CircularProgress,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, IconButton,
@@ -29,10 +33,6 @@ interface GoalSession {
 }
 
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
-
-import { useRouter } from "next/navigation";
-import { getUserRole } from "@/lib/auth";
-import LogoutButton from "@/components/LogoutButton";
 
 export default function StudentDashboard() {
   // SMART 목표 및 기타 상태
@@ -319,8 +319,8 @@ export default function StudentDashboard() {
   };
 
   return (
-    <Box p={4}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Box sx={{ p: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>학생 대시보드</Typography>
         <LogoutButton />
       </Box>
@@ -342,7 +342,7 @@ export default function StudentDashboard() {
 
       {/* 목표별 최근 7일 평균 달성률이 60% 미만인 경우 경고 카드 */}
       {goals.length > 0 && (
-        <Box mb={2}>
+        <Box sx={{ mb: 2 }}>
           {goals
             .filter(g => goalAverages[g.id] !== undefined && goalAverages[g.id] < 60)
             .map(g => (
@@ -355,7 +355,7 @@ export default function StudentDashboard() {
 
       {/* AI 피드백: 목표별 실제 Claude 피드백 요청 및 결과 표시 */}
       {goals.length > 0 && (
-        <Box mb={2}>
+        <Box sx={{ mb: 2 }}>
           <Card variant="outlined">
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>AI 피드백</Typography>
@@ -422,7 +422,7 @@ export default function StudentDashboard() {
       )}
 
       {/* 날짜별 학습 기록 및 그래프 */}
-      <Box mb={4}>
+      <Box sx={{ mb: 4 }}>
         <Typography variant="h6" gutterBottom>최근 7일간 학습 현황</Typography>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={dateRecords} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -584,7 +584,12 @@ export default function StudentDashboard() {
                       const session = sessions[goal.id]?.find(s => s.session_no === sessionNo);
                       const isEditing = sessionEdit && sessionEdit.goalId === goal.id && sessionEdit.sessionNo === sessionNo;
                       return (
-                        <Box key={sessionNo} mb={2} p={2} border={1} borderRadius={2} borderColor="grey.200" sx={{ 
+                        <Box key={sessionNo} sx={{ 
+                          mb: 2, 
+                          p: 2, 
+                          border: 1, 
+                          borderRadius: 2, 
+                          borderColor: 'grey.200',
                           backgroundColor: '#fafafa', 
                           boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
                         }}>
@@ -653,7 +658,7 @@ export default function StudentDashboard() {
                                   <Button onClick={closeSessionEdit} size="small" disabled={sessionSaveLoading}>취소</Button>
                                 </Box>
                               ) : (
-                                <Box display="flex" alignItems="center">
+                                <Box sx={{ display: "flex", alignItems: "center" }}>
                                   <Typography sx={{ mr: 2 }}>
                                     {session ? `달성도: ${session.percent}% | 반성: ${session.reflection}` : "기록 없음"}
                                   </Typography>
@@ -667,14 +672,12 @@ export default function StudentDashboard() {
                                   )}
                                 </Box>
                               )}
-                            </Grid>
-                          </Grid>
                         </Box>
                       );
                     })}
                   </>
                 )}
-                {sessionError[goal.id] && <Typography color="error">{sessionError[goal.id]}</Typography>}
+                {goal?.id && sessionError[goal.id] && <Typography color="error">{sessionError[goal.id]}</Typography>}
               </AccordionDetails>
             </Accordion>
           ))}
@@ -738,29 +741,42 @@ export default function StudentDashboard() {
       </DialogActions>
     </Dialog>
     {/* 요일별 학습 빈도 바차트 */}
-    <Box mt={6}>
+    <Box sx={{ mt: 6 }}>
       <Typography variant="h6" gutterBottom>최근 4주간 요일별 학습 빈도</Typography>
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={(() => {
-          // 4주간 모든 세션 펼치기
-          const allSessions: GoalSession[] = Object.values(sessions).flat();
-          const last28 = Array.from({length: 28}, (_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            return d.toISOString().slice(0, 10);
-          });
-          const weekMap = ["일", "월", "화", "수", "목", "금", "토"];
-          const freq: Record<string, number> = {"일":0, "월":0, "화":0, "수":0, "목":0, "금":0, "토":0};
-          allSessions.forEach(s => {
-            const d = new Date(s.created_at);
-            const dateStr = d.toISOString().slice(0, 10);
-            if (last28.includes(dateStr)) {
-              const day = weekMap[d.getDay()];
-              freq[day]++;
-            }
-          });
-          return weekMap.map(day => ({ day, count: freq[day] }));
-        })()} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        <BarChart 
+          data={
+            (() => {
+              // 4주간 모든 세션 펼치기
+              const allSessions: any[] = Object.values(sessions || {}).flat();
+              const last28 = Array.from({length: 28}, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                return d.toISOString().slice(0, 10);
+              });
+              const weekMap = ["일", "월", "화", "수", "목", "금", "토"];
+              const freq: Record<string, number> = {
+                "일": 0, "월": 0, "화": 0, "수": 0, "목": 0, "금": 0, "토": 0
+              };
+              
+              allSessions.forEach((s: any) => {
+                if (s && s.created_at) {
+                  const d = new Date(s.created_at);
+                  const dateStr = d.toISOString().slice(0, 10);
+                  if (last28.includes(dateStr)) {
+                    const day = weekMap[d.getDay()];
+                    if (day in freq) {
+                      freq[day]++;
+                    }
+                  }
+                }
+              });
+              
+              return weekMap.map(day => ({ day, count: freq[day] || 0 }));
+            })()
+          } 
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="day" />
           <YAxis allowDecimals={false} />
@@ -769,7 +785,5 @@ export default function StudentDashboard() {
         </BarChart>
       </ResponsiveContainer>
     </Box>
-    </Box>
   );
 }
-
