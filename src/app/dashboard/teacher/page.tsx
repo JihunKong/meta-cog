@@ -37,10 +37,27 @@ export default function TeacherDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    getUserRole().then((r) => {
-      setRole(r);
-      if (r !== "TEACHER") router.replace("/login");
-    });
+    async function checkAuth() {
+      try {
+        const r = await getUserRole();
+        console.log('Teacher dashboard - User role:', r); // 디버깅용 로그
+        setRole(r);
+        
+        if (r !== "TEACHER") {
+          console.log('Redirecting from teacher dashboard - wrong role:', r);
+          // router.replace 대신 직접 리디렉션 사용
+          window.location.href = "/login";
+          return;
+        }
+        
+        // TEACHER 권한이 있으면 학생 데이터 가져오기
+        fetchStudentData();
+      } catch (err) {
+        console.error('Auth check error:', err);
+        window.location.href = "/login";
+      }
+    }
+    checkAuth();
   }, [router]);
 
   // 전체 요약 통계

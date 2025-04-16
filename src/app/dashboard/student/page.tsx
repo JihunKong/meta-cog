@@ -68,8 +68,10 @@ export default function StudentDashboard() {
   useEffect(() => {
     async function checkAuth() {
       const role = await getUserRole();
-      if (role !== "student") {
-        router.push("/");
+      console.log('Student dashboard - User role:', role); // 디버깅용 로그
+      if (role !== "STUDENT") { // 대문자로 변경 (auth.ts에서는 "STUDENT"로 반환함)
+        console.log('Redirecting from student dashboard - wrong role:', role);
+        window.location.href = "/"; // Next.js router 대신 직접 리디렉션
         return;
       }
       fetchGoals();

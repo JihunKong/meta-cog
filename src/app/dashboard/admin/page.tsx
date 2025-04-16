@@ -55,10 +55,27 @@ export default function AdminDashboard() {
   
   // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {
-    getUserRole().then((r) => {
-      setRole(r);
-      if (r !== "ADMIN") router.replace("/login");
-    });
+    async function checkAuth() {
+      try {
+        const r = await getUserRole();
+        console.log('Admin dashboard - User role:', r); // 디버깅용 로그
+        setRole(r);
+        
+        if (r !== "ADMIN") {
+          console.log('Redirecting from admin dashboard - wrong role:', r);
+          // router.replace 대신 직접 리디렉션 사용
+          window.location.href = "/login";
+          return;
+        }
+        
+        // ADMIN 권한이 있으면 사용자 데이터 가져오기
+        fetchUsers();
+      } catch (err) {
+        console.error('Auth check error:', err);
+        window.location.href = "/login";
+      }
+    }
+    checkAuth();
   }, [router]);
 
   // 사용자 데이터 가져오기
