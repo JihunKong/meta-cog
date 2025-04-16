@@ -46,12 +46,13 @@ export default function StudentDashboard() {
     const fetchUserName = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // public.User 테이블에서 name 가져오기
+        // public.User 테이블에서 name 가져오기 (id 컬럼 사용)
         const { data, error } = await supabase
           .from('User')
           .select('name')
           .eq('id', user.id)
           .single();
+        console.log('User name query result:', data, error);
         if (data && data.name) {
           setUserName(data.name);
         } else {
@@ -78,14 +79,17 @@ export default function StudentDashboard() {
         const role = await getUserRole();
         if (role === "TEACHER") {
           router.push("/dashboard/teacher");
+          setUserRole(null);
           return;
         }
         if (role === "ADMIN") {
           router.push("/dashboard/admin");
+          setUserRole(null);
           return;
         }
         if (role !== "STUDENT") {
           router.push("/login");
+          setUserRole(null);
           return;
         }
         setUserRole(role);
@@ -93,6 +97,7 @@ export default function StudentDashboard() {
       } catch (error) {
         console.error("권한 확인 오류:", error);
         router.push("/login");
+        setUserRole(null);
       } finally {
         setLoading(false);
       }
@@ -282,6 +287,10 @@ export default function StudentDashboard() {
         <CircularProgress />
       </Box>
     );
+  }
+
+  if (loading || userRole !== "STUDENT") {
+    return <></>; // 또는 <CircularProgress />
   }
 
   return (
