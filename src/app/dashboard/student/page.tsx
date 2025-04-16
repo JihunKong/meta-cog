@@ -77,7 +77,7 @@ export default function StudentDashboard() {
     const checkRole = async () => {
       try {
         const role = await getUserRole();
-        if (role !== "student") {
+        if (role !== "STUDENT") {
           router.push("/dashboard");
         }
         setUserRole(role);
