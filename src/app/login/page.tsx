@@ -45,14 +45,21 @@ export default function LoginPage() {
       
       // 클라이언트 컴포넌트에서만 역할 분기 수행
       const role = await getUserRole();
-      console.log('User role:', role); // 디버깅용 로그
+      console.log('로그인 페이지 - 역할 확인:', role, typeof role); // 디버깅용 로그
       
-      if (role === "STUDENT") {
+      // 소문자 역할로 비교 (Enum 형식으로 데이터베이스 타입 일치)
+      if (role === "student") {
+        console.log('학생 역할 확인: 학생 대시보드로 이동');
         router.push("/dashboard/student");
-      } else if (role === "ADMIN") {
+      } else if (role === "teacher") {
+        console.log('교사 역할 확인: 교사 대시보드로 이동');
+        router.push("/dashboard/teacher");
+      } else if (role === "admin") {
+        console.log('관리자 역할 확인: 관리자 대시보드로 이동');
         router.push("/dashboard/admin");
       } else {
-        setError('권한이 없는 사용자입니다.');
+        console.error('알 수 없는 역할:', role);
+        setError('역할을 확인할 수 없습니다. 다시 로그인해주세요.');
         setLoading(false);
       }
     } catch (err) {
