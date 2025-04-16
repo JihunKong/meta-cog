@@ -13,14 +13,36 @@ import SessionList from "./SessionList";
 // 과목 목록
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
 
-interface Session {
+// 학습 목표 인터페이스
+interface Goal {
   id: string;
+  user_id: string;
+  subject: string; // 과목
+  description: string; // 목표 설명
+  created_at: string;
+  updated_at?: string;
+}
+
+// 목표 진행 상황 인터페이스
+interface Progress {
+  id: string;
+  goal_id: string;
+  percent: number; // 달성률 (0-100)
+  reflection: string; // 반성문
+  created_at: string;
+  updated_at?: string;
+}
+
+// 컴포넌트에서 사용할 통합 세션 인터페이스
+interface Session {
+  id: string; // 목표 ID
   user_id: string;
   subject: string;
   description: string;
   percent: number;
   reflection: string;
   created_at: string;
+  progress_id?: string; // 연결된 진행 상황 ID (있는 경우)
 }
 
 interface SessionManagerProps {
@@ -41,35 +63,140 @@ export default function SessionManager({
     subject: string;
     description: string;
   }>({ subject: SUBJECTS[0], description: "" });
+  const [editField, setEditField] = useState<{
+    subject: string;
+    description: string;
+    percent: number;
+    reflection: string;
+  }>({ subject: "", description: "", percent: 0, reflection: "" });
 
-  // 세션 추가 핸들러
+  // 기존 로컬 스토리지 데이터 마이그레이션 (한 번만 실행)
+  useEffect(() => {
+    // 모든 세션에 대해 로컬 스토리지에서 로드된 기존 데이터가 있는지 확인용
+    const migrateLocalData = async () => {
+      // 기존 세션들에 대해 진행도 데이터가 없는 경우만 로컬 스토리지 확인
+      for (const session of sessions) {
+        if (session.percent === 0 && session.reflection === '') {
+          const sessionDataKey = `session_data_${session.id}`;
+          const savedData = localStorage.getItem(sessionDataKey);
+          
+          if (savedData) {
+            try {
+              const parsedData = JSON.parse(savedData);
+              const percent = parsedData.percent || 0;
+              const reflection = parsedData.reflection || "";
+              
+              // 이전 데이터가 있다면 goal_progress 테이블에 저장
+              if (percent > 0 || reflection) {
+                console.log('로컬 데이터 마이그레이션:', session.id);
+                await syncProgressToDatabase(session.id, percent, reflection);
+              }
+            } catch (e) {
+              console.error('JSON 파싱 오류:', e);
+            }
+          }
+        }
+      }
+    };
+    
+    // 로컬 스토리지 데이터를 데이터베이스로 마이그레이션
+    const syncProgressToDatabase = async (goalId: string, percent: number, reflection: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('goal_progress')
+          .insert([{
+            goal_id: goalId,
+            percent,
+            reflection
+          }])
+          .select();
+        
+        if (error) throw error;
+        
+        // 로컬 스토리지 클리어 (마이그레이션 완료)
+        localStorage.removeItem(`session_data_${goalId}`);
+        
+        // 세션 데이터 업데이트
+        if (data && data.length > 0) {
+          setSessions(sessions.map(s => 
+            s.id === goalId ? 
+            {
+              ...s,
+              percent,
+              reflection,
+              progress_id: data[0].id
+            } : s
+          ));
+        }
+      } catch (err) {
+        console.error('마이그레이션 오류:', err);
+      }
+    };
+    
+    if (sessions.length > 0) {
+      migrateLocalData();
+    }
+  }, [sessions.length]);
+
+  // 세션 추가 핸들러 - 새로운 테이블 구조 사용
   const handleAddSession = async (sessionData: { subject: string; description: string }) => {
     try {
       setLoading(true);
       setError("");
+      
       // 현재 로그인된 사용자 정보 가져오기
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("로그인 정보가 없습니다. 다시 로그인 해주세요.");
-      // 데이터베이스에 모든 필드 저장 (user_id 포함)
-      const { data, error } = await supabase
+      
+      // 1. 목표 정보 저장 (smart_goals 테이블)
+      const { data: goalData, error: goalError } = await supabase
         .from('smart_goals')
         .insert([{
           user_id: user.id,
           subject: sessionData.subject,
-          description: sessionData.description,
-          percent: 0,  // 새 세션은 초기값 0
-          reflection: ''  // 새 세션은 초기값 빈 문자열
+          description: sessionData.description
         }])
         .select();
 
-      if (error) throw error;
-
-      // 새 세션을 로컬 상태에 추가
-      if (data && data.length > 0) {
-        // 이제 데이터베이스에 저장된 모든 필드를 포함한 세션 데이터 사용
-        setSessions([data[0], ...sessions]);
+      if (goalError) {
+        console.error('목표 생성 오류:', goalError);
+        throw goalError;
       }
-
+      
+      if (!goalData || goalData.length === 0) {
+        throw new Error('목표 생성 후 데이터를 가져올 수 없습니다.');
+      }
+      
+      // 2. 목표 진행도 초기화 (goal_progress 테이블)
+      const { data: progressData, error: progressError } = await supabase
+        .from('goal_progress')
+        .insert([{
+          goal_id: goalData[0].id,
+          percent: 0,
+          reflection: ''
+        }])
+        .select();
+      
+      // 진행도 저장 오류의 경우 실패로 처리하지 않음 (UI에는 표시만 해줌)
+      if (progressError) {
+        console.warn('진행도 초기화 오류:', progressError);
+      }
+      
+      // 3. 새로운 세션 데이터 생성
+      const newSession: Session = {
+        id: goalData[0].id,
+        user_id: goalData[0].user_id,
+        subject: goalData[0].subject,
+        description: goalData[0].description,
+        percent: 0,
+        reflection: '',
+        created_at: goalData[0].created_at,
+        progress_id: progressData && progressData.length > 0 ? progressData[0].id : undefined
+      };
+      
+      // 4. UI 업데이트
+      setSessions([newSession, ...sessions]);
+      
       // 대화상자 닫기
       setIsDialogOpen(false);
       setNewSessionData({ subject: SUBJECTS[0], description: "" });
@@ -81,7 +208,7 @@ export default function SessionManager({
     }
   };
 
-  // 세션 업데이트 핸들러
+  // 세션 업데이트 핸들러 - 새로운 테이블 구조 사용
   const handleUpdateSession = async (id: string, updatedData: { subject: string; description: string; percent: number; reflection: string }) => {
     try {
       setLoading(true);
@@ -93,31 +220,72 @@ export default function SessionManager({
         throw new Error("세션을 찾을 수 없습니다");
       }
 
-      // 데이터베이스에 모든 필드 업데이트 (테이블 스키마 업데이트 완료)
-      const { error } = await supabase
+      // 1. 목표 정보 업데이트 (smart_goals 테이블)
+      const { error: goalError } = await supabase
         .from('smart_goals')
         .update({
           subject: updatedData.subject,
           description: updatedData.description,
-          percent: updatedData.percent,
-          reflection: updatedData.reflection
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
-      if (error) throw error;
-
-      // 현재 세션 업데이트
+      if (goalError) {
+        console.error('목표 업데이트 오류:', goalError);
+        throw goalError;
+      }
+      
+      // 2. 진행도 정보 업데이트 (goal_progress 테이블)
+      let progressId = sessionToUpdate.progress_id;
+      
+      // 진행도 ID가 있는 경우 업데이트, 없는 경우 생성
+      if (progressId) {
+        // 기존 진행도 업데이트
+        const { error: progressError } = await supabase
+          .from('goal_progress')
+          .update({
+            percent: updatedData.percent,
+            reflection: updatedData.reflection,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', progressId);
+          
+        if (progressError) {
+          console.error('진행도 업데이트 오류:', progressError);
+          throw progressError;
+        }
+      } else {
+        // 진행도 새로 생성
+        const { data: progressData, error: progressError } = await supabase
+          .from('goal_progress')
+          .insert([{
+            goal_id: id,
+            percent: updatedData.percent,
+            reflection: updatedData.reflection
+          }])
+          .select();
+          
+        if (progressError) {
+          console.error('진행도 생성 오류:', progressError);
+          throw progressError;
+        }
+        
+        if (progressData && progressData.length > 0) {
+          progressId = progressData[0].id;
+        }
+      }
+      
+      // 3. 현재 세션 업데이트
       const updatedSession = {
         ...sessionToUpdate,
         subject: updatedData.subject,
         description: updatedData.description,
         percent: updatedData.percent,
-        reflection: updatedData.reflection
+        reflection: updatedData.reflection,
+        progress_id: progressId
       };
 
-      // 로컬 스토리지 사용 안 함 - 데이터베이스에 직접 저장함
-
-      // 로컬 세션 리스트 업데이트
+      // 4. 로컬 세션 리스트 업데이트
       setSessions(sessions.map(s => s.id === id ? updatedSession : s));
 
       // 편집 모드 종료
@@ -141,17 +309,43 @@ export default function SessionManager({
     setDeleteConfirmOpen(true);
   };
 
-  // 실제 삭제 실행
+  // 실제 삭제 실행 - 새로운 테이블 구조 사용
   const handleDeleteSession = async () => {
     if (!deleteTargetId) return;
     try {
       setLoading(true);
       setError("");
+      
+      // 삭제할 세션 찾기
+      const sessionToDelete = sessions.find(s => s.id === deleteTargetId);
+      
+      // 1. 호이스팅된 경우 goal_progress 객체 삭제
+      // (cascade로 자동 삭제되지만 먼저 시도)
+      if (sessionToDelete?.progress_id) {
+        // 진행도 데이터 먼저 삭제 (안전을 위해)
+        const { error: progressError } = await supabase
+          .from('goal_progress')
+          .delete()
+          .eq('id', sessionToDelete.progress_id);
+          
+        if (progressError) {
+          console.warn('진행도 삭제 시 오류 (동시 삭제 될 수 있음):', progressError);
+        }
+      }
+      
+      // 2. 목표 삭제 (smart_goals 테이블)
+      // ON DELETE CASCADE가 있으므로 연관된 goal_progress 데이터도 자동 삭제
       const { error } = await supabase
         .from('smart_goals')
         .delete()
         .eq('id', deleteTargetId);
+        
       if (error) throw error;
+      
+      // 3. 로컬 스토리지에서 데이터 삭제 (마이그레이션 데이터가 있을 경우)
+      localStorage.removeItem(`session_data_${deleteTargetId}`);
+      
+      // 4. UI 업데이트
       setSessions(sessions.filter(s => s.id !== deleteTargetId));
       setDeleteConfirmOpen(false);
       setDeleteTargetId(null);
@@ -163,18 +357,69 @@ export default function SessionManager({
     }
   };
 
-  // 세션 편집 시작
-  const handleEditStart = (sessionId: string) => {
+  // 세션 편집 시작 - 새로운 테이블 구조에 맞게 수정
+  const handleEditStart = async (sessionId: string) => {
+    // 세션 찾기
     const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      // 이제 percent와 reflection이 데이터베이스에 저장되어 있으므로 세션 객체에서 값을 바로 가져온다
-      setCurrentSession({
-        ...session,
-        percent: session.percent || 0,
-        reflection: session.reflection || ""
-      });
-      setEditingSessionId(sessionId);
+    if (!session) return;
+      
+    // 세션 기본 정보 설정
+    let sessionData = {
+      ...session,
+      percent: session.percent || 0,
+      reflection: session.reflection || ""
+    };
+      
+    // 진행도 정보가 데이터베이스에 없는 경우 조회 시도
+    if (!session.progress_id && (session.percent === 0 && session.reflection === "")) {
+      try {
+        // goal_progress 테이블에서 진행도 조회 시도
+        const { data: progressData, error: progressError } = await supabase
+          .from('goal_progress')
+          .select('*')
+          .eq('goal_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (!progressError && progressData && progressData.length > 0) {
+          // 데이터베이스에서 최신 진행도 정보 가져오기
+          sessionData = {
+            ...sessionData,
+            percent: progressData[0].percent,
+            reflection: progressData[0].reflection,
+            progress_id: progressData[0].id
+          };
+        } else {
+          // 데이터베이스에 없는 경우 로컬 스토리지 확인
+          const sessionDataKey = `session_data_${sessionId}`;
+          const savedData = localStorage.getItem(sessionDataKey);
+          
+          if (savedData) {
+            try {
+              const parsedData = JSON.parse(savedData);
+              sessionData = {
+                ...sessionData,
+                percent: parsedData.percent || 0,
+                reflection: parsedData.reflection || ""
+              };
+              
+              // 마이그레이션 대비 - 로컬 스토리지 데이터 아직 졸음
+              if (parsedData.percent > 0 || parsedData.reflection) {
+                console.log('편집 시작 중 로컬 데이터 발견:', sessionId);
+              }
+            } catch (e) {
+              console.error('JSON 파싱 오류:', e);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('편집 시작 중 오류:', e);
+      }
     }
+    
+    // 편집할 세션 설정
+    setCurrentSession(sessionData);
+    setEditingSessionId(sessionId);
   };
 
   // 세션 편집 취소
