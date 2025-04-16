@@ -79,13 +79,41 @@ export default function StudentDashboard() {
       // smart_goals 테이블을 학습 세션(목표) 테이블로 활용
       const { data, error: fetchError } = await supabase
         .from("smart_goals")
-        .select()
+        .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
-
-      setSessions(data || []);
+      
+      // 로컬 스토리지에서 세션 메타데이터 가져오기
+      let sessionData = data || [];
+      
+      // 클라이언트 환경에서만 로컬 스토리지 사용 가능
+      if (typeof window !== 'undefined') {
+        const metadataString = localStorage.getItem('sessionMetadata');
+        if (metadataString) {
+          try {
+            const metadataMap = JSON.parse(metadataString);
+            
+            // 각 세션에 메타데이터 추가
+            sessionData = sessionData.map(session => {
+              const metadata = metadataMap[session.id];
+              if (metadata) {
+                return {
+                  ...session,
+                  percent: metadata.percent,
+                  reflection: metadata.reflection
+                };
+              }
+              return session;
+            });
+          } catch (e) {
+            console.error('Failed to parse session metadata:', e);
+          }
+        }
+      }
+      
+      setSessions(sessionData);
     } catch (e: any) {
       console.error(e);
       setError(e.message || "세션을 불러오는 중 오류가 발생했습니다.");
@@ -177,16 +205,26 @@ export default function StudentDashboard() {
         throw new Error("달성도는 0-100 사이의 숫자여야 합니다.");
       }
 
-      // 세션 업데이트 (smart_goals 테이블 활용)
+      // 세션 기본 정보 업데이트 (smart_goals 테이블 활용)
       const { error } = await supabase
         .from("smart_goals")
         .update({
           subject: data.subject,
-          description: data.description,
-          percent,
-          reflection: data.reflection
+          description: data.description
         })
         .eq("id", sessionId);
+        
+      // 달성도와 반성은 로컬 스토리지에 저장
+      const sessionMetadata = {
+        percent: parseInt(data.percent),
+        reflection: data.reflection
+      };
+      
+      // 로컬 스토리지에 세션 메타데이터 저장
+      const existingData = localStorage.getItem('sessionMetadata');
+      const metadataMap = existingData ? JSON.parse(existingData) : {};
+      metadataMap[sessionId] = sessionMetadata;
+      localStorage.setItem('sessionMetadata', JSON.stringify(metadataMap));
 
       if (error) throw error;
 
@@ -215,8 +253,24 @@ export default function StudentDashboard() {
 
       if (error) throw error;
 
-      setDeleteSessionId(null);
+      // 로컬 스토리지에서 해당 세션 메타데이터 삭제
+      if (typeof window !== 'undefined') {
+        const metadataString = localStorage.getItem('sessionMetadata');
+        if (metadataString) {
+          try {
+            const metadataMap = JSON.parse(metadataString);
+            if (metadataMap[deleteSessionId]) {
+              delete metadataMap[deleteSessionId];
+              localStorage.setItem('sessionMetadata', JSON.stringify(metadataMap));
+            }
+          } catch (e) {
+            console.error('Failed to delete session metadata:', e);
+          }
+        }
+      }
+
       fetchSessions();
+      setDeleteSessionId(null);
     } catch (e: any) {
       console.error(e);
       setError(e.message || "세션 삭제 중 오류가 발생했습니다.");
