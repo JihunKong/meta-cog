@@ -123,16 +123,12 @@ export default function StudentDashboard() {
       }
 
       // 새 세션 추가 (smart_goals 테이블 활용)
-      const percent = sessionForm.percent ? parseInt(sessionForm.percent as string, 10) : null;
-      
       const { error } = await supabase
         .from("smart_goals")
         .insert({ 
           user_id: user.id, 
           subject: sessionForm.subject, 
-          description: sessionForm.description,
-          percent: percent,
-          reflection: sessionForm.reflection || null
+          description: sessionForm.description
         });
 
       if (error) throw error;
@@ -428,28 +424,9 @@ export default function StudentDashboard() {
               helperText="구체적이고 측정 가능한 목표를 설정하세요"
             />
             <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>선택 사항 (나중에 입력할 수 있습니다)</Typography>
-              <TextField
-                label="달성도 (%)"
-                type="number"
-                value={sessionForm.percent}
-                onChange={(e) => setSessionForm(prev => ({ ...prev, percent: e.target.value }))}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: 0, max: 100 }}
-                helperText="학습 목표 달성 정도를 0-100% 사이로 입력하세요"
-              />
-              <TextField
-                label="학습 반성 및 성찰"
-                value={sessionForm.reflection}
-                onChange={(e) => setSessionForm(prev => ({ ...prev, reflection: e.target.value }))}
-                fullWidth
-                margin="normal"
-                multiline
-                rows={3}
-                placeholder="오늘의 학습에 대한 반성과 성찰을 적어보세요"
-                helperText="자신의 학습 과정을 돌아보고 성찰하는 것은 메타인지 향상에 중요합니다"
-              />
+              <Typography variant="body2" color="textSecondary">
+                학습 세션을 추가한 후, 세션 관리 화면에서 학습 달성도와 반성을 입력할 수 있습니다.
+              </Typography>
             </Box>
           </DialogContent>
           <DialogActions>
