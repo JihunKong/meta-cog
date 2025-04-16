@@ -71,11 +71,26 @@ export async function getUserRole() {
     // 3. 이메일에서 권한 추측
     if (user.email) {
       const email = user.email.toLowerCase();
+      console.log('Identifying role from email pattern:', email);
+      
+      // 관리자 패턴 검사
       if (email.includes('admin')) {
+        console.log('Email pattern match: ADMIN');
         return 'ADMIN';
-      } else if (email.startsWith('202')) {
+      } 
+      
+      // 교사 패턴 검사 (더 포괄적인 조건)
+      if (email.startsWith('202') || 
+          email.includes('teacher') || 
+          email.includes('prof')) {
+        console.log('Email pattern match: TEACHER');
         return 'TEACHER';
-      } else if (email.startsWith('2201')) {
+      } 
+      
+      // 학생 패턴 검사
+      if (email.startsWith('2201') || 
+          email.includes('student')) {
+        console.log('Email pattern match: STUDENT');
         return 'STUDENT';
       }
     }
@@ -92,27 +107,53 @@ export async function getUserRole() {
 export async function getUserName() {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return user?.email || '';
+    if (userError || !user) {
+      console.log('No authenticated user found for getName');
+      return '';
+    }
 
-    // User 테이블에서 name 조회 시도
+    console.log('Getting name for user:', user.id, user.email);
+
+    // 1. User 테이블에서 이름 가져오기 시도
     try {
-      const { data, error } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('User')
         .select('name')
         .eq('id', user.id)
         .single();
 
-      if (error || !data || !data.name) {
-        console.log('User name not found, using email:', user.email);
-        return user.email || '';
+      if (!userError && userData && userData.name) {
+        console.log('Found name in User table:', userData.name);
+        return userData.name;
       }
-
-      console.log('Successfully found name:', data.name);
-      return data.name;
-    } catch (queryError) {
-      console.error('Failed to query User table for name:', queryError);
-      return user.email || '';
+    } catch (userQueryError) {
+      console.error('Failed to query User table for name:', userQueryError);
     }
+
+    // 2. profiles 테이블에서 이름 검색 시도
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      if (!profileError && profileData && profileData.name) {
+        console.log('Found name in profiles table:', profileData.name);
+        return profileData.name;
+      }
+    } catch (profileQueryError) {
+      console.error('Failed to query profiles table for name:', profileQueryError);
+    }
+
+    // 3. 이메일에서 이름 추출
+    if (user.email) {
+      const emailName = user.email.split('@')[0];
+      console.log('Using email-derived name:', emailName);
+      return emailName;
+    }
+
+    return '';
   } catch (error) {
     console.error('Unexpected error in getUserName:', error);
     return '';

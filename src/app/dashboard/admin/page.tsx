@@ -30,19 +30,39 @@ export default function AdminDashboard() {
   const handleAddUser = async () => {
     if (!newName.trim() || !newEmail.trim()) return;
     try {
-      // 실제 Supabase에 새 사용자 추가 (auth_user는 직접 수정할 수 없으므로, profiles 테이블만 추가)
-      const { data, error } = await supabase
+      console.log('Adding new user with name:', newName);
+      
+      // 1. profiles 테이블에 사용자 추가
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
-          // id는 UUID 형태로 자동 생성됨 (진짜 사용자 등록은 auth 기능 사용)
+          // id는 UUID 형태로 자동 생성됨
           email: newEmail,
-          role: newRole
+          role: newRole,
+          name: newName, // 이름 추가
         })
         .select();
-        
-      if (error) throw error;
       
-      // UI 업데이트 및 페이지 새로고침
+      if (profileError) throw profileError;
+      
+      // 2. User 테이블에도 동일한 정보 추가 (이름과 역할을 저장하기 위해)
+      if (profileData && profileData.length > 0) {
+        const { error: userError } = await supabase
+          .from('User')
+          .insert({
+            id: profileData[0].id, // profiles의 id와 동일하게 설정
+            email: newEmail,
+            name: newName,
+            role: newRole
+          });
+        
+        if (userError) {
+          console.error('User 테이블 삽입 오류:', userError);
+          // User 테이블 오류는 무시하고 계속 진행
+        }
+      }
+      
+      // UI 업데이트 및 입력창 초기화
       fetchUsers();
       setNewName(""); 
       setNewEmail(""); 
@@ -111,19 +131,34 @@ export default function AdminDashboard() {
     try {
       setUsers([]); // 기존 데이터 초기화
       
-      // Supabase에서 실제 사용자 데이터 가져오기
+      // 1. profiles에서 가져오기 (name 포함)
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, role, created_at')
+        .select('id, email, role, name, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // 사용자 데이터 포맷팅
+      // 2. User 테이블에서 이름 가져오기 시도 (배치)
+      const ids = profiles.map(p => p.id);
+      const { data: userRows } = await supabase
+        .from('User')
+        .select('id, name')
+        .in('id', ids);
+      
+      // id를 키로 하는 사용자 이름 맵 생성
+      const nameMap: Record<string, string> = {};
+      if (userRows) {
+        userRows.forEach(user => {
+          if (user.name) nameMap[user.id] = user.name;
+        });
+      }
+      
+      // 사용자 데이터 포맷팅 (우선순위: User의 name > profile의 name > 이메일에서 추출)
       const formattedUsers = profiles.map(profile => ({
         id: profile.id,
         email: profile.email || '이메일 없음',
-        name: profile.email?.split('@')[0] || '이름 없음', // 이메일에서 임시 표시
+        name: nameMap[profile.id] || profile.name || profile.email?.split('@')[0] || '이름 없음',
         role: profile.role as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
       }));
       
