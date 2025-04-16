@@ -34,25 +34,23 @@ export async function getUserRole() {
     console.error('No user found');
     return null;
   }
-  
-  // 프로필 조회 전 프로필이 있는지 확인하고, 없으면 생성 시도
-  await ensureProfile(user);
-  
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+
+  // User 테이블에서 role만 참조
+  const { data, error } = await supabase
+    .from('User')
     .select('role')
     .eq('id', user.id)
     .single();
-    
-  if (profileError) {
-    console.error('Profile fetch error:', profileError);
+
+  if (error) {
+    console.error('User fetch error:', error);
     return null;
   }
-  if (!profile) {
-    console.error('No profile found for user:', user.id);
+  if (!data) {
+    console.error('No User row found for user:', user.id);
     return null;
   }
-  return profile.role || null;
+  return data.role || null;
 }
 
 // Supabase 사용자 타입 정의
