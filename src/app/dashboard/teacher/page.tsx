@@ -116,6 +116,32 @@ export default function TeacherDashboard() {
         throw new Error("학생 정보를 가져올 수 없습니다: " + profilesError.message);
       }
       
+      // student_names 테이블에서 학생 이름 정보 가져오기
+      const emails = profiles.filter(p => p.email).map(p => p.email as string);
+      const { data: studentNames, error: studentNamesError } = await supabase
+        .from('student_names')
+        .select('email, display_name, grade, class, student_number')
+        .in('email', emails);
+      
+      if (studentNamesError) {
+        console.error('student_names 테이블 조회 오류:', studentNamesError);
+      }
+      
+      // 학생 이름 매핑 생성
+      const studentNamesMap: Record<string, any> = {};
+      if (studentNames && studentNames.length > 0) {
+        studentNames.forEach(student => {
+          if (student.email) {
+            studentNamesMap[student.email] = {
+              displayName: student.display_name,
+              grade: student.grade,
+              class: student.class,
+              studentNumber: student.student_number
+            };
+          }
+        });
+      }
+      
       // User 테이블에서 추가 정보 가져오기
       const ids = profiles.map(p => p.id);
       const { data: userRows, error: userError } = await supabase
@@ -127,28 +153,53 @@ export default function TeacherDashboard() {
         console.error('User 테이블 조회 오류:', userError);
       }
       
-      // 사용자명 맵 생성
-      const nameMap: Record<string, string> = {};
+      // User 테이블 사용자명 맵 생성
+      const userNameMap: Record<string, string> = {};
       if (userRows && userRows.length > 0) {
         userRows.forEach(user => {
-          if (user.name) nameMap[user.id] = user.name;
+          if (user.name) userNameMap[user.id] = user.name;
         });
       }
       
-      // 특별 학생 매핑 (수동 매핑)
-      const specialStudentNames: Record<string, string> = {
-        '2201@pof.com': '김서윤'
-      };
-      
       // 사용자 데이터 포맷팅
       const formattedStudents = profiles.map(profile => {
-        // 이메일에 맞는 특별 이름이 있는지 확인
-        const specialName = profile.email ? specialStudentNames[profile.email] : null;
+        let displayName = "";
+        let displayInfo = "";
+        
+        // 1. student_names 테이블에서 이름 찾기 (우선순위 1)
+        if (profile.email && studentNamesMap[profile.email]) {
+          const studentInfo = studentNamesMap[profile.email];
+          displayName = studentInfo.displayName;
+          
+          // 학년/반/번호 정보가 있으면 부가 정보로 추가
+          if (studentInfo.grade && studentInfo.class && studentInfo.studentNumber) {
+            displayInfo = `${studentInfo.grade}${studentInfo.class}-${studentInfo.studentNumber}`;
+          }
+        }
+        
+        // 2. User 테이블에서 이름 찾기 (우선순위 2)
+        if (!displayName && userNameMap[profile.id]) {
+          displayName = userNameMap[profile.id];
+        }
+        
+        // 3. profiles 테이블 자체 이름 사용 (우선순위 3)
+        if (!displayName && profile.name) {
+          displayName = profile.name;
+        }
+        
+        // 4. 이메일에서 추출 (최후 수단)
+        if (!displayName && profile.email) {
+          displayName = profile.email.split('@')[0];
+        }
+        
+        // 최종 이름 결정
+        const finalName = displayName || "이름 없음";
+        const finalDisplayName = displayInfo ? `${finalName} (${displayInfo})` : finalName;
         
         return {
           id: profile.id,
           email: profile.email || "이메일 없음",
-          name: specialName || nameMap[profile.id] || profile.name || profile.email?.split('@')[0] || "이름 없음",
+          name: finalDisplayName,
           last_login: new Date(profile.created_at).toLocaleDateString() || "-"
         };
       });

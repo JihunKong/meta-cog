@@ -127,67 +127,109 @@ export async function getUserName() {
 
     console.log('Getting name for user:', user.id, user.email);
     
-    // 사용자 정보 매핑
-    const specialUserNames: {[email: string]: string} = {
-      'admin@pof.com': '관리자',
-      '202@pof.com': '이교사',
-      '2201@pof.com': '김서윤'
+    // 0. 기본 사용자 정보 (역할별 기본 이름)
+    const roleBasedNames: {[role: string]: string} = {
+      'admin': '관리자',
+      'teacher': '교사',
+      'student': '학생'
     };
     
-    // 0. 특별 사용자 이름 찾기 (이메일에 따른 고정 이름)
-    if (user.email && specialUserNames[user.email]) {
-      console.log('Using mapped special name for:', user.email);
-      return specialUserNames[user.email];
+    // 1. student_names 테이블에서 이름 가져오기 시도 (학생에게 가장 우선순위)
+    if (user.email) {
+      try {
+        const { data: studentNameData, error: studentNameError } = await supabase
+          .from('student_names')
+          .select('display_name, grade, class, student_number')
+          .eq('email', user.email)
+          .single();
+
+        if (!studentNameError && studentNameData && studentNameData.display_name) {
+          console.log('Found name in student_names table:', studentNameData.display_name);
+          
+          // 학년반호 정보가 있으면 함께 표시
+          if (studentNameData.grade && studentNameData.class && studentNameData.student_number) {
+            const fullInfo = `${studentNameData.display_name} (${studentNameData.grade}${studentNameData.class}-${studentNameData.student_number})`;
+            console.log('Using full student info:', fullInfo);
+            return fullInfo;
+          }
+          
+          return studentNameData.display_name;
+        }
+      } catch (studentNameQueryError) {
+        console.error('Failed to query student_names table:', studentNameQueryError);
+      }
     }
 
-    // 1. User 테이블에서 이름 가져오기 시도
+    // 2. User 테이블에서 이름 가져오기 시도
     try {
       const { data: userData, error: userError } = await supabase
         .from('User')
-        .select('name')
+        .select('name, role')
         .eq('id', user.id)
         .single();
 
-      if (!userError && userData && userData.name && userData.name.length > 1) {
-        console.log('Found valid name in User table:', userData.name);
-        return userData.name;
+      if (!userError && userData) {
+        // 이름이 존재하면 사용
+        if (userData.name && userData.name.length > 1) {
+          console.log('Found valid name in User table:', userData.name);
+          return userData.name;
+        }
+        
+        // 역할에 따른 기본 이름 사용
+        if (userData.role && roleBasedNames[userData.role]) {
+          console.log('Using role-based name from User table:', roleBasedNames[userData.role]);
+          return roleBasedNames[userData.role];
+        }
       }
     } catch (userQueryError) {
       console.error('Failed to query User table for name:', userQueryError);
     }
 
-    // 2. profiles 테이블에서 이름 검색 시도
+    // 3. profiles 테이블에서 이름 검색 시도
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('name')
+        .select('name, role')
         .eq('id', user.id)
         .single();
 
-      if (!profileError && profileData && profileData.name && profileData.name.length > 1) {
-        console.log('Found valid name in profiles table:', profileData.name);
-        return profileData.name;
+      if (!profileError && profileData) {
+        // 이름이 존재하면 사용
+        if (profileData.name && profileData.name.length > 1) {
+          console.log('Found valid name in profiles table:', profileData.name);
+          return profileData.name;
+        }
+        
+        // 역할에 따른 기본 이름 사용
+        if (profileData.role && roleBasedNames[profileData.role]) {
+          console.log('Using role-based name from profiles table:', roleBasedNames[profileData.role]);
+          return roleBasedNames[profileData.role];
+        }
       }
     } catch (profileQueryError) {
       console.error('Failed to query profiles table for name:', profileQueryError);
     }
     
-    // 3. user_metadata에서 이름 가져오기 시도
+    // 4. user_metadata에서 이름 가져오기 시도
     if (user.user_metadata && user.user_metadata.name) {
       console.log('Found name in user_metadata:', user.user_metadata.name);
       return user.user_metadata.name;
     }
 
-    // 4. 이메일 처리: 2201@... 등은 클래스 ID가 아니라 사용자 이름처럼 표시
+    // 5. 이메일 기반 처리
     if (user.email) {
       // 특정 패턴을 가진 이메일의 경우 문구 생성
       const email = user.email.toLowerCase();
       const emailName = email.split('@')[0];
       
+      // 역할 키워드가 이메일에 포함된 경우 처리
       if (email.includes('student') || email.includes('teacher') || email.includes('admin')) {
-        const role = email.includes('student') ? '학생' : email.includes('teacher') ? '교사' : '관리자';
+        let role = 'student';
+        if (email.includes('teacher')) role = 'teacher';
+        else if (email.includes('admin')) role = 'admin';
+        
         console.log('Using role-based description for email:', email);
-        return `${emailName} ${role}`;
+        return `${emailName} ${roleBasedNames[role]}`;
       }
       
       console.log('Using email username as name:', emailName);
