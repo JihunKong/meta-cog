@@ -40,10 +40,11 @@ export default function TeacherDashboard() {
     async function checkAuth() {
       try {
         const r = await getUserRole();
-        console.log('Teacher dashboard - User role:', r); // 디버깅용 로그
+        console.log('Teacher dashboard - User role:', r, typeof r); // 디버깅용 로그
         setRole(r);
         
-        if (r !== "TEACHER") {
+        // 소문자 'teacher'로 비교 (반환값이 enum으로 소문자로 변경됨)
+        if (r !== "teacher") {
           console.log('Redirecting from teacher dashboard - wrong role:', r);
           // router.replace 대신 직접 리디렉션 사용
           window.location.href = "/login";

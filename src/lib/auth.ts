@@ -36,17 +36,25 @@ export async function getUserRole() {
       return null; // 오류 시 null 반환
     }
 
+    console.log('Checking role for user ID:', user.id);
+
     // 1. 먼저 profiles 테이블에서 role 조회 시도
     try {
+      // supabase 쿼리 문법 수정 (왼쪽이 컴퍼스 이름, 오른쪽이 조건값)
+      console.log('Querying profiles table with ID:', user.id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single();
 
+      console.log('Profiles query result:', { data: profileData, error: profileError });
+
       if (!profileError && profileData && profileData.role) {
-        console.log('Found role in profiles:', profileData.role);
-        return profileData.role;
+        // Enum 타입에 맞게 소문자로 변환 (admin, teacher, student)
+        const role = (profileData.role as string).toLowerCase();
+        console.log('Found role in profiles:', role);
+        return role;
       }
     } catch (profileQueryError) {
       console.error('Failed to query profiles table:', profileQueryError);
@@ -54,15 +62,20 @@ export async function getUserRole() {
 
     // 2. User 테이블에서 role 조회 시도
     try {
+      console.log('Querying User table with ID:', user.id);
       const { data: userData, error: userDataError } = await supabase
         .from('User')
         .select('role')
         .eq('id', user.id)
         .single();
 
+      console.log('User table query result:', { data: userData, error: userDataError });
+
       if (!userDataError && userData && userData.role) {
-        console.log('Found role in User table:', userData.role);
-        return userData.role;
+        // Enum 타입에 맞게 소문자로 변환
+        const role = (userData.role as string).toLowerCase();
+        console.log('Found role in User table:', role);
+        return role;
       }
     } catch (userQueryError) {
       console.error('Failed to query User table:', userQueryError);
@@ -73,34 +86,34 @@ export async function getUserRole() {
       const email = user.email.toLowerCase();
       console.log('Identifying role from email pattern:', email);
       
-      // 관리자 패턴 검사
+      // 관리자 패턴 검사 (소문자 반환)
       if (email.includes('admin')) {
-        console.log('Email pattern match: ADMIN');
-        return 'ADMIN';
+        console.log('Email pattern match: admin');
+        return 'admin';
       } 
       
-      // 교사 패턴 검사 (더 포괄적인 조건)
+      // 교사 패턴 검사 (소문자 반환)
       if (email.startsWith('202') || 
           email.includes('teacher') || 
           email.includes('prof')) {
-        console.log('Email pattern match: TEACHER');
-        return 'TEACHER';
+        console.log('Email pattern match: teacher');
+        return 'teacher';
       } 
       
-      // 학생 패턴 검사
+      // 학생 패턴 검사 (소문자 반환)
       if (email.startsWith('2201') || 
           email.includes('student')) {
-        console.log('Email pattern match: STUDENT');
-        return 'STUDENT';
+        console.log('Email pattern match: student');
+        return 'student';
       }
     }
 
-    // 4. 모든 방법 실패시 최종 안전장치 (기본값)
-    console.log('All role detection methods failed, returning STUDENT default');
-    return 'STUDENT';
+    // 4. 모든 방법 실패시 최종 안전장치 (기본값, 소문자)
+    console.log('All role detection methods failed, returning student default');
+    return 'student';
   } catch (error) {
     console.error('Unexpected error in getUserRole:', error);
-    return 'STUDENT';
+    return 'student';
   }
 }
 

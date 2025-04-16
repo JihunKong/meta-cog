@@ -64,22 +64,29 @@ export default function StudentDashboard() {
     const checkRole = async () => {
       try {
         const role = await getUserRole();
-        if (role === "TEACHER") {
+        console.log('학생 대시보드 - 역할 확인:', role, typeof role);
+        
+        // 소문자로 비교 (enum 타입 대응)
+        if (role === "teacher") {
+          console.log('교사 계정 -> 교사 대시보드로 이동');
           router.push("/dashboard/teacher");
           setUserRole(null);
           return;
         }
-        if (role === "ADMIN") {
+        if (role === "admin") {
+          console.log('관리자 계정 -> 관리자 대시보드로 이동');
           router.push("/dashboard/admin");
           setUserRole(null);
           return;
         }
-        if (role !== "STUDENT") {
+        if (role !== "student") {
+          console.log('학생 아닌 계정 -> 로그인으로 이동');
           router.push("/login");
           setUserRole(null);
           return;
         }
         setUserRole(role);
+        console.log('학생 계정 확인 완료, 학생 대시보드 로드');
         // 학생이면 그대로 진행
       } catch (error) {
         console.error("권한 확인 오류:", error);
@@ -299,6 +306,9 @@ export default function StudentDashboard() {
           {userName && (
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
               {userName}님! 환영합니다.
+              <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '5px' }}>
+                (ID: {userName.includes('@') ? userName.split('@')[0] : userName})
+              </span>
             </Typography>
           )}
         </Box>
