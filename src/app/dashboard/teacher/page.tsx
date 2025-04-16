@@ -37,28 +37,44 @@ export default function TeacherDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    let mounted = true; // 컴포넌트 마운트 상태 추적
+
     async function checkAuth() {
       try {
         const r = await getUserRole();
-        console.log('Teacher dashboard - User role:', r, typeof r); // 디버깅용 로그
-        setRole(r);
+        
+        // 컴포넌트가 언마운트된 경우 상태 업데이트 하지 않음
+        if (!mounted) return;
+        
+        console.log('Teacher dashboard - User role:', r, typeof r);
         
         // 소문자 'teacher'로 비교 (반환값이 enum으로 소문자로 변경됨)
         if (r !== "teacher") {
           console.log('Redirecting from teacher dashboard - wrong role:', r);
-          // router.replace 대신 직접 리디렉션 사용
-          window.location.href = "/login";
+          // 즉시 리디렉션 실행 - replace 사용으로 히스토리 없이 이동
+          window.location.replace("/dashboard/" + r);
           return;
         }
+        
+        // teacher 역할인 경우만 상태 업데이트
+        setRole(r);
         
         // TEACHER 권한이 있으면 학생 데이터 가져오기
         fetchStudentData();
       } catch (err) {
         console.error('Auth check error:', err);
-        window.location.href = "/login";
+        if (mounted) {
+          window.location.replace("/login");
+        }
       }
     }
+    
     checkAuth();
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   // 전체 요약 통계

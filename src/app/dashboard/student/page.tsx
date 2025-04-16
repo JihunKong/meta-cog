@@ -61,43 +61,53 @@ export default function StudentDashboard() {
 
   // 사용자 권한 확인
   useEffect(() => {
+    let mounted = true; // 컴포넌트 마운트 상태 추적
+    
     const checkRole = async () => {
       try {
         const role = await getUserRole();
+        
+        // 컴포넌트가 언마운트된 경우 상태 업데이트 중단
+        if (!mounted) return;
+        
         console.log('학생 대시보드 - 역할 확인:', role, typeof role);
         
-        // 소문자로 비교 (enum 타입 대응)
+        // 소문자로 비교 (enum 타입 대응) + 즉시 리디렉션
         if (role === "teacher") {
           console.log('교사 계정 -> 교사 대시보드로 이동');
-          router.push("/dashboard/teacher");
-          setUserRole(null);
+          window.location.replace("/dashboard/teacher");
           return;
         }
         if (role === "admin") {
           console.log('관리자 계정 -> 관리자 대시보드로 이동');
-          router.push("/dashboard/admin");
-          setUserRole(null);
+          window.location.replace("/dashboard/admin");
           return;
         }
         if (role !== "student") {
           console.log('학생 아닌 계정 -> 로그인으로 이동');
-          router.push("/login");
-          setUserRole(null);
+          window.location.replace("/login");
           return;
         }
+        
+        // student 역할인 경우만 상태 업데이트
         setUserRole(role);
         console.log('학생 계정 확인 완료, 학생 대시보드 로드');
-        // 학생이면 그대로 진행
+        setLoading(false);
       } catch (error) {
         console.error("권한 확인 오류:", error);
-        router.push("/login");
-        setUserRole(null);
-      } finally {
-        setLoading(false);
+        if (mounted) {
+          window.location.replace("/login");
+        }
       }
     };
+    
     checkRole();
-  }, [router]);
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // 세션 데이터 로드 (학생만)
   useEffect(() => {
@@ -286,16 +296,13 @@ export default function StudentDashboard() {
     setActiveTab(newValue);
   };
 
-  if (loading) {
+  // 로딩 상태이거나 역할이 student가 아닔
+  if (loading || !userRole || userRole !== "student") {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
       </Box>
     );
-  }
-
-  if (loading || userRole !== "STUDENT") {
-    return <></>; // 또는 <CircularProgress />
   }
 
   return (

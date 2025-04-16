@@ -77,49 +77,45 @@ export default function AdminDashboard() {
   // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {
     // 사용자 인증 정보 확인 및 리디렉션
-    let authCheckComplete = false;
+    let mounted = true; // 컴포넌트가 마운트된 상태인지 추적
 
     const checkAuth = async () => {
       try {
         console.log("Admin dashboard - Checking auth...");
         const r = await getUserRole();
-        console.log('Admin dashboard - User role:', r); // 디버깅용 로그
-        setRole(r);
+        // 컴포넌트가 언마운트된 경우 상태 업데이트 중단
+        if (!mounted) return;
         
-        // 소문자 'admin'으로 비교 (enum 데이터베이스 타입에 맞추기)
+        console.log('Admin dashboard - User role:', r);
         console.log('Admin dashboard - Role type check:', typeof r, r);
+        
+        // 소문자 'admin'으로 비교 (enum 데이터베이스 타입에 맞춰기)
         if (r !== "admin") {
           console.log('Redirecting from admin dashboard - wrong role:', r);
-          // router.replace 대신 직접 리디렉션 사용
-          window.location.href = "/login";
+          // 리디렉션 강화: replace 사용 (브라우저 히스토리에 추가하지 않음)
+          window.location.replace("/dashboard/" + r);
           return;
         }
         
-        // 인증 완료
-        authCheckComplete = true;
+        // admin 역할인 경우만 상태 업데이트
+        setRole(r);
         console.log('Admin dashboard - Auth success, fetching users');
-        // ADMIN 권한이 있으면 사용자 데이터 가져오기
         fetchUsers();
       } catch (err) {
         console.error('Auth check error:', err);
-        window.location.href = "/login";
+        if (mounted) {
+          window.location.replace("/login");
+        }
       }
     };
 
-    // 아직 인증 확인이 완료되지 않은 경우 진행
-    if (!authCheckComplete) {
-      checkAuth();
-    }
+    // 역할 확인
+    checkAuth();
     
-    // 백업 타이머 - 5초 후에도 인증이 완료되지 않았으면 로그인 페이지로 이동
-    const failsafeTimer = setTimeout(() => {
-      if (!authCheckComplete) {
-        console.log('Admin dashboard - Auth check timeout, redirecting to login');
-        window.location.href = "/login";
-      }
-    }, 5000);
-    
-    return () => clearTimeout(failsafeTimer);
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // 초기 데이터 로드 (별도 useEffect로 분리)
@@ -196,8 +192,17 @@ export default function AdminDashboard() {
     }
   };
 
-  // 역할에 따른 조건부 렌더링
-  return role !== "ADMIN" ? null : (
+  // 로딩 상태 또는 역할이 admin이 아닌 경우 렌더링 차단
+  if (!role || role !== "admin") {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>권한 확인 중...</Typography>
+      </Box>
+    );
+  }
+  
+  // admin 역할인 경우만 대시보드 렌더링
+  return (
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>관리자 대시보드</Typography>
