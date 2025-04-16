@@ -10,7 +10,7 @@ import {
   DialogActions, FormControl, InputLabel, Select, TextField, MenuItem, CircularProgress, Alert, Tab, Tabs
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import SessionList from "@/components/student/session/SessionList";
+import SessionManager from "@/components/student/session/SessionManager";
 import CalendarView from "@/components/student/CalendarView";
 import StatsView from "@/components/student/StatsView";
 import AIAdviceView from "@/components/student/AIAdviceView";
@@ -47,30 +47,7 @@ export default function StudentDashboard() {
     weekdayFrequency: [] as { day: string; count: number }[]
   });
 
-  // 로컬 세션 데이터
-  const [sessionMetadata, setSessionMetadata] = useState<Record<string, { percent: number; reflection: string }>>({});
-
-  // 세션 메타데이터 로드 (로컬 스토리지)
-  useEffect(() => {
-    try {
-      const storedData = localStorage.getItem('sessionMetadata');
-      if (storedData) {
-        setSessionMetadata(JSON.parse(storedData));
-      }
-    } catch (error) {
-      console.error("로컬 스토리지 데이터 로드 오류:", error);
-    }
-  }, []);
-
-  // 세션 메타데이터 저장 (로컬 스토리지)
-  const saveSessionMetadata = (data: Record<string, { percent: number; reflection: string }>) => {
-    setSessionMetadata(data);
-    try {
-      localStorage.setItem('sessionMetadata', JSON.stringify(data));
-    } catch (error) {
-      console.error("로컬 스토리지 데이터 저장 오류:", error);
-    }
-  };
+  // 이제 메타데이터를 데이터베이스에 저장하므로 로컬 스토리지 사용 중단
 
   // 사용자 권한 확인
   useEffect(() => {
@@ -104,7 +81,7 @@ export default function StudentDashboard() {
     if (sessions.length > 0) {
       calculateStats();
     }
-  }, [sessions, sessionMetadata]);
+  }, [sessions]);
 
   // 세션 데이터 가져오기
   const fetchSessions = async () => {
@@ -124,26 +101,26 @@ export default function StudentDashboard() {
 
   // 통계 데이터 계산
   const calculateStats = () => {
-    // 최근 달성률 계산
+    // 최근 달성률 계산 (이제 데이터베이스에서 percent 값 사용)
     const recentSessionsData = [...sessions]
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .slice(-10)
       .map(session => {
-        const percent = sessionMetadata[session.id]?.percent || 0;
+        // 로컬 스토리지 대신 데이터베이스에서 percent 값 사용
         return {
           date: new Date(session.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
-          value: percent
+          value: session.percent || 0
         };
       });
 
-    // 과목별 평균 달성률 계산
+    // 과목별 평균 달성률 계산 (이제 데이터베이스에서 percent 값 사용)
     const subjectData: Record<string, { total: number; count: number }> = {};
     sessions.forEach(session => {
-      const percent = sessionMetadata[session.id]?.percent || 0;
+      // 로컬 스토리지 대신 데이터베이스에서 percent 값 사용
       if (!subjectData[session.subject]) {
         subjectData[session.subject] = { total: 0, count: 0 };
       }
-      subjectData[session.subject].total += percent;
+      subjectData[session.subject].total += session.percent || 0;
       subjectData[session.subject].count += 1;
     });
 
@@ -191,12 +168,8 @@ export default function StudentDashboard() {
 
       if (error) throw error;
 
+      // 이제 데이터베이스에 전부 저장되민플 결과만 상태로 업데이트
       if (data && data.length > 0) {
-        setSessionMetadata(prev => ({
-          ...prev,
-          [data[0].id]: { percent: 0, reflection: '' }
-        }));
-        
         setSessions([data[0], ...sessions]);
       }
 
@@ -219,13 +192,8 @@ export default function StudentDashboard() {
 
       if (error) throw error;
 
-      // 로컬 상태 업데이트
+      // 로컬 상태만 업데이트 (데이터베이스에서는 이미 삭제됨)
       setSessions(sessions.filter(s => s.id !== id));
-      
-      // 세션 메타데이터에서 삭제
-      const updatedMetadata = { ...sessionMetadata };
-      delete updatedMetadata[id];
-      saveSessionMetadata(updatedMetadata);
     } catch (error) {
       console.error("세션 삭제 오류:", error);
     } finally {
@@ -248,18 +216,8 @@ export default function StudentDashboard() {
 
       if (error) throw error;
 
-      // 로컬 상태 업데이트
+      // 로컬 상태만 업데이트 (데이터베이스는 이미 업데이트 됨)
       setSessions(sessions.map(s => s.id === session.id ? session : s));
-      
-      // 로컬 메타데이터 업데이트 (percent, reflection)
-      const updatedMetadata = {
-        ...sessionMetadata,
-        [session.id]: {
-          percent: session.percent || 0,
-          reflection: session.reflection || ''
-        }
-      };
-      saveSessionMetadata(updatedMetadata);
 
       setEditId(null);
     } catch (error) {
@@ -324,13 +282,9 @@ export default function StudentDashboard() {
             </Button>
           </Box>
 
-          <SessionList 
+          <SessionManager 
             sessions={sessions} 
-            sessionMetadata={sessionMetadata}
-            onDelete={handleDeleteSession}
-            onUpdate={handleUpdateSession}
-            setEditId={setEditId}
-            editId={editId}
+            setSessions={setSessions}
           />
         </Box>
       )}

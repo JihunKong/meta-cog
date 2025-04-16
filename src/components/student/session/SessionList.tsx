@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  Box, Typography, Grid, Button, CircularProgress, Alert, Chip
+  Box, Typography, Grid, Alert, Chip, CircularProgress
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import SessionItem from "./SessionItem";
 
 interface Session {
   id: string;
+  user_id: string;
   subject: string;
   description: string;
   percent: number;
@@ -18,33 +18,25 @@ interface Session {
 
 interface SessionListProps {
   sessions: Session[];
+  editingSessionId: string | null;
   loading: boolean;
-  error: string;
-  handleAddSession: () => void;
-  handleEditSession: (sessionId: string) => void;
-  handleSaveSession: (sessionId: string, data: {
+  onEdit: (sessionId: string) => void;
+  onDelete: (sessionId: string) => void;
+  onUpdate: (sessionId: string, data: {
     subject: string;
     description: string;
-    percent: string;
+    percent: number;
     reflection: string;
   }) => void;
-  handleDeleteSession: (sessionId: string) => void;
-  editingSessionId: string | null;
-  saveLoading: boolean;
-  closeEdit: () => void;
 }
 
 export default function SessionList({
   sessions,
-  loading,
-  error,
-  handleAddSession,
-  handleEditSession,
-  handleSaveSession,
-  handleDeleteSession,
   editingSessionId,
-  saveLoading,
-  closeEdit
+  loading,
+  onEdit,
+  onDelete,
+  onUpdate
 }: SessionListProps) {
   const today = new Date().toISOString().slice(0, 10);
   const hasTodaySession = sessions.some(s => s.created_at.slice(0, 10) === today);
@@ -72,10 +64,6 @@ export default function SessionList({
     );
   }
 
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
-  }
-
   if (sessions.length === 0) {
     return (
       <Box sx={{ textAlign: "center", py: 4, bgcolor: "#f5f5f5", borderRadius: 2 }}>
@@ -83,13 +71,6 @@ export default function SessionList({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           "학습 세션 추가" 버튼을 클릭하여 오늘의 학습 목표를 설정해보세요.
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddSession}
-        >
-          학습 세션 추가
-        </Button>
       </Box>
     );
   }
@@ -130,19 +111,33 @@ export default function SessionList({
             </Box>
             
             <Grid container spacing={3}>
-              {sessionsForDate.map(session => (
-                <Grid item xs={12} md={6} lg={4} key={session.id}>
-                  <SessionItem
-                    session={session}
-                    isEditing={editingSessionId === session.id}
-                    openEdit={handleEditSession}
-                    closeEdit={closeEdit}
-                    handleSave={handleSaveSession}
-                    handleDelete={handleDeleteSession}
-                    saveLoading={saveLoading}
-                  />
-                </Grid>
-              ))}
+              {sessionsForDate.map(session => {
+                // 이제 percent와 reflection이 데이터베이스에 저장되어 있으므로 직접 사용
+                const sessionWithMetadata = {
+                  ...session,
+                  percent: session.percent || 0,
+                  reflection: session.reflection || ''
+                };
+                
+                return (
+                  <Grid item xs={12} md={6} lg={4} key={session.id}>
+                    <SessionItem
+                      session={sessionWithMetadata}
+                      isEditing={editingSessionId === session.id}
+                      openEdit={() => onEdit(session.id)}
+                      closeEdit={() => onEdit('')}
+                      handleSave={(id, data) => onUpdate(id, {
+                        subject: data.subject,
+                        description: data.description,
+                        percent: parseInt(data.percent) || 0,
+                        reflection: data.reflection
+                      })}
+                      handleDelete={() => onDelete(session.id)}
+                      saveLoading={loading}
+                    />
+                  </Grid>
+                );
+              })}
             </Grid>
           </Box>
         );
