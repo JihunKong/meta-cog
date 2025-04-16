@@ -25,82 +25,75 @@ export async function signUpWithEmail(email: string, password: string, role: str
 }
 
 export async function getUserRole() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError) {
-    console.error('Auth error:', userError);
-    return null;
-  }
-  if (!user) {
-    console.error('No user found');
-    return null;
-  }
-
-  // User row가 없으면 자동 생성 (STUDENT 기본)
-  let { data, error } = await supabase
-    .from('User')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (error && error.code === 'PGRST116') {
-    // Row not found, upsert
-    const upsertResult = await supabase.from('User').upsert({
-      id: user.id,
-      email: user.email,
-      name: user.email,
-      role: 'STUDENT',
-    });
-    if (upsertResult.error) {
-      console.error('User upsert error:', upsertResult.error);
-      return null;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Auth error:', userError);
+      return 'STUDENT'; // 안전한 기본값 반환
     }
-    // 재조회
-    const retry = await supabase
-      .from('User')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    data = retry.data;
+    if (!user) {
+      console.error('No user found');
+      return 'STUDENT'; // 안전한 기본값 반환
+    }
+
+    // User 테이블에서 role 조회 시도
+    try {
+      const { data, error } = await supabase
+        .from('User')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('User fetch error:', error);
+        return 'STUDENT'; // 안전한 기본값 반환
+      }
+
+      if (!data || !data.role) {
+        console.log('No role data found, returning STUDENT default');
+        return 'STUDENT'; // 안전한 기본값 반환
+      }
+
+      console.log('Successfully found role:', data.role);
+      return data.role;
+    } catch (queryError) {
+      console.error('Failed to query User table:', queryError);
+      return 'STUDENT'; // 안전한 기본값 반환
+    }
+  } catch (error) {
+    console.error('Unexpected error in getUserRole:', error);
+    return 'STUDENT'; // 안전한 기본값 반환
   }
-  if (!data) {
-    console.error('No User row found for user:', user.id);
-    return null;
-  }
-  return data.role || null;
 }
 
 export async function getUserName() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) return null;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return user?.email || '';
 
-  let { data, error } = await supabase
-    .from('User')
-    .select('name')
-    .eq('id', user.id)
-    .single();
+    // User 테이블에서 name 조회 시도
+    try {
+      const { data, error } = await supabase
+        .from('User')
+        .select('name')
+        .eq('id', user.id)
+        .single();
 
-  if (error && error.code === 'PGRST116') {
-    // Row not found, upsert
-    const upsertResult = await supabase.from('User').upsert({
-      id: user.id,
-      email: user.email,
-      name: user.email,
-      role: 'STUDENT',
-    });
-    if (upsertResult.error) {
-      console.error('User upsert error:', upsertResult.error);
-      return null;
+      if (error || !data || !data.name) {
+        console.log('User name not found, using email:', user.email);
+        return user.email || '';
+      }
+
+      console.log('Successfully found name:', data.name);
+      return data.name;
+    } catch (queryError) {
+      console.error('Failed to query User table for name:', queryError);
+      return user.email || '';
     }
-    // 재조회
-    const retry = await supabase
-      .from('User')
-      .select('name')
-      .eq('id', user.id)
-      .single();
-    data = retry.data;
+  } catch (error) {
+    console.error('Unexpected error in getUserName:', error);
+    return '';
   }
-  if (!data) return null;
-  return data.name;
 }
 
 // Supabase 사용자 타입 정의
