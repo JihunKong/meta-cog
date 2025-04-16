@@ -22,7 +22,8 @@ export default function AdminDashboard() {
   // [설명] 사용자 추가를 위한 입력값 state입니다.
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<"STUDENT"|"TEACHER"|"ADMIN">("STUDENT");
+  // 역할을 소문자로 변경 (enum 형식에 맞춰서)
+  const [newRole, setNewRole] = useState<"student"|"teacher"|"admin">("student");
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
       fetchUsers();
       setNewName(""); 
       setNewEmail(""); 
-      setNewRole("STUDENT");
+      setNewRole("student"); // 소문자로 변경
     } catch (error: any) {
       console.error('사용자 추가 오류:', error.message);
       alert('사용자 추가 실패: ' + error.message);
@@ -85,7 +86,9 @@ export default function AdminDashboard() {
         console.log('Admin dashboard - User role:', r); // 디버깅용 로그
         setRole(r);
         
-        if (r !== "ADMIN") {
+        // 소문자 'admin'으로 비교 (enum 데이터베이스 타입에 맞추기)
+        console.log('Admin dashboard - Role type check:', typeof r, r);
+        if (r !== "admin") {
           console.log('Redirecting from admin dashboard - wrong role:', r);
           // router.replace 대신 직접 리디렉션 사용
           window.location.href = "/login";
@@ -221,12 +224,12 @@ export default function AdminDashboard() {
             <Select
               size="small"
               value={newRole}
-              onChange={e => setNewRole(e.target.value as "STUDENT"|"TEACHER"|"ADMIN")}
+              onChange={e => setNewRole(e.target.value as "student"|"teacher"|"admin")}
               sx={{ minWidth: 100 }}
             >
-              <MenuItem value="STUDENT">STUDENT</MenuItem>
-              <MenuItem value="TEACHER">TEACHER</MenuItem>
-              <MenuItem value="ADMIN">ADMIN</MenuItem>
+              <MenuItem value="student">STUDENT</MenuItem>
+              <MenuItem value="teacher">TEACHER</MenuItem>
+              <MenuItem value="admin">ADMIN</MenuItem>
             </Select>
             <Chip label="추가" color="primary" clickable onClick={handleAddUser} sx={{ cursor: 'pointer' }} />
           </Box>

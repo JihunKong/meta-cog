@@ -40,12 +40,12 @@ export async function getUserRole() {
 
     // 1. 먼저 profiles 테이블에서 role 조회 시도
     try {
-      // supabase 쿼리 문법 수정 (왼쪽이 컴퍼스 이름, 오른쪽이 조건값)
+      // Supabase PostgREST API 쿼리 형식 수정
       console.log('Querying profiles table with ID:', user.id);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', user.id) // 이것이 URL에서 ?eq.id=... 형식으로 변환됨
         .single();
 
       console.log('Profiles query result:', { data: profileData, error: profileError });
@@ -64,9 +64,9 @@ export async function getUserRole() {
     try {
       console.log('Querying User table with ID:', user.id);
       const { data: userData, error: userDataError } = await supabase
-        .from('User')
+        .from('User') // 테이블 이름은 따옴표 없이 그대로 사용
         .select('role')
-        .eq('id', user.id)
+        .eq('id', user.id) // 이것이 URL에서 ?eq.id=... 형식으로 변환됨
         .single();
 
       console.log('User table query result:', { data: userData, error: userDataError });
