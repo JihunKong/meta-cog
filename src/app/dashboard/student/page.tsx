@@ -10,7 +10,8 @@ import {
   TextField, MenuItem, CircularProgress, Alert, Tab, Tabs
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import { LineChart, Line, BarChart, Bar, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
+import { LineChart, Line, BarChart, Bar, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay } from "date-fns";
 import SessionList from "@/components/student/session/SessionList";
 
 interface Session {
@@ -24,6 +25,42 @@ interface Session {
 }
 
 const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
+
+// 과목별 색상 지정 함수
+const getSubjectColor = (subject: string): string => {
+  const colorMap: Record<string, string> = {
+    "국어": "#e57373", // 빨간계열
+    "영어": "#64b5f6", // 파란계열
+    "수학": "#81c784", // 초록계열
+    "과학": "#9575cd", // 보라계열
+    "사회": "#ffb74d"  // 주황계열
+  };
+  
+  return colorMap[subject] || "#90a4ae"; // 기본값
+};
+
+// 달력 일자 생성 함수
+const generateCalendarDays = (): (Date | null)[] => {
+  const today = new Date();
+  const firstDayOfMonth = startOfMonth(today);
+  const lastDayOfMonth = endOfMonth(today);
+  
+  // 해당 월의 모든 날짜 가져오기
+  const daysInMonth = eachDayOfInterval({
+    start: firstDayOfMonth,
+    end: lastDayOfMonth
+  });
+  
+  // 첫째 주의 첫째 날 채우기
+  const startWeekday = firstDayOfMonth.getDay(); // 0: 일요일, 1: 월요일, ...
+  const prefixDays = Array(startWeekday).fill(null);
+  
+  // 마지막 주의 마지막 날 채우기
+  const endWeekday = lastDayOfMonth.getDay();
+  const suffixDays = Array(6 - endWeekday).fill(null);
+  
+  return [...prefixDays, ...daysInMonth, ...suffixDays];
+};
 
 // AI 어드바이스 생성 함수
 const getAIAdvice = (subject: string, average: number): string => {
@@ -447,10 +484,118 @@ export default function StudentDashboard() {
             </Alert>
           ) : (
             <Box sx={{ mt: 2 }}>
-              {/* 일자별 달력 뷰 내용은 이후 구현할 예정 */}
-              <Alert severity="info" sx={{ mb: 2 }}>
-                달력 뷰 기능은 구현 중입니다...
-              </Alert>
+              {/* 달력 헤더 */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">{format(new Date(), 'yyyy년 MM월')}</Typography>
+                <Box>
+                  {/* 나중에 월 넘기기 버튼 추가 가능 */}
+                </Box>
+              </Box>
+              
+              {/* 요일 표시 */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', mb: 1 }}>
+                {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
+                  <Typography key={i} sx={{ fontWeight: 'bold', color: i === 0 ? 'error.main' : 'text.primary' }}>
+                    {day}
+                  </Typography>
+                ))}
+              </Box>
+              
+              {/* 달력 그리드 */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                {generateCalendarDays().map((day, i) => {
+                  // 해당 날짜의 세션 찾기
+                  const dayStr = day ? format(day, 'yyyy-MM-dd') : '';
+                  const daySessions = sessions.filter(s => s.created_at.substring(0, 10) === dayStr);
+                  const hasSession = daySessions.length > 0;
+                  
+                  // 오늘 날짜와 현재 월의 날짜인지 확인
+                  const isCurrentDay = day && isToday(day);
+                  const isCurrentMonth = day && day.getMonth() === new Date().getMonth();
+                  
+                  return (
+                    <Box 
+                      key={i} 
+                      sx={{
+                        p: 1,
+                        height: '100px',
+                        border: '1px solid',
+                        borderColor: isCurrentDay ? 'primary.main' : 'grey.300',
+                        borderRadius: 1,
+                        backgroundColor: isCurrentDay ? 'primary.50' : (isCurrentMonth ? 'background.paper' : 'grey.50'),
+                        display: 'flex',
+                        flexDirection: 'column',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:hover': {
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          cursor: hasSession ? 'pointer' : 'default',
+                        }
+                      }}
+                      onClick={() => {
+                        if (hasSession) {
+                          // 추후 세션 상세 보기 기능 추가 가능
+                        }
+                      }}
+                    >
+                      {day && (
+                        <>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: isCurrentDay ? 'bold' : 'normal',
+                              color: !isCurrentMonth ? 'text.disabled' : 
+                                     format(day, 'E') === 'Sun' ? 'error.main' : 
+                                     'text.primary'
+                            }}
+                          >
+                            {format(day, 'd')}
+                          </Typography>
+                          
+                          {hasSession && (
+                            <Box sx={{ mt: 'auto' }}>
+                              {daySessions.map((session, idx) => (
+                                <Box 
+                                  key={idx} 
+                                  sx={{ 
+                                    mt: 0.5, 
+                                    p: 0.5, 
+                                    bgcolor: getSubjectColor(session.subject), 
+                                    borderRadius: 0.5,
+                                    fontSize: '0.7rem',
+                                    color: 'white',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}
+                                >
+                                  {session.subject}: {session.percent ? `${session.percent}%` : '진행중'}
+                                </Box>
+                              ))}
+                              
+                              {daySessions.length > 2 && (
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  +{daySessions.length - 2} 더 보기
+                                </Typography>
+                              )}
+                            </Box>
+                          )}
+                        </>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+              
+              {/* 과목별 색상 밸런스 */}
+              <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {SUBJECTS.map(subject => (
+                  <Box key={subject} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: getSubjectColor(subject), mr: 1 }} />
+                    <Typography variant="caption">{subject}</Typography>
+                  </Box>
+                ))}
+              </Box>
             </Box>
           )}
         </Box>
@@ -461,7 +606,7 @@ export default function StudentDashboard() {
         <Box>
           <Typography variant="h6" gutterBottom>통계 및 학습 분석</Typography>
           
-          {sessions.filter(s => s.percent).length === 0 ? (
+          {sessions.filter(s => s.percent != null && s.percent > 0).length === 0 ? (
             <Alert severity="info" sx={{ my: 2 }}>
               아직 완료된 학습 세션이 없습니다. 학습을 완료하고 통계를 확인해보세요.
             </Alert>
@@ -471,15 +616,21 @@ export default function StudentDashboard() {
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>최근 달성률 추이</Typography>
                 <Box sx={{ height: 300, bgcolor: "#f9f9f9", p: 2, borderRadius: 1 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={statsData.recentPerformance}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                      <Tooltip formatter={(v) => `${v}%`} />
-                      <Line type="monotone" dataKey="percent" stroke="#1976d2" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {statsData.recentPerformance.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={statsData.recentPerformance}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                        <Tooltip formatter={(v) => `${v}%`} />
+                        <Line type="monotone" dataKey="percent" stroke="#1976d2" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography color="text.secondary">아직 데이터가 없습니다</Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
               
@@ -487,15 +638,21 @@ export default function StudentDashboard() {
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle1" gutterBottom>과목별 평균 달성률</Typography>
                 <Box sx={{ height: 300, bgcolor: "#f9f9f9", p: 2, borderRadius: 1 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={statsData.subjectPerformance}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="subject" />
-                      <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-                      <Tooltip formatter={(v) => `${v}%`} />
-                      <Bar dataKey="average" fill="#1976d2" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {statsData.subjectPerformance.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={statsData.subjectPerformance}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="subject" />
+                        <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                        <Tooltip formatter={(v) => `${v}%`} />
+                        <Bar dataKey="average" fill="#1976d2" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography color="text.secondary">아직 데이터가 없습니다</Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
               
@@ -503,15 +660,21 @@ export default function StudentDashboard() {
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle1" gutterBottom>최근 4주간 요일별 학습 빈도</Typography>
                 <Box sx={{ height: 300, bgcolor: "#f9f9f9", p: 2, borderRadius: 1 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={statsData.weekdayFrequency}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#1976d2" name="학습 횟수" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {statsData.weekdayFrequency.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={statsData.weekdayFrequency}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="day" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#1976d2" name="학습 횟수" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography color="text.secondary">아직 데이터가 없습니다</Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
             </Grid>
