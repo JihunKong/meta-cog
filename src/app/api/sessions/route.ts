@@ -30,10 +30,11 @@ export async function GET(request: Request) {
     console.log('세션 데이터 요청:', { userId });
     
     // 서비스 역할로 데이터 조회 (RLS 우회)
+    // user_id를 문자열로 변환하여 비교 (타입 불일치 문제 해결)
     const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .order('created_at', { ascending: false });
       
     if (error) {
