@@ -23,6 +23,12 @@ export async function POST(request: Request) {
     
     // 서비스 역할로 데이터 삽입 (RLS 우회)
     // user_id를 문자열로 변환하여 저장 (타입 불일치 문제 해결)
+    console.log('삽입할 데이터:', { 
+      user_id: user_id.toString(), 
+      subject, 
+      description 
+    });
+    
     const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .insert([{ 

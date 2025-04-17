@@ -16,39 +16,71 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: Request) {
   try {
-    // smart_goals 테이블 스키마 확인
-    const { data: smartGoalsSchema, error: smartGoalsError } = await supabaseAdmin.rpc(
-      'get_table_definition',
-      { table_name: 'smart_goals' }
-    );
-    
-    if (smartGoalsError) {
-      console.error('smart_goals 테이블 스키마 조회 오류:', smartGoalsError);
+    // 테이블 목록 조회
+    const { data: tables, error: tablesError } = await supabaseAdmin
+      .from('pg_tables')
+      .select('tablename')
+      .eq('schemaname', 'public');
       
-      // 대체 방법으로 테이블 정보 조회
-      const { data: tableInfo, error: tableInfoError } = await supabaseAdmin
-        .from('smart_goals')
-        .select('*')
-        .limit(1);
-        
-      if (tableInfoError) {
-        console.error('테이블 정보 조회 오류:', tableInfoError);
-        return NextResponse.json({ error: tableInfoError.message }, { status: 500 });
-      }
-      
-      // 테이블 컬럼 정보 추출
-      const columns = tableInfo && tableInfo.length > 0 ? Object.keys(tableInfo[0]) : [];
-      
-      return NextResponse.json({
-        success: true,
-        message: 'smart_goals 테이블 컬럼 정보',
-        columns
-      });
+    if (tablesError) {
+      console.error('테이블 목록 조회 오류:', tablesError);
+      return NextResponse.json({ error: tablesError.message }, { status: 500 });
     }
     
-    return NextResponse.json({ 
-      success: true, 
-      schema: smartGoalsSchema
+    // smart_goals 테이블 스키마 조회
+    const { data: smartGoalsInfo, error: smartGoalsError } = await supabaseAdmin
+      .from('smart_goals')
+      .select('*')
+      .limit(1);
+      
+    if (smartGoalsError) {
+      console.error('smart_goals 테이블 조회 오류:', smartGoalsError);
+      return NextResponse.json({ error: smartGoalsError.message }, { status: 500 });
+    }
+    
+    // goal_progress 테이블 스키마 조회
+    const { data: goalProgressInfo, error: goalProgressError } = await supabaseAdmin
+      .from('goal_progress')
+      .select('*')
+      .limit(1);
+      
+    if (goalProgressError) {
+      console.error('goal_progress 테이블 조회 오류:', goalProgressError);
+    }
+    
+    // profiles 테이블 스키마 조회
+    const { data: profilesInfo, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .limit(1);
+      
+    if (profilesError) {
+      console.error('profiles 테이블 조회 오류:', profilesError);
+    }
+    
+    // 테이블 컴럼 정보 추출
+    const smartGoalsColumns = smartGoalsInfo && smartGoalsInfo.length > 0 ? Object.keys(smartGoalsInfo[0]) : [];
+    const goalProgressColumns = goalProgressInfo && goalProgressInfo.length > 0 ? Object.keys(goalProgressInfo[0]) : [];
+    const profilesColumns = profilesInfo && profilesInfo.length > 0 ? Object.keys(profilesInfo[0]) : [];
+    
+    // 전체 데이터베이스 정보 반환
+    return NextResponse.json({
+      success: true,
+      tables: tables?.map(t => t.tablename) || [],
+      schemas: {
+        smart_goals: {
+          columns: smartGoalsColumns,
+          sample: smartGoalsInfo?.[0] || null
+        },
+        goal_progress: {
+          columns: goalProgressColumns,
+          sample: goalProgressInfo?.[0] || null
+        },
+        profiles: {
+          columns: profilesColumns,
+          sample: profilesInfo?.[0] || null
+        }
+      }
     });
   } catch (error: any) {
     console.error('스키마 확인 API 예외 발생:', error);

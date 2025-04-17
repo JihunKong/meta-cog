@@ -31,6 +31,10 @@ export async function GET(request: Request) {
     
     // 서비스 역할로 데이터 조회 (RLS 우회)
     // user_id를 문자열로 변환하여 비교 (타입 불일치 문제 해결)
+    console.log('세션 조회 매개변수:', { userId: userId.toString() });
+    
+    // 정확한 테이블 구조에 맞게 조회
+    // goal_progress는 smart_goal_id를 통해 연결
     const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
