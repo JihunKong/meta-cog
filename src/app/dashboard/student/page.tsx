@@ -112,7 +112,7 @@ export default function StudentDashboard() {
 
   // 세션 데이터 로드 (학생만)
   useEffect(() => {
-    if (userRole === "STUDENT") {
+    if (userRole === "student") {
       fetchSessions();
     }
   }, [userRole]);
@@ -267,12 +267,12 @@ export default function StudentDashboard() {
       try {
         // 요청 데이터 로깅
         const requestData = {
-          user_id: user.id.toString(), // 명시적으로 문자열로 변환
+          user_id: user.id,
           subject: newSessionData.subject,
           description: newSessionData.description
         };
         console.log("요청 데이터:", requestData);
-        console.log("사용자 ID 타입:", typeof user.id.toString());
+        console.log("사용자 ID 타입:", typeof user.id);
         
         // API 호출
         const response = await fetch('/api/goals', {
