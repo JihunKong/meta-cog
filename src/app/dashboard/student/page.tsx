@@ -240,8 +240,22 @@ export default function StudentDashboard() {
         description: newSessionData.description
       });
       
+      // 사용자 정보 상세 확인
+      console.log("현재 사용자 상세 정보:", {
+        id: user.id,
+        email: user.email,
+        idType: typeof user.id,
+        authTime: user.app_metadata?.provider,
+        created_at: user.created_at
+      });
+      
       // 1. 직접 SQL 실행 시도 (개발 환경에서만 사용)
       try {
+        console.log("세션 데이터:", {
+          subject: newSessionData.subject,
+          description: newSessionData.description,
+        });
+        
         // 일반 삽입 시도
         const { data, error } = await supabase
           .from('smart_goals')
@@ -258,6 +272,9 @@ export default function StudentDashboard() {
         
         if (error) {
           console.error("목표 생성 상세 오류:", error);
+          console.error("오류 코드:", error.code);
+          console.error("오류 메시지:", error.message);
+          console.error("오류 세부 정보:", error.details);
           throw error;
         }
         
