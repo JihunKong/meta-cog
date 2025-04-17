@@ -14,11 +14,17 @@ CREATE TABLE IF NOT EXISTS student_names (
 -- 기존 학생 데이터 초기 삽입
 INSERT INTO student_names (email, display_name, grade, class, student_number)
 VALUES 
+  ('2101@pof.com', '강지민', '2학년', '1반', '01'),
+  ('2104@pof.com', '김소윤', '2학년', '1반', '04'),
+  ('2106@pof.com', '김시온', '2학년', '1반', '06'),
   ('2201@pof.com', '김서윤', '2학년', '2반', '01'),
-  ('2202@pof.com', '이민준', '2학년', '2반', '02'),
-  ('2203@pof.com', '박지은', '2학년', '2반', '03'),
-  ('2204@pof.com', '정현우', '2학년', '2반', '04'),
-  ('2205@pof.com', '최수아', '2학년', '2반', '05')
+  ('2209@pof.com', '이시원', '2학년', '2반', '09'),
+  ('2214@pof.com', '최성진', '2학년', '2반', '14'),
+  ('2217@pof.com', '허나경', '2학년', '2반', '17'),
+  ('2405@pof.com', '김유빈', '2학년', '4반', '05'),
+  ('2602@pof.com', '김경훈', '2학년', '6반', '02'),
+  ('2604@pof.com', '김서후', '2학년', '6반', '04'),
+  ('2607@pof.com', '박수민', '2학년', '4반', '05')
 ON CONFLICT (email) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     grade = EXCLUDED.grade,
