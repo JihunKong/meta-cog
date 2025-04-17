@@ -39,59 +39,45 @@ export default function AdminDashboard() {
       alert('이름, 이메일, 비밀번호를 모두 입력해주세요.');
       return;
     }
-    
     setAddingUser(true);
-    
     try {
-      console.log('Adding new user with name:', newName);
-      
-      // 1. profiles 테이블에 사용자 추가
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          // id는 UUID 형태로 자동 생성됨
+      // 1. Supabase 인증 시스템에 계정 생성 (Admin API 필요, 실제 서비스에서는 서버 API로 분리 필요)
+      // @ts-ignore: admin API는 supabase-js v2에서만 지원, 실제 서비스 역할 키 필요
+      const { data, error } = await (supabase as any).auth.admin.createUser({
+        email: newEmail,
+        password: newPassword,
+        user_metadata: { name: newName, role: newRole }
+      });
+      if (error || !data?.user) throw error || new Error('회원 생성 실패');
+      const userId = data.user.id;
+      // 2. profiles 테이블에 row upsert
+      await supabase.from('profiles').upsert({
+        id: userId,
+        email: newEmail,
+        name: newName,
+        role: newRole.toUpperCase(),
+      });
+      // 3. student_names 테이블에도 row upsert (학생인 경우)
+      if (newRole === 'student') {
+        await supabase.from('student_names').upsert({
           email: newEmail,
-          role: newRole,
-          name: newName, // 이름 추가
-        })
-        .select();
-      
-      if (profileError) throw profileError;
-      
-      // 2. User 테이블에도 동일한 정보 추가 (이름과 역할을 저장하기 위해)
-      if (profileData && profileData.length > 0) {
-        const { error: userError } = await supabase
-          .from('User')
-          .insert({
-            id: profileData[0].id, // profiles의 id와 동일하게 설정
-            email: newEmail,
-            name: newName,
-            role: newRole,
-            password: newPassword // 비밀번호 저장
-          });
-        
-        if (userError) {
-          console.error('User 테이블 삽입 오류:', userError);
-          // User 테이블 오류는 무시하고 계속 진행
-        }
+          display_name: newName,
+          // grade, class, student_number 등 필요시 추가
+        });
       }
-      
-      // 성공 메시지 표시
-      alert('사용자가 성공적으로 추가되었습니다.');
-      
-      // UI 업데이트 및 입력창 초기화
+      alert('학생 계정이 성공적으로 생성되었습니다!');
       fetchUsers();
-      setNewName(""); 
+      setNewName("");
       setNewEmail("");
-      setNewPassword(""); 
-      setNewRole("student"); // 소문자로 변경
-    } catch (error: any) {
-      console.error('사용자 추가 오류:', error.message);
-      alert('사용자 추가 실패: ' + error.message);
+      setNewPassword("");
+      setNewRole("student");
+    } catch (err: any) {
+      alert('계정 생성 오류: ' + (err?.message || err));
     } finally {
-      setAddingUser(false); // 상태 초기화
+      setAddingUser(false);
     }
   };
+
   
   // 클라이언트에서 역할 검사 (SSR에서는 권한 분기하지 않음)
   useEffect(() => {

@@ -135,17 +135,32 @@ export default function StudentDashboard() {
 
       console.log("Current user ID for sessions:", user.id);
 
-      // 현재 사용자의 데이터만 가져오기
+      // smart_goals + goal_progress JOIN 쿼리
       const { data, error } = await supabase
         .from('smart_goals')
-        .select('*')
-        .eq('user_id', user.id)  // 현재 사용자의 데이터만 필터링
+        .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      console.log("Fetched sessions for user:", user.id, "count:", data?.length || 0);
-      setSessions(data || []);
+      // 통합 세션 데이터로 변환
+      const sessions = (data || []).map((row: any) => {
+        const progress = Array.isArray(row.goal_progress) && row.goal_progress.length > 0 ? row.goal_progress[0] : {};
+        return {
+          id: row.id,
+          user_id: row.user_id,
+          subject: row.subject,
+          description: row.description,
+          percent: progress.percent ?? 0,
+          reflection: progress.reflection ?? '',
+          created_at: row.created_at,
+          goal_progress_id: progress.id,
+          progress_created_at: progress.created_at
+        };
+      });
+
+      setSessions(sessions);
     } catch (error) {
       console.error("세션 데이터 로드 오류:", error);
     }
@@ -208,6 +223,7 @@ export default function StudentDashboard() {
   const handleAddSession = async () => {
     try {
       setLoading(true);
+      // 1. smart_goals에 insert
       const { data, error } = await supabase
         .from('smart_goals')
         .insert([
@@ -219,12 +235,17 @@ export default function StudentDashboard() {
         .select();
 
       if (error) throw error;
-
-      // 이제 데이터베이스에 전부 저장되민플 결과만 상태로 업데이트
       if (data && data.length > 0) {
-        setSessions([data[0], ...sessions]);
+        const goalId = data[0].id;
+        // 2. goal_progress에 insert (percent/reflection 초기값)
+        await supabase.from('goal_progress').insert({
+          smart_goal_id: goalId,
+          percent: 0,
+          reflection: ''
+        });
       }
-
+      // 3. DB에서 세션 목록 새로고침
+      await fetchSessions();
       handleDialogClose();
     } catch (error) {
       console.error("세션 추가 오류:", error);
@@ -232,6 +253,7 @@ export default function StudentDashboard() {
       setLoading(false);
     }
   };
+
 
   // 세션 삭제 핸들러
   const handleDeleteSession = async (id: string) => {
