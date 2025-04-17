@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
 
 export async function POST(request: Request) {
   try {
@@ -12,13 +7,14 @@ export async function POST(request: Request) {
     
     console.log('API 요청 데이터:', { user_id, subject, description });
     
-    // 서비스 역할로 데이터 삽입 (RLS 우회)
-    // 타입 변환 없이 원래 user_id 사용
     console.log('삽입할 데이터:', { 
       user_id, 
       subject, 
       description 
     });
+
+    console.log('권한 문제 진단: 현재 수행하려는 작업 - smart_goals 테이블에 데이터 삽입');
+    console.log('테이블의 RLS 정책을 확인해주세요. 모든 사용자에게 삽입 권한이 있어야 합니다.');
     
     const { data, error } = await supabase
       .from('smart_goals')
@@ -31,7 +27,14 @@ export async function POST(request: Request) {
       
     if (error) {
       console.error('목표 생성 API 오류:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      // 자세한 오류 정보 제공
+      console.error('오류 상세:', {
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        message: error.message
+      });
+      return NextResponse.json({ error: error.message, details: error }, { status: 500 });
     }
     
     console.log('목표 생성 성공:', data);
@@ -50,7 +53,14 @@ export async function POST(request: Request) {
         
       if (progressError) {
         console.error('진행상황 추가 API 오류:', progressError);
-        return NextResponse.json({ error: progressError.message }, { status: 500 });
+        // 자세한 오류 정보 제공
+        console.error('오류 상세:', {
+          code: progressError.code,
+          details: progressError.details,
+          hint: progressError.hint,
+          message: progressError.message
+        });
+        return NextResponse.json({ error: progressError.message, details: progressError }, { status: 500 });
       }
       
       return NextResponse.json({ 
@@ -66,7 +76,8 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('API 예외 발생:', error);
     return NextResponse.json({ 
-      error: error.message || '알 수 없는 오류가 발생했습니다.' 
+      error: error.message || '알 수 없는 오류가 발생했습니다.',
+      stack: error.stack
     }, { status: 500 });
   }
 }
