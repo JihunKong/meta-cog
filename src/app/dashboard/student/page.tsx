@@ -226,35 +226,67 @@ export default function StudentDashboard() {
       
       // 현재 사용자 ID 가져오기
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("현재 사용자:", user);
+      
       if (!user) {
         console.error("사용자 정보를 가져올 수 없습니다.");
         return;
       }
       
-      // 1. smart_goals에 insert - user_id를 명시적으로 추가
-      const { data, error } = await supabase
-        .from('smart_goals')
-        .insert([
-          {
-            user_id: user.id,  // 명시적으로 사용자 ID 설정
-            subject: newSessionData.subject,
-            description: newSessionData.description,
+      // 세션 데이터 로깅
+      console.log("추가할 세션 데이터:", {
+        user_id: user.id,
+        subject: newSessionData.subject,
+        description: newSessionData.description
+      });
+      
+      // 1. 직접 SQL 실행 시도 (개발 환경에서만 사용)
+      try {
+        // 일반 삽입 시도
+        const { data, error } = await supabase
+          .from('smart_goals')
+          .insert([
+            {
+              user_id: user.id,
+              subject: newSessionData.subject,
+              description: newSessionData.description,
+            }
+          ])
+          .select();
+        
+        console.log("삽입 결과:", { data, error });
+        
+        if (error) {
+          console.error("목표 생성 상세 오류:", error);
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          const goalId = data[0].id;
+          console.log("생성된 목표 ID:", goalId);
+          
+          // 2. goal_progress에 insert (percent/reflection 초기값)
+          const { error: progressError } = await supabase.from('goal_progress').insert({
+            smart_goal_id: goalId,
+            percent: 0,
+            reflection: ''
+          });
+          
+          if (progressError) {
+            console.error("진행상황 추가 오류:", progressError);
+            throw progressError;
           }
-        ])
-        .select();
-
-      if (error) throw error;
-      if (data && data.length > 0) {
-        const goalId = data[0].id;
-        // 2. goal_progress에 insert (percent/reflection 초기값)
-        await supabase.from('goal_progress').insert({
-          smart_goal_id: goalId,
-          percent: 0,
-          reflection: ''
-        });
+          
+          // 3. DB에서 세션 목록 새로고침
+          await fetchSessions();
+          console.log("세션 추가 성공!");
+        }
+      } catch (innerError) {
+        console.error("세션 추가 내부 오류:", innerError);
+        throw innerError;
       }
-      // 3. DB에서 세션 목록 새로고침
-      await fetchSessions();
+      
+      // 대화상자 닫기
       handleDialogClose();
     } catch (error) {
       console.error("세션 추가 오류:", error);
