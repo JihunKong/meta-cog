@@ -117,6 +117,20 @@ export async function getUserRole() {
   }
 }
 
+import { supabase } from './supabase';
+
+export async function signInWithEmail(email: string, password: string) {
+  // ... (생략)
+}
+
+export async function signUpWithEmail(email: string, password: string, role: string) {
+  // ... (생략)
+}
+
+export async function getUserRole() {
+  // ... (생략)
+}
+
 export async function getUserName() {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -157,52 +171,19 @@ export async function getUserName() {
   }
 }
 
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.log('No authenticated user found for getName');
-      return '';
-    }
-    const email = user.email || '';
-    const emailName = email.split('@')[0];
-
-    // 1. student_names 테이블에서 이름 가져오기(없으면 자동 생성)
-    let { data: studentRow, error: studentError } = await supabase
-      .from('student_names')
-      .select('display_name')
-      .eq('email', email)
-      .single();
-    if (!studentRow && !studentError) {
-      // row가 없으면 자동 생성
-      const { error: insertError } = await supabase
-        .from('student_names')
-        .insert({ email, display_name: emailName });
-      if (!insertError) {
-        studentRow = { display_name: emailName };
-      }
-    }
-    if (studentRow && studentRow.display_name) {
-      return studentRow.display_name;
-    }
-    // fallback: 이메일 앞부분
-    return emailName;
-  } catch (error) {
-    console.error('Unexpected error in getUserName:', error);
-    return '';
-  }
-
-
-      } catch (studentNameQueryError) {
-        console.error('Failed to query student_names table:', studentNameQueryError);
-      }
-    }
-
-
-
 // Supabase 사용자 타입 정의
 interface User {
   id: string;
   email?: string;
+}
+
+// 로그인/회원가입 후 profiles row가 없으면 자동 생성
+export async function ensureProfile(user: User) {
+  // ... (생략)
+}
+
+export async function signOut() {
+  // ... (생략)
 }
 
 // 로그인/회원가입 후 profiles row가 없으면 자동 생성
