@@ -36,15 +36,15 @@ export async function GET(request: Request) {
     console.log('세션 데이터 요청:', { userId });
     
     // 서비스 역할로 데이터 조회 (RLS 우회)
-    // user_id를 문자열로 변환하여 비교 (타입 불일치 문제 해결)
-    console.log('세션 조회 매개변수:', { userId: userId.toString() });
+    // user_id를 UUID 형식으로 사용 (테이블 정의에 맞게)
+    console.log('세션 조회 매개변수:', { userId });
     
     // 정확한 테이블 구조에 맞게 조회
     // goal_progress는 smart_goal_id를 통해 연결
     const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
-      .eq('user_id', userId.toString())
+      .eq('user_id', userId) // UUID 형식으로 그대로 사용
       .order('created_at', { ascending: false });
       
     if (error) {
