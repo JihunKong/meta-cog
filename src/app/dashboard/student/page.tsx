@@ -134,34 +134,44 @@ export default function StudentDashboard() {
         return;
       }
 
-      console.log("Current user ID for sessions:", user.id);
-
-      // smart_goals + goal_progress JOIN 쿼리
-      const { data, error } = await supabase
-        .from('smart_goals')
-        .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // 통합 세션 데이터로 변환
-      const sessions = (data || []).map((row: any) => {
-        const progress = Array.isArray(row.goal_progress) && row.goal_progress.length > 0 ? row.goal_progress[0] : {};
-        return {
-          id: row.id,
-          user_id: row.user_id,
-          subject: row.subject,
-          description: row.description,
-          percent: progress.percent ?? 0,
-          reflection: progress.reflection ?? '',
-          created_at: row.created_at,
-          goal_progress_id: progress.id,
-          progress_created_at: progress.created_at
-        };
-      });
-
-      setSessions(sessions);
+      console.log("세션 데이터 요청 중 - 사용자 ID:", user.id);
+      
+      try {
+        // API 라우트를 통해 데이터 가져오기
+        const response = await fetch(`/api/sessions?userId=${encodeURIComponent(user.id)}`);
+        
+        console.log("세션 API 응답 상태 코드:", response.status);
+        
+        const result = await response.json();
+        console.log("세션 API 응답:", { success: result.success, count: result.data?.length || 0 });
+        
+        if (!response.ok) {
+          console.error("세션 API 오류:", result.error);
+          throw new Error(result.error || '세션 데이터 로드 실패');
+        }
+        
+        // 통합 세션 데이터로 변환
+        const sessions = (result.data || []).map((row: any) => {
+          const progress = Array.isArray(row.goal_progress) && row.goal_progress.length > 0 ? row.goal_progress[0] : {};
+          return {
+            id: row.id,
+            user_id: row.user_id,
+            subject: row.subject,
+            description: row.description,
+            percent: progress.percent ?? 0,
+            reflection: progress.reflection ?? '',
+            created_at: row.created_at,
+            goal_progress_id: progress.id,
+            progress_created_at: progress.created_at
+          };
+        });
+        
+        console.log("변환된 세션 데이터:", { count: sessions.length });
+        setSessions(sessions);
+      } catch (apiError) {
+        console.error("세션 API 호출 오류:", apiError);
+        throw apiError;
+      }
     } catch (error) {
       console.error("세션 데이터 로드 오류:", error);
     }
