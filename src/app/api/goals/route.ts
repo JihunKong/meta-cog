@@ -7,12 +7,18 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 console.log('API 라우트 초기화 - 환경 변수 확인:');
-console.log('URL 존재 여부:', !!supabaseUrl);
+console.log('URL:', supabaseUrl);
 console.log('Service Role Key 존재 여부:', !!serviceRoleKey);
 
+// 안전한 로깅을 위해 키의 일부만 출력
+if (serviceRoleKey) {
+  console.log('Service Role Key 시작 부분:', serviceRoleKey.substring(0, 10) + '...');
+}
+
+// 서비스 역할 키가 없을 경우 기본 클라이언트 사용 (개발 환경용)
 const supabaseAdmin = createClient(
-  supabaseUrl!,
-  serviceRoleKey!
+  supabaseUrl || 'https://ljrrinokzegzjbovssjy.supabase.co',
+  serviceRoleKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqcnJpbm9remVnempib3Zzc2p5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjExODgxNCwiZXhwIjoyMDU3Njk0ODE0fQ.dT1-dsN3MUeigfKRaK97UBg_pV7Cx88rh_dnwxlHiLY'
 );
 
 export async function POST(request: Request) {
