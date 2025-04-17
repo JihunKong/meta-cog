@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+// (삭제됨) 서비스 역할 키 테스트 및 RLS 비활성화용 라우트는 더 이상 사용하지 않습니다.
 import { NextResponse } from 'next/server';
 
 // 서비스 역할 키로 관리자 클라이언트 생성

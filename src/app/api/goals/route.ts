@@ -1,25 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-// 서비스 역할 키로 관리자 클라이언트 생성
-// Netlify 환경 변수에서 가져옴
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log('API 라우트 초기화 - 환경 변수 확인:');
-console.log('URL:', supabaseUrl);
-console.log('Service Role Key 존재 여부:', !!serviceRoleKey);
-
-// 안전한 로깅을 위해 키의 일부만 출력
-if (serviceRoleKey) {
-  console.log('Service Role Key 시작 부분:', serviceRoleKey.substring(0, 10) + '...');
-}
-
-// 서비스 역할 키가 없을 경우 기본 클라이언트 사용 (개발 환경용)
-const supabaseAdmin = createClient(
-  supabaseUrl || 'https://ljrrinokzegzjbovssjy.supabase.co',
-  serviceRoleKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqcnJpbm9remVnempib3Zzc2p5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjExODgxNCwiZXhwIjoyMDU3Njk0ODE0fQ.dT1-dsN3MUeigfKRaK97UBg_pV7Cx88rh_dnwxlHiLY'
-);
+const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +20,7 @@ export async function POST(request: Request) {
       description 
     });
     
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('smart_goals')
       .insert([{ 
         user_id: user_id.toString(), 
@@ -55,7 +40,7 @@ export async function POST(request: Request) {
       const goalId = data[0].id;
       
       // goal_progress에 데이터 삽입
-      const { error: progressError } = await supabaseAdmin
+      const { error: progressError } = await supabase
         .from('goal_progress')
         .insert({ 
           smart_goal_id: goalId, 
