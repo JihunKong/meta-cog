@@ -25,35 +25,49 @@ export async function GET(request: Request) {
     // 주의: 이 API는 보안상 위험할 수 있으므로 개발 환경에서만 사용해야 합니다.
     // 실제 프로덕션 환경에서는 적절한 RLS 정책을 사용하는 것이 좋습니다.
     
-    // smart_goals 테이블에 대한 RLS 비활성화
-    const { error: disableSmartGoalsRlsError } = await supabaseAdmin.rpc(
-      'alter_table_disable_rls',
-      { table_name: 'smart_goals' }
-    );
+    // 오류 로그를 확인하기 위한 테스트 쿼리 실행
+    console.log('테스트 쿼리 실행 중...');
     
-    if (disableSmartGoalsRlsError) {
-      console.error('smart_goals 테이블 RLS 비활성화 오류:', disableSmartGoalsRlsError);
-      
-      // SQL 쿼리를 직접 실행하는 대체 방법
-      const { error: sqlError } = await supabaseAdmin.rpc(
-        'execute_sql',
-        { sql: 'ALTER TABLE "public"."smart_goals" DISABLE ROW LEVEL SECURITY;' }
-      );
-      
-      if (sqlError) {
-        console.error('SQL 실행 오류:', sqlError);
-        return NextResponse.json({ error: sqlError.message }, { status: 500 });
-      }
+    // smart_goals 테이블에서 데이터 조회 시도
+    const { data: smartGoalsData, error: smartGoalsError } = await supabaseAdmin
+      .from('smart_goals')
+      .select('*')
+      .limit(1);
+    
+    if (smartGoalsError) {
+      console.error('smart_goals 테이블 조회 오류:', smartGoalsError);
+    } else {
+      console.log('smart_goals 테이블 조회 성공:', { count: smartGoalsData?.length || 0 });
     }
     
-    // goal_progress 테이블에 대한 RLS 비활성화
-    const { error: disableGoalProgressRlsError } = await supabaseAdmin.rpc(
-      'alter_table_disable_rls',
-      { table_name: 'goal_progress' }
-    );
+    // 새 데이터 삽입 시도
+    const { data: insertData, error: insertError } = await supabaseAdmin
+      .from('smart_goals')
+      .insert([{
+        user_id: '00000000-0000-0000-0000-000000000000', // 더미 ID
+        subject: 'RLS 테스트',
+        description: 'RLS 비활성화 테스트를 위한 더미 데이터'
+      }])
+      .select();
     
-    if (disableGoalProgressRlsError) {
-      console.error('goal_progress 테이블 RLS 비활성화 오류:', disableGoalProgressRlsError);
+    if (insertError) {
+      console.error('데이터 삽입 오류:', insertError);
+    } else {
+      console.log('데이터 삽입 성공:', insertData);
+    }
+    
+    // 오류 메시지 분석
+    const errorMessage = smartGoalsError?.message || insertError?.message || '';
+    const isPermissionDenied = errorMessage.includes('permission denied');
+    
+    if (isPermissionDenied) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'RLS 정책이 활성화되어 있어 접근이 거부되었습니다. Supabase 대시보드에서 RLS를 비활성화하거나 적절한 정책을 설정해야 합니다.',
+        error: errorMessage,
+        solution: `1. Supabase 대시보드에서 smart_goals 테이블의 RLS를 비활성화하세요: ALTER TABLE "public"."smart_goals" DISABLE ROW LEVEL SECURITY;
+2. 또는 적절한 RLS 정책을 설정하세요: CREATE POLICY "Users can only access their own goals" ON "public"."smart_goals" FOR ALL USING (auth.uid()::text = user_id::text);`
+      }, { status: 403 });
     }
     
     return NextResponse.json({ 
