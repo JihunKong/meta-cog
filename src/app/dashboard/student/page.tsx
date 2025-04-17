@@ -247,7 +247,7 @@ export default function StudentDashboard() {
           .from('smart_goals')
           .insert([
             {
-              user_id: user.id,
+              user_id: user.id.toString(),  // 명시적으로 문자열로 변환
               subject: newSessionData.subject,
               description: newSessionData.description,
             }
