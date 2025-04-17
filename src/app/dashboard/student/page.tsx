@@ -223,11 +223,20 @@ export default function StudentDashboard() {
   const handleAddSession = async () => {
     try {
       setLoading(true);
-      // 1. smart_goals에 insert
+      
+      // 현재 사용자 ID 가져오기
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("사용자 정보를 가져올 수 없습니다.");
+        return;
+      }
+      
+      // 1. smart_goals에 insert - user_id를 명시적으로 추가
       const { data, error } = await supabase
         .from('smart_goals')
         .insert([
           {
+            user_id: user.id,  // 명시적으로 사용자 ID 설정
             subject: newSessionData.subject,
             description: newSessionData.description,
           }
