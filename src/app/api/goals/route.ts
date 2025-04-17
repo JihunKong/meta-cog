@@ -3,9 +3,16 @@ import { NextResponse } from 'next/server';
 
 // 서비스 역할 키로 관리자 클라이언트 생성
 // Netlify 환경 변수에서 가져옴
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+console.log('API 라우트 초기화 - 환경 변수 확인:');
+console.log('URL 존재 여부:', !!supabaseUrl);
+console.log('Service Role Key 존재 여부:', !!serviceRoleKey);
+
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  supabaseUrl!,
+  serviceRoleKey!
 );
 
 export async function POST(request: Request) {
