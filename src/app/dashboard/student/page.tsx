@@ -252,33 +252,47 @@ export default function StudentDashboard() {
       // 서버 API 라우트를 통한 데이터 삽입 (서비스 역할 키 사용)
       console.log("서버 API 호출 시작");
       
-      // API 호출
-      const response = await fetch('/api/goals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let result;
+      
+      try {
+        // 요청 데이터 로깅
+        const requestData = {
           user_id: user.id,
           subject: newSessionData.subject,
           description: newSessionData.description
-        })
-      });
-      
-      const result = await response.json();
-      console.log("서버 API 응답:", result);
-      
-      if (!response.ok) {
-        console.error("서버 API 오류:", result.error);
-        throw new Error(result.error || '세션 추가 실패');
+        };
+        console.log("요청 데이터:", requestData);
+        
+        // API 호출
+        const response = await fetch('/api/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData)
+        });
+        
+        console.log("응답 상태 코드:", response.status);
+        console.log("응답 헤더:", Object.fromEntries([...response.headers.entries()]));
+        
+        result = await response.json();
+        console.log("서버 API 응답:", result);
+        
+        if (!response.ok) {
+          console.error("서버 API 오류:", result.error);
+          throw new Error(result.error || '세션 추가 실패');
+        }
+      } catch (apiError) {
+        console.error("서버 API 호출 중 예외 발생:", apiError);
+        throw apiError;
       }
       
-      if (result.success) {
+      if (result && result.success) {
         // DB에서 세션 목록 새로고침
         await fetchSessions();
         console.log("세션 추가 성공!");
         
         // 대화상자 닫기
         handleDialogClose();
-      } else {
+      } else if (result) {
         console.error('세션 추가 실패:', result);
       }
     } catch (error) {
