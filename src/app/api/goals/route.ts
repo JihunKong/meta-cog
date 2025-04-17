@@ -28,9 +28,9 @@ export async function POST(request: Request) {
     console.log('API 요청 데이터:', { user_id, subject, description });
     
     // 서비스 역할로 데이터 삽입 (RLS 우회)
-    // user_id를 UUID 형식으로 사용 (테이블 정의에 맞게)
+    // user_id를 문자열로 변환하여 저장 (RLS 정책에 맞게)
     console.log('삽입할 데이터:', { 
-      user_id, // 문자열로 변환하지 않고 그대로 사용
+      user_id: user_id.toString(), 
       subject, 
       description 
     });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .insert([{ 
-        user_id, // UUID 형식으로 그대로 사용
+        user_id: user_id.toString(), 
         subject, 
         description 
       }])
