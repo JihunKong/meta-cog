@@ -19,8 +19,6 @@ export async function signInWithEmail(email: string, password: string) {
     
     if (error) {
       console.error('로그인 오류:', error);
-      console.error('오류 코드:', error.status);
-      console.error('오류 메시지:', error.message);
       return { data, error };
     }
     
@@ -33,8 +31,6 @@ export async function signInWithEmail(email: string, password: string) {
       } catch (profileError) {
         console.error('프로필 처리 중 오류:', profileError);
       }
-    } else {
-      console.warn('로그인 성공했지만 사용자 정보 없음');
     }
     
     return { data, error };
@@ -48,7 +44,9 @@ export async function signInWithEmail(email: string, password: string) {
 export async function signUpWithEmail(email: string, password: string, role: string) {
   const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role } } });
   if (error || !data.user) return { data, error };
-  await supabase.from('profiles').upsert({ id: data.user.id, email, role });
+  
+  // 프로필 생성 (RLS 우회를 위해 supabaseAdmin 사용)
+  await supabaseAdmin.from('profiles').upsert({ id: data.user.id, email, role });
   return { data, error };
 }
 
@@ -59,8 +57,6 @@ export async function getUserRole(): Promise<UserRole> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("사용자 정보가 없습니다.");
 
-    console.log("로그인 사용자:", user.id);
-    
     // 프로필 테이블에서 역할 조회 (RLS 우회용 서비스 키 사용)
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -74,33 +70,25 @@ export async function getUserRole(): Promise<UserRole> {
       
       // 프로필이 없는 경우, 기본 프로필 생성 시도
       if (profileError.code === 'PGRST116') {
-        console.log("프로필 생성 시작");
-        
         // 새 프로필 생성 (기본값 student)
         const { data: newProfile, error: createError } = await supabaseAdmin
           .from('profiles')
-          .insert([
-            { 
-              id: user.id, 
-              email: user.email, 
-              role: 'student' 
-            }
-          ])
+          .insert([{ 
+            id: user.id, 
+            email: user.email, 
+            role: 'student' 
+          }])
           .select()
           .single();
         
         if (createError) {
           console.error("프로필 생성 오류:", createError);
-          console.error("오류 코드:", createError.code);
-          console.error("오류 메시지:", createError.message);
-          console.error("오류 세부 정보:", createError.details);
           return 'student'; // 기본값
         }
         
         return newProfile?.role as UserRole || 'student';
       }
       
-      // 다른 오류인 경우 기본값 반환
       return 'student';
     }
     
@@ -145,43 +133,25 @@ export async function getUserName(): Promise<string | null> {
 // 로그인/회원가입 후 profiles row가 없으면 자동 생성
 export async function ensureProfile(user: User) {
   if (!user || !user.email) {
-    console.log('유효하지 않은 사용자 정보:', user);
+    console.log('유효하지 않은 사용자 정보');
     return;
   }
-  
-  console.log('프로필 확인 중:', user.id);
   
   try {
     // 프로필 존재 여부 확인 (RLS 우회를 위해 supabaseAdmin 사용)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id')
-      .eq('id', user.id.toString()) // 명시적 문자열 변환
+      .eq('id', user.id)
       .single();
-    
-    if (profileError) {
-      console.log('프로필 조회 오류:', profileError);
-    }
     
     // 프로필이 없으면 생성 (RLS 우회를 위해 supabaseAdmin 사용)
     if (!profile) {
-      console.log('프로필 생성 시작');
-      const { data: insertData, error: insertError } = await supabaseAdmin.from('profiles').insert({
-        id: user.id.toString(), // 명시적 문자열 변환
+      await supabaseAdmin.from('profiles').insert({
+        id: user.id,
         email: user.email,
-        role: 'student', // 소문자로 통일
+        role: 'student',
       });
-      
-      if (insertError) {
-        console.error('프로필 생성 오류:', insertError);
-        console.error('오류 코드:', insertError.code);
-        console.error('오류 메시지:', insertError.message);
-        console.error('오류 세부 정보:', insertError.details);
-      } else {
-        console.log('프로필 생성 성공');
-      }
-    } else {
-      console.log('기존 프로필 발견:', profile.id);
     }
   } catch (error) {
     console.error('프로필 확인/생성 중 예외 발생:', error);
