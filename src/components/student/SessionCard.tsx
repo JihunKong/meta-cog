@@ -8,7 +8,7 @@ import {
 
 interface GoalSession {
   id: string;
-  goal_id: string;
+  smart_goal_id: string;
   session_no: number;
   percent: number;
   reflection: string;
