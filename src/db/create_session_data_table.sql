@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS smart_goals (
 -- 각 목표별 달성률과 반성문을 저장
 CREATE TABLE IF NOT EXISTS goal_progress (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  goal_id UUID REFERENCES smart_goals(id) ON DELETE CASCADE,
+  smart_goal_id UUID REFERENCES smart_goals(id) ON DELETE CASCADE,
   percent INTEGER DEFAULT 0,               -- 목표 달성률 (0-100)
   reflection TEXT DEFAULT '',              -- 학습 반성문
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -90,11 +90,11 @@ CREATE POLICY "학생 본인 진행도 관리 권한" ON goal_progress
   USING (
     EXISTS (
       SELECT 1 FROM smart_goals
-      WHERE smart_goals.id = goal_progress.goal_id
+      WHERE smart_goals.id = goal_progress.smart_goal_id
       AND smart_goals.user_id = auth.uid()
     )
   );
 
 -- 인덱스 생성으로 성능 향상
 CREATE INDEX idx_smart_goals_user_id ON smart_goals(user_id);
-CREATE INDEX idx_goal_progress_goal_id ON goal_progress(goal_id);
+CREATE INDEX idx_goal_progress_smart_goal_id ON goal_progress(smart_goal_id);

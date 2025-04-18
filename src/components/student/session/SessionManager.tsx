@@ -26,7 +26,7 @@ interface Goal {
 // 목표 진행 상황 인터페이스
 interface Progress {
   id: string;
-  goal_id: string;
+  smart_goal_id: string;
   percent: number; // 달성률 (0-100)
   reflection: string; // 반성문
   created_at: string;
@@ -105,7 +105,7 @@ export default function SessionManager({
         const { data, error } = await supabase
           .from('goal_progress')
           .insert([{
-            goal_id: goalId,
+            smart_goal_id: goalId,
             percent,
             reflection
           }])
@@ -171,7 +171,7 @@ export default function SessionManager({
       const { data: progressData, error: progressError } = await supabase
         .from('goal_progress')
         .insert([{
-          goal_id: goalData[0].id,
+          smart_goal_id: goalData[0].id,
           percent: 0,
           reflection: ''
         }])
@@ -259,7 +259,7 @@ export default function SessionManager({
         const { data: progressData, error: progressError } = await supabase
           .from('goal_progress')
           .insert([{
-            goal_id: id,
+            smart_goal_id: id,
             percent: updatedData.percent,
             reflection: updatedData.reflection
           }])
@@ -377,7 +377,7 @@ export default function SessionManager({
         const { data: progressData, error: progressError } = await supabase
           .from('goal_progress')
           .select('*')
-          .eq('goal_id', sessionId)
+          .eq('smart_goal_id', sessionId)
           .order('created_at', { ascending: false })
           .limit(1);
           
