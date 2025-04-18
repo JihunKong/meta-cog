@@ -1,4 +1,10 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+
+// 서비스 키를 사용하는 관리자 전용 클라이언트 직접 생성
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // 사용자 타입 정의
 interface User {
