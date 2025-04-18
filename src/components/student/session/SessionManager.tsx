@@ -316,36 +316,59 @@ export default function SessionManager({
       setLoading(true);
       setError("");
       
-      // 삭제할 세션 찾기
-      const sessionToDelete = sessions.find(s => s.id === deleteTargetId);
+      console.log('세션 삭제 시작:', deleteTargetId);
       
-      // 1. 호이스팅된 경우 goal_progress 객체 삭제
-      // (cascade로 자동 삭제되지만 먼저 시도)
-      if (sessionToDelete?.progress_id) {
-        // 진행도 데이터 먼저 삭제 (안전을 위해)
-        const { error: progressError } = await supabase
-          .from('goal_progress')
-          .delete()
-          .eq('id', sessionToDelete.progress_id);
-          
-        if (progressError) {
-          console.warn('진행도 삭제 시 오류 (동시 삭제 될 수 있음):', progressError);
+      // 1. 전체 goal_progress 데이터 먼저 조회
+      const { data: progressData, error: fetchError } = await supabase
+        .from('goal_progress')
+        .select('id')
+        .eq('smart_goal_id', deleteTargetId);
+        
+      if (fetchError) {
+        console.error('goal_progress 데이터 조회 오류:', fetchError);
+      } else {
+        console.log(`${progressData?.length || 0}개의 연결된 progress 항목 발견`);
+        
+        // 2. 관련 progress 데이터가 있는 경우 먼저 삭제
+        if (progressData && progressData.length > 0) {
+          // 각 progress 항목 삭제
+          for (const progress of progressData) {
+            console.log('progress 삭제 시도:', progress.id);
+            
+            const { error: deleteProgressError } = await supabase
+              .from('goal_progress')
+              .delete()
+              .eq('id', progress.id);
+              
+            if (deleteProgressError) {
+              console.error('progress 삭제 오류:', deleteProgressError);
+            }
+          }
         }
       }
       
-      // 2. 목표 삭제 (smart_goals 테이블)
-      // ON DELETE CASCADE가 있으므로 연관된 goal_progress 데이터도 자동 삭제
+      // 3. smart_goals 테이블 삭제
+      console.log('smart_goals 삭제 시도:', deleteTargetId);
       const { error } = await supabase
         .from('smart_goals')
         .delete()
         .eq('id', deleteTargetId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('smart_goals 삭제 오류:', error);
+        if (error.message.includes('violates foreign key constraint')) {
+          setError('외래 키 제약 조건으로 인해 삭제할 수 없습니다. 관련 데이터를 먼저 삭제해주세요.');
+          throw new Error('외래 키 제약 조건 위반');
+        }
+        throw error;
+      }
       
-      // 3. 로컬 스토리지에서 데이터 삭제 (마이그레이션 데이터가 있을 경우)
+      console.log('삭제 성공');
+      
+      // 4. 로컬 스토리지에서 데이터 삭제 (마이그레이션 데이터가 있을 경우)
       localStorage.removeItem(`session_data_${deleteTargetId}`);
       
-      // 4. UI 업데이트
+      // 5. UI 업데이트
       setSessions(sessions.filter(s => s.id !== deleteTargetId));
       setDeleteConfirmOpen(false);
       setDeleteTargetId(null);

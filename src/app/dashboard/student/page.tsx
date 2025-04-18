@@ -135,7 +135,9 @@ export default function StudentDashboard() {
       }
 
       console.log("세션 데이터 요청 중 - 사용자 ID:", user.id);
-      console.log("사용자 ID 타입:", typeof user.id); // 사용자 ID 타입 확인
+      
+      // 세션 데이터 초기화 (중복 방지)
+      setSessions([]);
       
       try {
         // 현재 사용자의 인증 세션 가져오기
@@ -149,7 +151,6 @@ export default function StudentDashboard() {
         
         // API 라우트를 통해 데이터 가져오기 (인증 토큰 포함)
         console.log(`API 요청 URL: /api/sessions?userId=${encodeURIComponent(user.id)}`);
-        console.log("토큰 정보:", { accessToken: session.access_token ? `${session.access_token.substring(0, 10)}...` : '없음' });
         
         const response = await fetch(`/api/sessions?userId=${encodeURIComponent(user.id)}`, {
           headers: {
@@ -160,31 +161,72 @@ export default function StudentDashboard() {
         console.log("세션 API 응답 상태 코드:", response.status);
         
         const result = await response.json();
-        console.log("세션 API 응답:", { success: result.success, error: result.error, details: result.details });
         
         if (!response.ok) {
           console.error("세션 API 오류:", result.error, result.details);
           throw new Error(result.error || '세션 데이터 로드 실패');
         }
         
-        // 통합 세션 데이터로 변환
-        const sessions = (result.data || []).map((row: any) => {
-          const progress = Array.isArray(row.goal_progress) && row.goal_progress.length > 0 ? row.goal_progress[0] : {};
-          return {
+        console.log("API 응답 데이터 구조:", {
+          dataLength: result.data?.length || 0,
+          sampleItem: result.data?.length > 0 ? {
+            id: result.data[0].id,
+            subject: result.data[0].subject,
+            hasProgress: !!result.data[0].goal_progress?.length,
+            progressItems: result.data[0].goal_progress?.length || 0
+          } : null
+        });
+        
+        // 중복 방지를 위해 ID 세트 유지
+        const processedIds = new Set<string>();
+        
+        // 통합 세션 데이터로 변환 (중복 제거)
+        const sessions = (result.data || []).reduce((acc: any[], row: any) => {
+          // 이미 처리된 ID 건너뛰기
+          if (processedIds.has(row.id)) {
+            return acc;
+          }
+          
+          // ID 기록
+          processedIds.add(row.id);
+          
+          // 진행 데이터 추출 (배열인 경우만 처리)
+          const progressArray = Array.isArray(row.goal_progress) ? row.goal_progress : [];
+          
+          // 가장 최근 진행 데이터 찾기
+          let latestProgress = null;
+          if (progressArray.length > 0) {
+            latestProgress = progressArray.reduce((latest: any, current: any) => {
+              if (!latest) return current;
+              return new Date(current.created_at) > new Date(latest.created_at) ? current : latest;
+            }, null);
+          }
+          
+          // 최종 세션 데이터 생성
+          acc.push({
             id: row.id,
             user_id: row.user_id,
             subject: row.subject,
             description: row.description,
-            percent: progress.percent ?? 0,
-            reflection: progress.reflection ?? '',
+            percent: latestProgress?.percent ?? 0,
+            reflection: latestProgress?.reflection ?? '',
             created_at: row.created_at,
-            goal_progress_id: progress.id,
-            progress_created_at: progress.created_at
-          };
-        });
+            goal_progress_id: latestProgress?.id,
+            progress_created_at: latestProgress?.created_at
+          });
+          
+          return acc;
+        }, []);
         
         console.log("변환된 세션 데이터:", { count: sessions.length });
-        setSessions(sessions);
+        
+        // 생성일 기준으로 정렬 (최신순)
+        const sortedSessions = [...sessions].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        // 상태 업데이트
+        setSessions(sortedSessions);
       } catch (apiError) {
         console.error("세션 API 호출 오류:", apiError);
         throw apiError;
@@ -343,22 +385,60 @@ export default function StudentDashboard() {
     }
   };
 
-
   // 세션 삭제 핸들러
   const handleDeleteSession = async (id: string) => {
     try {
       setLoading(true);
+      
+      console.log('세션 삭제 시작:', id);
+      
+      // 1. 먼저 해당 목표와 연결된 모든 진행 데이터 찾기
+      const { data: progressData, error: fetchError } = await supabase
+        .from('goal_progress')
+        .select('id')
+        .eq('smart_goal_id', id);
+        
+      if (fetchError) {
+        console.error('연결된 progress 데이터 조회 오류:', fetchError);
+      } else {
+        console.log(`${progressData?.length || 0}개의 연결된 progress 항목 발견`);
+        
+        // 2. 각 진행 데이터 삭제
+        if (progressData && progressData.length > 0) {
+          for (const progress of progressData) {
+            console.log('progress 삭제:', progress.id);
+            
+            const { error: deleteProgressError } = await supabase
+              .from('goal_progress')
+              .delete()
+              .eq('id', progress.id);
+              
+            if (deleteProgressError) {
+              console.error('progress 삭제 실패:', deleteProgressError);
+            }
+          }
+        }
+      }
+      
+      // 3. 목표 데이터 삭제
+      console.log('smart_goal 삭제:', id);
       const { error } = await supabase
         .from('smart_goals')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('smart_goal 삭제 실패:', error);
+        throw error;
+      }
 
-      // 로컬 상태만 업데이트 (데이터베이스에서는 이미 삭제됨)
+      console.log('세션 삭제 완료');
+      
+      // 로컬 상태 업데이트
       setSessions(sessions.filter(s => s.id !== id));
-    } catch (error) {
+    } catch (error: any) {
       console.error("세션 삭제 오류:", error);
+      alert(`세션 삭제 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
     } finally {
       setLoading(false);
     }
