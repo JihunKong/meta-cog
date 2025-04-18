@@ -152,8 +152,8 @@ export async function ensureProfile(user: User) {
   console.log('프로필 확인 중:', user.id);
   
   try {
-    // 프로필 존재 여부 확인
-    const { data: profile, error: profileError } = await supabase
+    // 프로필 존재 여부 확인 (RLS 우회를 위해 supabaseAdmin 사용)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('id', user.id.toString()) // 명시적 문자열 변환
@@ -163,13 +163,13 @@ export async function ensureProfile(user: User) {
       console.log('프로필 조회 오류:', profileError);
     }
     
-    // 프로필이 없으면 생성
+    // 프로필이 없으면 생성 (RLS 우회를 위해 supabaseAdmin 사용)
     if (!profile) {
       console.log('프로필 생성 시작');
-      const { data: insertData, error: insertError } = await supabase.from('profiles').insert({
+      const { data: insertData, error: insertError } = await supabaseAdmin.from('profiles').insert({
         id: user.id.toString(), // 명시적 문자열 변환
         email: user.email,
-        role: 'STUDENT',
+        role: 'student', // 소문자로 통일
       });
       
       if (insertError) {
