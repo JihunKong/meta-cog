@@ -3,25 +3,17 @@
 import { createClient } from '@supabase/supabase-js';
 
 // 환경 변수에서 Supabase 설정 가져오기
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // 일반 사용자용 클라이언트 (RLS가 적용됨)
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
-);
-
-// 브라우저 환경 여부 확인
-const isBrowser = typeof window !== 'undefined';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // 관리자용 클라이언트 (서버에서만 사용)
-export const supabaseAdmin = !isBrowser && process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(
-      supabaseUrl || '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-  : supabase;
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
+);
 
 // 환경 변수 디버깅용 로그
 if (process.env.NODE_ENV !== 'production') {
