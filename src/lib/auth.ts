@@ -114,11 +114,12 @@ export async function getUserName(): Promise<string | null> {
     const { data: studentData, error: studentError } = await supabaseAdmin
       .from('student_names')
       .select('display_name')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
     
     // 학생 정보가 없는 경우 기본 이름 반환
     if (studentError || !studentData) {
+      console.log('학생 이름 조회 오류 또는 데이터 없음:', studentError ? studentError.message : '데이터 없음');
       return defaultName;
     }
     
