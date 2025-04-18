@@ -135,18 +135,21 @@ export default function StudentDashboard() {
       }
 
       console.log("세션 데이터 요청 중 - 사용자 ID:", user.id);
+      console.log("사용자 ID 타입:", typeof user.id); // 사용자 ID 타입 확인
       
       try {
         // API 라우트를 통해 데이터 가져오기
+        console.log(`API 요청 URL: /api/sessions?userId=${encodeURIComponent(user.id)}`);
+        
         const response = await fetch(`/api/sessions?userId=${encodeURIComponent(user.id)}`);
         
         console.log("세션 API 응답 상태 코드:", response.status);
         
         const result = await response.json();
-        console.log("세션 API 응답:", { success: result.success, count: result.data?.length || 0 });
+        console.log("세션 API 응답:", { success: result.success, error: result.error, details: result.details });
         
         if (!response.ok) {
-          console.error("세션 API 오류:", result.error);
+          console.error("세션 API 오류:", result.error, result.details);
           throw new Error(result.error || '세션 데이터 로드 실패');
         }
         

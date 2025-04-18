@@ -1,11 +1,16 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
+// 이 함수는 서버에서 동적으로 실행되어야 함을 명시
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { user_id, subject, description } = await request.json();
     
     console.log('API 요청 데이터:', { user_id, subject, description });
+    console.log('user_id 타입:', typeof user_id);
+    console.log('user_id 값:', user_id);
     
     console.log('삽입할 데이터:', { 
       user_id, 

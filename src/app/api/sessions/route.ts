@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
+// 이 함수는 서버에서 동적으로 실행되어야 함을 명시
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     // URL에서 사용자 ID 파라미터 추출
