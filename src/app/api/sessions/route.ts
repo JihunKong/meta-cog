@@ -48,17 +48,12 @@ export async function GET(request: Request) {
       const { data, error } = await supabaseAdmin
         .from('smart_goals')
         .select(`
-          id, 
-          user_id, 
-          subject, 
-          description, 
-          created_at, 
-          goal_progress!smart_goal_id(
-            id, 
-            percent, 
-            reflection, 
-            created_at
-          )
+          id,
+          user_id,
+          subject,
+          description,
+          created_at,
+          goal_progress(id, percent, reflection, created_at)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
