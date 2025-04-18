@@ -138,10 +138,24 @@ export default function StudentDashboard() {
       console.log("사용자 ID 타입:", typeof user.id); // 사용자 ID 타입 확인
       
       try {
-        // API 라우트를 통해 데이터 가져오기
-        console.log(`API 요청 URL: /api/sessions?userId=${encodeURIComponent(user.id)}`);
+        // 현재 사용자의 인증 세션 가져오기
+        const { data: { session } } = await supabase.auth.getSession();
         
-        const response = await fetch(`/api/sessions?userId=${encodeURIComponent(user.id)}`);
+        if (!session) {
+          console.error("인증 세션이 없습니다. 다시 로그인하세요.");
+          router.push('/login');
+          return;
+        }
+        
+        // API 라우트를 통해 데이터 가져오기 (인증 토큰 포함)
+        console.log(`API 요청 URL: /api/sessions?userId=${encodeURIComponent(user.id)}`);
+        console.log("토큰 정보:", { accessToken: session.access_token ? `${session.access_token.substring(0, 10)}...` : '없음' });
+        
+        const response = await fetch(`/api/sessions?userId=${encodeURIComponent(user.id)}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
         
         console.log("세션 API 응답 상태 코드:", response.status);
         
@@ -268,6 +282,15 @@ export default function StudentDashboard() {
       let result;
       
       try {
+        // 현재 사용자의 인증 세션 가져오기
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          console.error("인증 세션이 없습니다. 다시 로그인하세요.");
+          router.push('/login');
+          return;
+        }
+        
         // 요청 데이터 로깅
         const requestData = {
           user_id: user.id,
@@ -276,11 +299,15 @@ export default function StudentDashboard() {
         };
         console.log("요청 데이터:", requestData);
         console.log("사용자 ID 타입:", typeof user.id);
+        console.log("토큰 정보:", { accessToken: session.access_token ? `${session.access_token.substring(0, 10)}...` : '없음' });
         
-        // API 호출
+        // API 호출 (인증 토큰 포함)
         const response = await fetch('/api/goals', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
           body: JSON.stringify(requestData)
         });
         
