@@ -1,9 +1,29 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
   const { searchParams } = new URL(request.url);
   const student_id = searchParams.get("student_id");
   const smart_goal_id = searchParams.get("smart_goal_id");
@@ -78,7 +98,25 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
 
   try {
     const { student_id, smart_goal_id, feedback } = await request.json();
@@ -149,7 +187,25 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
 
   try {
     const { id, feedback } = await request.json();
@@ -238,7 +294,26 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const cookieStore = cookies();
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
+  
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
