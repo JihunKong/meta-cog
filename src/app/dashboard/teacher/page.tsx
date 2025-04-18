@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 interface Student {
   user_id: string;
   email: string;
-  name: string;
+  display_name: string;
   last_login: string;
 }
 
@@ -128,22 +128,22 @@ export default function TeacherDashboard() {
       }
       
       // 학생 이름 매핑 생성
-      const studentNamesMap: Record<string, any> = {};
+      const studentNamesMap: Record<string, {displayName: string, grade?: string, class?: string, studentNumber?: string}> = {};
       if (studentNames && studentNames.length > 0) {
         studentNames.forEach(student => {
           if (student.email) {
-            studentNamesMap[student.email] = {
-              displayName: student.display_name,
-              grade: student.grade,
-              class: student.class,
-              studentNumber: student.student_number
+            studentNamesMap[student.email as string] = {
+              displayName: student.display_name as string,
+              grade: student.grade as string,
+              class: student.class as string,
+              studentNumber: student.student_number as string
             };
           }
         });
       }
       
       // User 테이블에서 추가 정보 가져오기
-      const ids = profiles.map(p => p.user_id);
+      const ids = profiles.map(p => p.user_id as string);
       const { data: userRows, error: userError } = await supabase
         .from('User')
         .select('id, name')
@@ -157,7 +157,7 @@ export default function TeacherDashboard() {
       const userNameMap: Record<string, string> = {};
       if (userRows && userRows.length > 0) {
         userRows.forEach(user => {
-          if (user.name) userNameMap[user.id] = user.name;
+          if (user.name) userNameMap[user.id as string] = user.name as string;
         });
       }
       
@@ -167,8 +167,8 @@ export default function TeacherDashboard() {
         let displayInfo = "";
         
         // 1. student_names 테이블에서 이름 찾기 (우선순위 1)
-        if (profile.email && studentNamesMap[profile.email]) {
-          const studentInfo = studentNamesMap[profile.email];
+        if (profile.email && studentNamesMap[profile.email as string]) {
+          const studentInfo = studentNamesMap[profile.email as string];
           displayName = studentInfo.displayName;
           
           // 학년/반/번호 정보가 있으면 부가 정보로 추가
@@ -178,18 +178,18 @@ export default function TeacherDashboard() {
         }
         
         // 2. User 테이블에서 이름 찾기 (우선순위 2)
-        if (!displayName && userNameMap[profile.user_id]) {
-          displayName = userNameMap[profile.user_id];
+        if (!displayName && userNameMap[profile.user_id as string]) {
+          displayName = userNameMap[profile.user_id as string];
         }
         
         // 3. profiles 테이블 자체 이름 사용 (우선순위 3)
         if (!displayName && profile.name) {
-          displayName = profile.name;
+          displayName = profile.name as string;
         }
         
         // 4. 이메일에서 추출 (최후 수단)
         if (!displayName && profile.email) {
-          displayName = profile.email.split('@')[0];
+          displayName = (profile.email as string).split('@')[0];
         }
         
         // 최종 이름 결정
@@ -197,10 +197,10 @@ export default function TeacherDashboard() {
         const finalDisplayName = displayInfo ? `${finalName} (${displayInfo})` : finalName;
         
         return {
-          user_id: profile.user_id,
-          email: profile.email || "이메일 없음",
-          name: finalDisplayName,
-          last_login: new Date(profile.created_at).toLocaleDateString() || "-"
+          user_id: profile.user_id as string,
+          email: profile.email as string || "이메일 없음",
+          display_name: finalDisplayName,
+          last_login: new Date(profile.created_at as string).toLocaleDateString() || "-"
         };
       });
       
@@ -225,7 +225,7 @@ export default function TeacherDashboard() {
       
       // 각 학생별로 목표 가져오기
       for (const student of studentsList) {
-        console.log(`학생 ${student.name}(${student.user_id}) 목표 조회 중...`);
+        console.log(`학생 ${student.display_name}(${student.user_id}) 목표 조회 중...`);
         const { data: goals, error } = await supabase
           .from('smart_goals')
           .select('id, subject, description, created_at')
@@ -237,10 +237,10 @@ export default function TeacherDashboard() {
         }
         
         if (goals && goals.length > 0) {
-          console.log(`학생 ${student.name}의 목표 ${goals.length}개 발견`);
+          console.log(`학생 ${student.display_name}의 목표 ${goals.length}개 발견`);
           goalsData[student.user_id] = goals;
         } else {
-          console.log(`학생 ${student.name}의 목표 없음`);
+          console.log(`학생 ${student.display_name}의 목표 없음`);
         }
       }
       
@@ -283,12 +283,12 @@ export default function TeacherDashboard() {
               
               // 반성문이 있는 세션만 반성문 데이터로 추가
               const validReflections = sessions
-                .filter(s => s.reflection && s.reflection.trim() !== '')
+                .filter(s => s.reflection && (s.reflection as string).trim() !== '')
                 .map(session => ({
                   id: session.id,
                   goalId: goal.id,
-                  date: new Date(session.created_at).toLocaleDateString(),
-                  text: session.reflection
+                  date: new Date(session.created_at as string).toLocaleDateString(),
+                  text: session.reflection as string
                 }));
                 
               if (validReflections.length > 0) {
@@ -442,7 +442,7 @@ export default function TeacherDashboard() {
           <List>
             {students
               .filter(stu => 
-                stu.name.toLowerCase().includes(search.toLowerCase()) || 
+                stu.display_name.toLowerCase().includes(search.toLowerCase()) || 
                 stu.email.toLowerCase().includes(search.toLowerCase())
               )
               .map(stu => (
@@ -456,7 +456,7 @@ export default function TeacherDashboard() {
                   }}
                 >
                   <ListItemText 
-                    primary={stu.name}
+                    primary={stu.display_name}
                     secondary={`${stu.email} / 최근 활동: ${stu.last_login}`}
                   />
                 </ListItem>
@@ -468,7 +468,7 @@ export default function TeacherDashboard() {
       {/* 선택된 학생 상세 정보 */}
       {selected && (
         <Box>
-          <Typography variant="h5">{selected.name}님의 학습 현황</Typography>
+          <Typography variant="h5">{selected.display_name}님의 학습 현황</Typography>
           
           {/* 목표 목록 */}
           <Card sx={{ mt: 2, mb: 3 }}>
