@@ -397,9 +397,6 @@ export default function StudentDashboard() {
           {userName && (
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
               {userName}님! 환영합니다.
-              <span style={{ fontSize: '0.8em', color: '#666', marginLeft: '5px' }}>
-                (ID: {userName.includes('@') ? userName.split('@')[0] : userName})
-              </span>
             </Typography>
           )}
         </Box>
