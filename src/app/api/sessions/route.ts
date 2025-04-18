@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // 이 함수는 서버에서 동적으로 실행되어야 함을 명시
@@ -17,17 +17,6 @@ export async function GET(request: Request) {
     }
     
     console.log('세션 데이터 요청:', { userId });
-    console.log('권한 문제 진단: 현재 수행하려는 작업 - smart_goals 테이블에서 데이터 조회');
-    console.log('테이블의 RLS 정책을 확인해주세요. 사용자가 자신의 데이터를 조회할 수 있어야 합니다.');
-    
-    console.log('Supabase 요청 전송 전 환경:', {
-      hasUrl: !!supabase.supabaseUrl,
-      hasKey: !!supabase.supabaseKey,
-      url: supabase.supabaseUrl,
-      userId: userId,
-      userIdType: typeof userId,
-      isUsingAdmin: supabaseAdmin !== supabase
-    });
     
     // RLS 우회를 위해 supabaseAdmin 클라이언트 사용
     const { data, error } = await supabaseAdmin
@@ -38,13 +27,6 @@ export async function GET(request: Request) {
       
     if (error) {
       console.error('세션 데이터 조회 오류:', error);
-      // 자세한 오류 정보 제공
-      console.error('오류 상세:', {
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        message: error.message
-      });
       return NextResponse.json({ error: error.message, details: error }, { status: 500 });
     }
     

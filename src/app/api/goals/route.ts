@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // 이 함수는 서버에서 동적으로 실행되어야 함을 명시
@@ -9,26 +9,6 @@ export async function POST(request: Request) {
     const { user_id, subject, description } = await request.json();
     
     console.log('API 요청 데이터:', { user_id, subject, description });
-    console.log('user_id 타입:', typeof user_id);
-    console.log('user_id 값:', user_id);
-    
-    console.log('삽입할 데이터:', { 
-      user_id, 
-      subject, 
-      description 
-    });
-
-    console.log('권한 문제 진단: 현재 수행하려는 작업 - smart_goals 테이블에 데이터 삽입');
-    console.log('테이블의 RLS 정책을 확인해주세요. 모든 사용자에게 삽입 권한이 있어야 합니다.');
-    
-    console.log('Supabase 요청 전송 전 환경:', {
-      hasUrl: !!supabase.supabaseUrl,
-      hasKey: !!supabase.supabaseKey,
-      url: supabase.supabaseUrl,
-      userIdType: typeof user_id,
-      user_id: user_id,
-      isUsingAdmin: supabaseAdmin !== supabase
-    });
     
     // RLS 우회를 위해 supabaseAdmin 클라이언트 사용
     const { data, error } = await supabaseAdmin
@@ -42,13 +22,6 @@ export async function POST(request: Request) {
       
     if (error) {
       console.error('목표 생성 API 오류:', error);
-      // 자세한 오류 정보 제공
-      console.error('오류 상세:', {
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        message: error.message
-      });
       return NextResponse.json({ error: error.message, details: error }, { status: 500 });
     }
     
@@ -68,13 +41,6 @@ export async function POST(request: Request) {
         
       if (progressError) {
         console.error('진행상황 추가 API 오류:', progressError);
-        // 자세한 오류 정보 제공
-        console.error('오류 상세:', {
-          code: progressError.code,
-          details: progressError.details,
-          hint: progressError.hint,
-          message: progressError.message
-        });
         return NextResponse.json({ error: progressError.message, details: progressError }, { status: 500 });
       }
       
