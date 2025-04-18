@@ -46,7 +46,7 @@ export async function signUpWithEmail(email: string, password: string, role: str
   if (error || !data.user) return { data, error };
   
   // 프로필 생성 (RLS 우회를 위해 supabaseAdmin 사용)
-  await supabaseAdmin.from('profiles').upsert({ id: data.user.id, email, role });
+  await supabaseAdmin.from('profiles').upsert({ user_id: data.user.id, email, role });
   return { data, error };
 }
 
@@ -57,11 +57,13 @@ export async function getUserRole(): Promise<UserRole> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("사용자 정보가 없습니다.");
 
+    console.log("사용자 ID:", user.id); // 디버깅용 로그
+
     // 프로필 테이블에서 역할 조회 (RLS 우회용 서비스 키 사용)
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single();
     
     // 프로필 조회 에러 처리
@@ -74,7 +76,7 @@ export async function getUserRole(): Promise<UserRole> {
         const { data: newProfile, error: createError } = await supabaseAdmin
           .from('profiles')
           .insert([{ 
-            id: user.id, 
+            user_id: user.id, 
             email: user.email, 
             role: 'student' 
           }])
@@ -92,8 +94,11 @@ export async function getUserRole(): Promise<UserRole> {
       return 'student';
     }
     
+    console.log("프로필 데이터:", profileData); // 디버깅용 로그
+    
     // 역할 반환 (없으면 기본값 student)
-    return (profileData?.role || 'student') as UserRole;
+    const role = profileData?.role as string;
+    return (role as UserRole) || 'student';
   } catch (error) {
     console.error("사용자 역할 확인 오류:", error);
     return 'student'; // 에러 발생 시 기본값
@@ -142,14 +147,14 @@ export async function ensureProfile(user: User) {
     // 프로필 존재 여부 확인 (RLS 우회를 위해 supabaseAdmin 사용)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id')
-      .eq('id', user.id)
+      .select('user_id')
+      .eq('user_id', user.id)
       .single();
     
     // 프로필이 없으면 생성 (RLS 우회를 위해 supabaseAdmin 사용)
     if (!profile) {
       await supabaseAdmin.from('profiles').insert({
-        id: user.id,
+        user_id: user.id,
         email: user.email,
         role: 'student',
       });
