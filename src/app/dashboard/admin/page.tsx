@@ -142,10 +142,10 @@ export default function AdminDashboard() {
     try {
       setUsers([]); // 기존 데이터 초기화
       
-      // 1. profiles에서 가져오기 (name 포함)
+      // 1. profiles에서 가져오기 (display_name 포함)
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, role, name, created_at')
+        .select('id, email, role, display_name, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -165,12 +165,12 @@ export default function AdminDashboard() {
         });
       }
       
-      // 사용자 데이터 포맷팅 (우선순위: User의 name > profile의 name > 이메일에서 추출)
+      // 사용자 데이터 포맷팅 (우선순위: User의 name > profile의 display_name > 이메일에서 추출)
       const formattedUsers = profiles.map(profile => ({
-        id: profile.id,
-        email: profile.email || '이메일 없음',
-        name: nameMap[profile.id] || profile.name || profile.email?.split('@')[0] || '이름 없음',
-        role: profile.role?.toUpperCase() as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
+        id: profile.id as string,
+        email: profile.email as string || '이메일 없음',
+        name: nameMap[profile.id as string] || profile.display_name as string || (profile.email as string)?.split('@')[0] || '이름 없음',
+        role: (profile.role as string)?.toUpperCase() as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
       }));
       
       setUsers(formattedUsers);
