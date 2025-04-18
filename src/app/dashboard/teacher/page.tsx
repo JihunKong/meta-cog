@@ -142,23 +142,22 @@ export default function TeacherDashboard() {
         });
       }
       
-      // User 테이블에서 추가 정보 가져오기
-      const ids = profiles.map(p => p.user_id as string);
-      const { data: userRows, error: userError } = await supabase
-        .from('User')
-        .select('id, name')
-        .in('id', ids);
-        
-      if (userError) {
-        console.error('User 테이블 조회 오류:', userError);
-      }
-      
-      // User 테이블 사용자명 맵 생성
+      // User 테이블 참조 대신 auth.users의 메타데이터 참조로 변경 (필요한 경우)
+      // 오류 처리와 함께 빈 배열 처리 추가
       const userNameMap: Record<string, string> = {};
-      if (userRows && userRows.length > 0) {
-        userRows.forEach(user => {
-          if (user.name) userNameMap[user.id as string] = user.name as string;
-        });
+      if (profiles && profiles.length > 0) {
+        const ids = profiles.map(p => p.user_id as string);
+        
+        try {
+          // 서비스 역할이 있는 경우 메타데이터 접근 가능 (없으면 생략)
+          if (supabase && ids.length > 0) {
+            // 사용자 메타데이터 가져오기는 클라이언트에서는 제한적이므로 로깅만 처리
+            console.log('사용자 메타데이터 접근은 서버 측에서만 가능합니다.');
+            console.log('대신 profiles 및 student_names 테이블에서 사용자 정보를 활용합니다.');
+          }
+        } catch (metaError) {
+          console.error('사용자 메타데이터 접근 오류:', metaError);
+        }
       }
       
       // 사용자 데이터 포맷팅
@@ -177,12 +176,7 @@ export default function TeacherDashboard() {
           }
         }
         
-        // 2. User 테이블에서 이름 찾기 (우선순위 2)
-        if (!displayName && userNameMap[profile.user_id as string]) {
-          displayName = userNameMap[profile.user_id as string];
-        }
-        
-        // 4. 이메일에서 추출 (최후 수단)
+        // 2. 이메일에서 추출 (최후 수단)
         if (!displayName && profile.email) {
           displayName = (profile.email as string).split('@')[0];
         }

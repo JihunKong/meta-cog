@@ -144,33 +144,57 @@ export default function AdminDashboard() {
       // 1. profiles에서 가져오기 (display_name 포함)
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, email, role, display_name, created_at')
+        .select('id, email, role, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // 2. User 테이블에서 이름 가져오기 시도 (배치)
-      const ids = profiles.map(p => p.id);
-      const { data: userRows } = await supabase
-        .from('User')
-        .select('id, name')
-        .in('id', ids);
+      // student_names 테이블에서 학생 이름 정보 가져오기
+      const emails = profiles.filter(p => p.email).map(p => p.email as string);
+      const { data: studentNames, error: studentNamesError } = await supabase
+        .from('student_names')
+        .select('email, display_name')
+        .in('email', emails);
       
-      // id를 키로 하는 사용자 이름 맵 생성
-      const nameMap: Record<string, string> = {};
-      if (userRows) {
-        userRows.forEach(user => {
-          if (user.name) nameMap[user.id] = user.name;
+      if (studentNamesError && studentNamesError.code !== 'PGRST116') {
+        console.error('student_names 테이블 조회 오류:', studentNamesError);
+      }
+      
+      // 학생 이름 매핑 생성
+      const studentNamesMap: Record<string, string> = {};
+      if (studentNames && studentNames.length > 0) {
+        studentNames.forEach(student => {
+          if (student.email && student.display_name) {
+            studentNamesMap[student.email as string] = student.display_name as string;
+          }
         });
       }
       
-      // 사용자 데이터 포맷팅 (우선순위: User의 name > profile의 display_name > 이메일에서 추출)
-      const formattedUsers = profiles.map(profile => ({
-        id: profile.id as string,
-        email: profile.email as string || '이메일 없음',
-        name: nameMap[profile.id as string] || profile.display_name as string || (profile.email as string)?.split('@')[0] || '이름 없음',
-        role: (profile.role as string)?.toUpperCase() as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
-      }));
+      // 사용자 데이터 포맷팅 (우선순위: student_names의 display_name > 이메일에서 추출)
+      const formattedUsers = profiles.map(profile => {
+        // 이름 결정 로직
+        let displayName: string = "";
+        
+        // 1. student_names 테이블에서 이름 가져오기
+        if (profile.email && studentNamesMap[profile.email as string]) {
+          displayName = studentNamesMap[profile.email as string];
+        }
+        // 2. 이메일에서 추출
+        else if (profile.email) {
+          displayName = (profile.email as string).split('@')[0];
+        }
+        // 3. 기본값
+        else {
+          displayName = '이름 없음';
+        }
+        
+        return {
+          id: profile.id as string,
+          email: profile.email as string || '이메일 없음',
+          name: displayName,
+          role: (profile.role as string)?.toUpperCase() as "STUDENT" | "TEACHER" | "ADMIN" || 'STUDENT'
+        };
+      });
       
       setUsers(formattedUsers);
     } catch (error: any) {
