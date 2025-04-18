@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin, testSupabaseConnection } from "@/lib/supabase";
 import { getUserRole, getUserName } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import {
@@ -41,6 +41,17 @@ export default function StudentDashboard() {
   });
   const [editId, setEditId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 수파베이스 연결 테스트 (페이지 로드 시 한 번만 실행)
+  useEffect(() => {
+    const testConnection = async () => {
+      console.log("Supabase 연결 테스트 시작...");
+      const result = await testSupabaseConnection();
+      console.log("Supabase 연결 테스트 결과:", result);
+    };
+    
+    testConnection();
+  }, []);
 
   // 사용자 이름 로딩 (User row 없으면 자동 생성)
   useEffect(() => {
