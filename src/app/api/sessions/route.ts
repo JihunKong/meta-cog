@@ -45,40 +45,85 @@ export async function GET(request: Request) {
     
     // RLS 우회를 위해 supabaseAdmin 클라이언트 사용
     try {
-      const { data, error } = await supabaseAdmin
+      // 다중 관계 오류 해결을 위해 조인 대신 직접 두 개의 쿼리 사용
+      // 1. 먼저 smart_goals 데이터 가져오기
+      const { data: goalData, error: goalError } = await supabaseAdmin
         .from('smart_goals')
-        .select(`
-          id, 
-          subject, 
-          description, 
-          created_at, 
-          user_id,
-          goal_progress!smart_goal_id(*)
-        `)
+        .select('id, subject, description, created_at, user_id')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('세션 데이터 조회 오류:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
+      if (goalError) {
+        console.error('목표 데이터 조회 오류:', {
+          code: goalError.code,
+          message: goalError.message,
+          details: goalError.details,
+          hint: goalError.hint
         });
         
         return NextResponse.json({ 
-          error: error.message, 
-          code: error.code,
-          details: error.details,
-          hint: error.hint
+          error: goalError.message, 
+          code: goalError.code,
+          details: goalError.details,
+          hint: goalError.hint
         }, { status: 500 });
       }
-      
-      console.log('세션 데이터 조회 성공:', { count: data?.length || 0 });
+
+      // 목표 데이터가 없으면 빈 배열 반환
+      if (!goalData || goalData.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          data: [] 
+        });
+      }
+
+      // 2. 목표 ID 목록 추출
+      const goalIds = goalData.map(goal => goal.id);
+
+      // 3. 관련된 progress 데이터 가져오기
+      const { data: progressData, error: progressError } = await supabaseAdmin
+        .from('goal_progress')
+        .select('id, smart_goal_id, percent, reflection, created_at')
+        .in('smart_goal_id', goalIds);
+
+      if (progressError) {
+        console.error('진행 데이터 조회 오류:', {
+          code: progressError.code,
+          message: progressError.message,
+          details: progressError.details,
+          hint: progressError.hint
+        });
+        
+        return NextResponse.json({ 
+          error: progressError.message,
+          code: progressError.code,
+          details: progressError.details,
+          hint: progressError.hint
+        }, { status: 500 });
+      }
+
+      // 4. 결과 데이터 구성 (클라이언트가 기대하는 형식으로)
+      const resultData = goalData.map(goal => {
+        const goalProgress = progressData
+          .filter(progress => progress.smart_goal_id === goal.id)
+          .map(progress => ({
+            id: progress.id,
+            percent: progress.percent,
+            reflection: progress.reflection,
+            created_at: progress.created_at
+          }));
+
+        return {
+          ...goal,
+          goal_progress: goalProgress
+        };
+      });
+
+      console.log('세션 데이터 조회 성공:', { count: resultData.length || 0 });
       
       return NextResponse.json({ 
         success: true, 
-        data 
+        data: resultData 
       });
     } catch (dbError: any) {
       console.error('DB 쿼리 실행 중 예외 발생:', {
