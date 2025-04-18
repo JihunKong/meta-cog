@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 // 서버에서 동적으로 실행되도록 설정
 export const dynamic = 'force-dynamic';
@@ -11,29 +12,37 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('class_id');
     
-    // 요청 헤더에서 인증 토큰 확인
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-    
-    if (!token) {
-      console.error('API 오류: 인증 토큰이 제공되지 않음');
-      return NextResponse.json({ 
-        error: '인증 토큰이 필요합니다' 
-      }, { status: 401 });
-    }
-    
-    // Supabase 클라이언트 생성
+    // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${token}` }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('API 오류: Supabase 환경 변수가 설정되지 않음');
+      return NextResponse.json({ 
+        error: 'Supabase 환경 변수가 설정되지 않았습니다' 
+      }, { status: 500 });
+    }
+    
+    // Supabase 클라이언트 생성
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get: (name) => cookieStore.get(name)?.value,
+          set: (name, value, options) => {
+            cookieStore.set(name, value, options);
+          },
+          remove: (name, options) => {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          },
+        },
       }
-    });
+    );
     
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('인증 오류:', authError || '사용자 정보를 찾을 수 없음');
@@ -99,29 +108,37 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    // 요청 헤더에서 인증 토큰 확인
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-    
-    if (!token) {
-      console.error('API 오류: 인증 토큰이 제공되지 않음');
-      return NextResponse.json({ 
-        error: '인증 토큰이 필요합니다' 
-      }, { status: 401 });
-    }
-    
-    // Supabase 클라이언트 생성
+    // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${token}` }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('API 오류: Supabase 환경 변수가 설정되지 않음');
+      return NextResponse.json({ 
+        error: 'Supabase 환경 변수가 설정되지 않았습니다' 
+      }, { status: 500 });
+    }
+    
+    // Supabase 클라이언트 생성
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get: (name) => cookieStore.get(name)?.value,
+          set: (name, value, options) => {
+            cookieStore.set(name, value, options);
+          },
+          remove: (name, options) => {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          },
+        },
       }
-    });
+    );
     
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('인증 오류:', authError || '사용자 정보를 찾을 수 없음');
@@ -211,29 +228,37 @@ export async function PUT(request: Request) {
       }, { status: 400 });
     }
     
-    // 요청 헤더에서 인증 토큰 확인
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-    
-    if (!token) {
-      console.error('API 오류: 인증 토큰이 제공되지 않음');
-      return NextResponse.json({ 
-        error: '인증 토큰이 필요합니다' 
-      }, { status: 401 });
-    }
-    
-    // Supabase 클라이언트 생성
+    // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${token}` }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('API 오류: Supabase 환경 변수가 설정되지 않음');
+      return NextResponse.json({ 
+        error: 'Supabase 환경 변수가 설정되지 않았습니다' 
+      }, { status: 500 });
+    }
+    
+    // Supabase 클라이언트 생성
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get: (name) => cookieStore.get(name)?.value,
+          set: (name, value, options) => {
+            cookieStore.set(name, value, options);
+          },
+          remove: (name, options) => {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          },
+        },
       }
-    });
+    );
     
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('인증 오류:', authError || '사용자 정보를 찾을 수 없음');
@@ -329,29 +354,37 @@ export async function DELETE(request: Request) {
       }, { status: 400 });
     }
     
-    // 요청 헤더에서 인증 토큰 확인
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-    
-    if (!token) {
-      console.error('API 오류: 인증 토큰이 제공되지 않음');
-      return NextResponse.json({ 
-        error: '인증 토큰이 필요합니다' 
-      }, { status: 401 });
-    }
-    
-    // Supabase 클라이언트 생성
+    // 환경 변수 확인
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: `Bearer ${token}` }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('API 오류: Supabase 환경 변수가 설정되지 않음');
+      return NextResponse.json({ 
+        error: 'Supabase 환경 변수가 설정되지 않았습니다' 
+      }, { status: 500 });
+    }
+    
+    // Supabase 클라이언트 생성
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get: (name) => cookieStore.get(name)?.value,
+          set: (name, value, options) => {
+            cookieStore.set(name, value, options);
+          },
+          remove: (name, options) => {
+            cookieStore.set(name, '', { ...options, maxAge: 0 });
+          },
+        },
       }
-    });
+    );
     
     // 사용자 인증 확인
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
       console.error('인증 오류:', authError || '사용자 정보를 찾을 수 없음');

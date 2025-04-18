@@ -1,1 +1,14 @@
-{}
+{
+  "/_not-found": "app/_not-found.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/admin/page": "app/dashboard/admin/page.js",
+  "/dashboard/student/page": "app/dashboard/student/page.js",
+  "/dashboard/teacher/page": "app/dashboard/teacher/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/sessions/route": "app/api/sessions/route.js",
+  "/api/goals/route": "app/api/goals/route.js",
+  "/api/teacher/feedback/route": "app/api/teacher/feedback/route.js",
+  "/api/teacher/announcements/route": "app/api/teacher/announcements/route.js"
+}
