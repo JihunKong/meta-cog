@@ -54,7 +54,6 @@ export default function AdminDashboard() {
       await supabase.from('profiles').upsert({
         id: userId,
         email: newEmail,
-        name: newName,
         role: newRole.toUpperCase(),
       });
       // 3. student_names 테이블에도 row upsert (학생인 경우)

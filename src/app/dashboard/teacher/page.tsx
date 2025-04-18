@@ -108,7 +108,7 @@ export default function TeacherDashboard() {
       // Supabase에서 student 역할을 가진 사용자 가져오기 (소문자 역할로 변경)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email, name, created_at')
+        .select('user_id, email, created_at')
         .eq('role', 'student');
 
       if (profilesError) {
@@ -180,11 +180,6 @@ export default function TeacherDashboard() {
         // 2. User 테이블에서 이름 찾기 (우선순위 2)
         if (!displayName && userNameMap[profile.user_id as string]) {
           displayName = userNameMap[profile.user_id as string];
-        }
-        
-        // 3. profiles 테이블 자체 이름 사용 (우선순위 3)
-        if (!displayName && profile.name) {
-          displayName = profile.name as string;
         }
         
         // 4. 이메일에서 추출 (최후 수단)
