@@ -21,6 +21,14 @@ export async function POST(request: Request) {
     console.log('권한 문제 진단: 현재 수행하려는 작업 - smart_goals 테이블에 데이터 삽입');
     console.log('테이블의 RLS 정책을 확인해주세요. 모든 사용자에게 삽입 권한이 있어야 합니다.');
     
+    console.log('Supabase 요청 전송 전 환경:', {
+      hasUrl: !!supabase.supabaseUrl,
+      hasKey: !!supabase.supabaseKey,
+      url: supabase.supabaseUrl,
+      userIdType: typeof user_id,
+      user_id: user_id
+    });
+    
     const { data, error } = await supabase
       .from('smart_goals')
       .insert([{ 

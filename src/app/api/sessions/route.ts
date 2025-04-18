@@ -22,6 +22,14 @@ export async function GET(request: Request) {
     
     // 정확한 테이블 구조에 맞게 조회
     // goal_progress는 smart_goal_id를 통해 연결
+    console.log('Supabase 요청 전송 전 환경:', {
+      hasUrl: !!supabase.supabaseUrl,
+      hasKey: !!supabase.supabaseKey,
+      url: supabase.supabaseUrl,
+      userId: userId,
+      userIdType: typeof userId
+    });
+    
     const { data, error } = await supabase
       .from('smart_goals')
       .select('id, user_id, subject, description, created_at, goal_progress(id, percent, reflection, created_at)')
