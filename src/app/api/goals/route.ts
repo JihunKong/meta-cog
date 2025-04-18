@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 // 이 함수는 서버에서 동적으로 실행되어야 함을 명시
@@ -26,10 +26,12 @@ export async function POST(request: Request) {
       hasKey: !!supabase.supabaseKey,
       url: supabase.supabaseUrl,
       userIdType: typeof user_id,
-      user_id: user_id
+      user_id: user_id,
+      isUsingAdmin: supabaseAdmin !== supabase
     });
     
-    const { data, error } = await supabase
+    // RLS 우회를 위해 supabaseAdmin 클라이언트 사용
+    const { data, error } = await supabaseAdmin
       .from('smart_goals')
       .insert([{ 
         user_id, 
@@ -55,8 +57,8 @@ export async function POST(request: Request) {
     if (data && data.length > 0) {
       const goalId = data[0].id;
       
-      // goal_progress에 데이터 삽입
-      const { error: progressError } = await supabase
+      // goal_progress에 데이터 삽입 (여기도 RLS 우회)
+      const { error: progressError } = await supabaseAdmin
         .from('goal_progress')
         .insert({ 
           smart_goal_id: goalId, 

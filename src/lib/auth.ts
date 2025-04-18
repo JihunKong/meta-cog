@@ -1,10 +1,13 @@
-import { supabase } from './supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 // 사용자 타입 정의
 interface User {
   id: string;
   email?: string;
 }
+
+// 사용자 역할 정의
+export type UserRole = 'student' | 'teacher' | 'admin';
 
 // 로그인 함수
 export async function signInWithEmail(email: string, password: string) {
@@ -50,67 +53,92 @@ export async function signUpWithEmail(email: string, password: string, role: str
 }
 
 // 사용자 권한 확인 함수
-export async function getUserRole() {
+export async function getUserRole(): Promise<UserRole> {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return null;
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      if (!profileError && profileData && profileData.role) return (profileData.role as string).toLowerCase();
-    } catch {}
-    try {
-      const { data: userData, error: userDataError } = await supabase
-        .from('User')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      if (!userDataError && userData && userData.role) return (userData.role as string).toLowerCase();
-    } catch {}
-    if (user.email) {
-      const email = user.email.toLowerCase();
-      if (email.includes('admin')) return 'admin';
-      if (email.startsWith('202') || email.includes('teacher') || email.includes('prof')) return 'teacher';
-      if (email.startsWith('2201') || email.includes('student')) return 'student';
+    // 현재 로그인한 사용자 정보 가져오기
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("사용자 정보가 없습니다.");
+
+    console.log("로그인 사용자:", user.id);
+    
+    // 프로필 테이블에서 역할 조회 (RLS 우회용 서비스 키 사용)
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    // 프로필 조회 에러 처리
+    if (profileError) {
+      console.error("프로필 조회 오류:", profileError);
+      
+      // 프로필이 없는 경우, 기본 프로필 생성 시도
+      if (profileError.code === 'PGRST116') {
+        console.log("프로필 생성 시작");
+        
+        // 새 프로필 생성 (기본값 student)
+        const { data: newProfile, error: createError } = await supabaseAdmin
+          .from('profiles')
+          .insert([
+            { 
+              id: user.id, 
+              email: user.email, 
+              role: 'student' 
+            }
+          ])
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error("프로필 생성 오류:", createError);
+          console.error("오류 코드:", createError.code);
+          console.error("오류 메시지:", createError.message);
+          console.error("오류 세부 정보:", createError.details);
+          return 'student'; // 기본값
+        }
+        
+        return newProfile?.role as UserRole || 'student';
+      }
+      
+      // 다른 오류인 경우 기본값 반환
+      return 'student';
     }
-    return 'student';
-  } catch {
-    return 'student';
+    
+    // 역할 반환 (없으면 기본값 student)
+    return (profileData?.role || 'student') as UserRole;
+  } catch (error) {
+    console.error("사용자 역할 확인 오류:", error);
+    return 'student'; // 에러 발생 시 기본값
   }
 }
 
 // 사용자 표시 이름 가져오기 함수
-export async function getUserName() {
+export async function getUserName(): Promise<string | null> {
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) return '';
-    const email = user.email || '';
-    const emailName = email.split('@')[0];
-    let { data: studentRow, error: studentError } = await supabase
+    // 현재 로그인한 사용자 정보 가져오기
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // 이메일을 기본 이름으로 사용
+    const defaultName = user.email || user.id;
+    
+    // student_names 테이블에서 이름 조회 시도 (RLS 우회용 서비스 키 사용)
+    const { data: studentData, error: studentError } = await supabaseAdmin
       .from('student_names')
-      .select('display_name, grade, class, student_number')
-      .eq('email', email)
+      .select('display_name')
+      .eq('id', user.id)
       .single();
-    if (!studentRow && !studentError) {
-      const { error: insertError } = await supabase
-        .from('student_names')
-        .insert({ email, display_name: emailName, grade: null, class: null, student_number: null });
-      if (!insertError) {
-        studentRow = { display_name: emailName, grade: null, class: null, student_number: null };
-      }
+    
+    // 학생 정보가 없는 경우 기본 이름 반환
+    if (studentError || !studentData) {
+      return defaultName;
     }
-    if (studentRow && studentRow.display_name) {
-      if (studentRow.grade && studentRow.class && studentRow.student_number) {
-        return `${studentRow.display_name} (${studentRow.grade}${studentRow.class}-${studentRow.student_number})`;
-      }
-      return studentRow.display_name;
-    }
-    return emailName;
-  } catch {
-    return '';
+    
+    // 표시 이름 반환 (없으면 기본 이름)
+    return studentData.display_name || defaultName;
+  } catch (error) {
+    console.error("사용자 이름 조회 오류:", error);
+    return null;
   }
 }
 
