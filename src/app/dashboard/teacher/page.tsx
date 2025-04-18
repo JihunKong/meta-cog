@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { supabase } from "@/lib/supabase";
 
 interface Student {
-  id: string;
+  user_id: string;
   email: string;
   name: string;
   last_login: string;
@@ -108,7 +108,7 @@ export default function TeacherDashboard() {
       // Supabase에서 student 역할을 가진 사용자 가져오기 (소문자 역할로 변경)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, name, created_at')
+        .select('user_id, email, name, created_at')
         .eq('role', 'student');
 
       if (profilesError) {
@@ -143,7 +143,7 @@ export default function TeacherDashboard() {
       }
       
       // User 테이블에서 추가 정보 가져오기
-      const ids = profiles.map(p => p.id);
+      const ids = profiles.map(p => p.user_id);
       const { data: userRows, error: userError } = await supabase
         .from('User')
         .select('id, name')
@@ -178,8 +178,8 @@ export default function TeacherDashboard() {
         }
         
         // 2. User 테이블에서 이름 찾기 (우선순위 2)
-        if (!displayName && userNameMap[profile.id]) {
-          displayName = userNameMap[profile.id];
+        if (!displayName && userNameMap[profile.user_id]) {
+          displayName = userNameMap[profile.user_id];
         }
         
         // 3. profiles 테이블 자체 이름 사용 (우선순위 3)
@@ -197,7 +197,7 @@ export default function TeacherDashboard() {
         const finalDisplayName = displayInfo ? `${finalName} (${displayInfo})` : finalName;
         
         return {
-          id: profile.id,
+          user_id: profile.user_id,
           email: profile.email || "이메일 없음",
           name: finalDisplayName,
           last_login: new Date(profile.created_at).toLocaleDateString() || "-"
@@ -225,20 +225,20 @@ export default function TeacherDashboard() {
       
       // 각 학생별로 목표 가져오기
       for (const student of studentsList) {
-        console.log(`학생 ${student.name}(${student.id}) 목표 조회 중...`);
+        console.log(`학생 ${student.name}(${student.user_id}) 목표 조회 중...`);
         const { data: goals, error } = await supabase
           .from('smart_goals')
           .select('id, subject, description, created_at')
-          .eq('user_id', student.id);
+          .eq('user_id', student.user_id);
           
         if (error) {
-          console.error(`학생 ${student.id} 목표 조회 오류:`, error);
+          console.error(`학생 ${student.user_id} 목표 조회 오류:`, error);
           continue;
         }
         
         if (goals && goals.length > 0) {
           console.log(`학생 ${student.name}의 목표 ${goals.length}개 발견`);
-          goalsData[student.id] = goals;
+          goalsData[student.user_id] = goals;
         } else {
           console.log(`학생 ${student.name}의 목표 없음`);
         }
@@ -270,8 +270,8 @@ export default function TeacherDashboard() {
           for (const goal of goals) {
             const { data: sessions, error } = await supabase
               .from('goal_sessions')
-              .select('id, goal_id, created_at, percent, reflection')
-              .eq('goal_id', goal.id);
+              .select('id, smart_goal_id, created_at, percent, reflection')
+              .eq('smart_goal_id', goal.id);
               
             if (error) {
               console.error(`목표 ${goal.id} 세션 조회 오류:`, error);
@@ -447,11 +447,11 @@ export default function TeacherDashboard() {
               )
               .map(stu => (
                 <ListItem 
-                  key={stu.id} 
+                  key={stu.user_id} 
                   button 
                   onClick={() => setSelected(stu)}
                   sx={{ 
-                    bgcolor: selected?.id === stu.id ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    bgcolor: selected?.user_id === stu.user_id ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
                     borderRadius: 1
                   }}
                 >
@@ -474,9 +474,9 @@ export default function TeacherDashboard() {
           <Card sx={{ mt: 2, mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>학습 목표</Typography>
-              {studentGoals[selected.id] ? (
+              {studentGoals[selected.user_id] ? (
                 <List>
-                  {studentGoals[selected.id].map(goal => (
+                  {studentGoals[selected.user_id].map(goal => (
                     <ListItem key={goal.id}>
                       <ListItemText 
                         primary={goal.subject}
@@ -540,9 +540,9 @@ export default function TeacherDashboard() {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>학습 반성문</Typography>
-              {studentReflections[selected.id] && studentReflections[selected.id].length > 0 ? (
+              {studentReflections[selected.user_id] && studentReflections[selected.user_id].length > 0 ? (
                 <List>
-                  {studentReflections[selected.id].map(ref => (
+                  {studentReflections[selected.user_id].map(ref => (
                     <ListItem key={ref.id}>
                       <ListItemText 
                         primary={`${ref.date} 작성`}
