@@ -62,7 +62,7 @@ export async function getUserRole(): Promise<UserRole> {
     // 프로필 테이블에서 역할 조회 (RLS 우회용 서비스 키 사용)
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('role')
+      .select('role, email')
       .eq('user_id', user.id)
       .single();
     
@@ -72,13 +72,23 @@ export async function getUserRole(): Promise<UserRole> {
       
       // 프로필이 없는 경우, 기본 프로필 생성 시도
       if (profileError.code === 'PGRST116') {
-        // 새 프로필 생성 (기본값 student)
+        // 기존 역할이 있는지 확인 (auth.user.user_metadata에서)
+        const userRole = user.user_metadata?.role as string || 'student';
+        console.log("사용자 메타데이터에서 찾은 역할:", userRole);
+        
+        // 새 프로필 생성
+        const normalizedRole = typeof userRole === 'string' 
+          ? userRole.toLowerCase() as UserRole 
+          : 'student';
+        
+        console.log(`새 프로필 생성 - 사용자 ID: ${user.id}, 이메일: ${user.email}, 역할: ${normalizedRole}`);
+        
         const { data: newProfile, error: createError } = await supabaseAdmin
           .from('profiles')
           .insert([{ 
             user_id: user.id, 
             email: user.email, 
-            role: 'student' 
+            role: normalizedRole 
           }])
           .select()
           .single();
@@ -88,17 +98,48 @@ export async function getUserRole(): Promise<UserRole> {
           return 'student'; // 기본값
         }
         
-        return newProfile?.role as UserRole || 'student';
+        const newRole = newProfile?.role;
+        console.log("새로 생성된 프로필의 역할:", newRole);
+        
+        return (typeof newRole === 'string' ? newRole.toLowerCase() as UserRole : 'student');
       }
       
+      console.log("프로필 조회 실패로 기본값 student 반환");
       return 'student';
     }
     
-    console.log("프로필 데이터:", profileData); // 디버깅용 로그
+    console.log("프로필 데이터:", profileData, typeof profileData?.role); // 디버깅용 로그
     
     // 역할 반환 (없으면 기본값 student)
-    const role = profileData?.role as string;
-    return (role as UserRole) || 'student';
+    if (!profileData || !profileData.role) {
+      console.warn("프로필에 역할 필드가 없음:", profileData);
+      return 'student';
+    }
+    
+    // 역할 정규화: 문자열로 변환 후 소문자화
+    let normalizedRole = 'student'; // 기본값
+    
+    try {
+      if (typeof profileData.role === 'string') {
+        normalizedRole = profileData.role.toLowerCase();
+      } else if (profileData.role) {
+        // 객체가 아니고 null이 아닌 경우만 시도
+        normalizedRole = String(profileData.role).toLowerCase();
+      }
+    } catch (e) {
+      console.error("역할 정규화 중 오류:", e);
+    }
+    
+    console.log("정규화된 역할:", normalizedRole);
+    
+    // 역할 값 유효성 검사 (역할이 student, teacher, admin 중 하나인지 확인)
+    if (normalizedRole === 'student' || normalizedRole === 'teacher' || normalizedRole === 'admin') {
+      return normalizedRole as UserRole;
+    }
+    
+    // 알 수 없는 역할인 경우 경고 로그 및 기본값 반환
+    console.warn("알 수 없는 역할 값:", profileData.role);
+    return 'student';
   } catch (error) {
     console.error("사용자 역할 확인 오류:", error);
     return 'student'; // 에러 발생 시 기본값

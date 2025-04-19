@@ -7,11 +7,23 @@ export default function DashboardPage() {
   const router = useRouter();
   useEffect(() => {
     (async () => {
-      const role = await getUserRole();
-      if (role === "STUDENT") router.replace("/dashboard/student");
-      else if (role === "TEACHER") router.replace("/dashboard/teacher");
-      else if (role === "ADMIN") router.replace("/dashboard/admin");
-      else router.replace("/login");
+      try {
+        console.log('대시보드 페이지 - 역할 확인 중...');
+        const role = await getUserRole();
+        console.log('대시보드 페이지 - 역할 확인 결과:', role);
+        
+        // getUserRole은 항상 소문자 역할을 반환합니다
+        if (role === "student") router.replace("/dashboard/student");
+        else if (role === "teacher") router.replace("/dashboard/teacher");
+        else if (role === "admin") router.replace("/dashboard/admin");
+        else {
+          console.log('알 수 없는 역할:', role);
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error('대시보드 역할 확인 오류:', error);
+        router.replace("/login");
+      }
     })();
   }, [router]);
   return null;
