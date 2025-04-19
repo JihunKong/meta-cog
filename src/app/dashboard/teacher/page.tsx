@@ -105,25 +105,62 @@ export default function TeacherDashboard() {
     console.log('학생 데이터 로딩 시작...');
     
     try {
-      // Supabase에서 student 역할을 가진 사용자 가져오기 (소문자 역할로 변경)
+      // 먼저 profiles 테이블에서 role 값들의 종류를 확인 (디버깅용)
+      const { data: roleData } = await supabase
+        .from('profiles')
+        .select('role')
+        .order('role');
+      
+      console.log('존재하는 role 값들:', roleData?.map(r => r.role));
+      
+      // Supabase에서 student 역할을 가진 사용자 가져오기 (대소문자 구분 없이 검색)
+      // role이 'student'이거나 'STUDENT' 모두 가져오도록 ILIKE 사용
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email, created_at')
-        .eq('role', 'student');
+        .select('user_id, email, created_at, role')
+        .or('role.ilike.%student%,role.eq.student');
+
+      console.log('프로필 쿼리 결과:', { 
+        count: profiles?.length || 0, 
+        error: profilesError ? '에러 있음' : '없음',
+        firstFew: profiles?.slice(0, 3)
+      });
 
       if (profilesError) {
         console.error('프로필 조회 오류:', profilesError);
         throw new Error("학생 정보를 가져올 수 없습니다: " + profilesError.message);
       }
       
+      // role이 student 또는 STUDENT인 프로필만 필터링
+      const studentProfiles = profiles.filter(p => 
+        p.role && (typeof p.role === 'string' && 
+          (p.role.toLowerCase() === 'student' || p.role === 'STUDENT'))
+      );
+      
+      console.log('필터링된 학생 프로필:', { 
+        count: studentProfiles.length,
+        allRoles: profiles.map(p => p.role)
+      });
+      
       // student_names 테이블에서 학생 이름 정보 가져오기
-      const emails = profiles.filter(p => p.email).map(p => p.email as string);
+      const emails = studentProfiles.filter(p => p.email).map(p => p.email as string);
+      
+      console.log('학생 이메일 목록:', { 
+        count: emails.length, 
+        examples: emails.slice(0, 3)
+      });
+      
       const { data: studentNames, error: studentNamesError } = await supabase
         .from('student_names')
         .select('email, display_name, grade, class, student_number')
-        .in('email', emails);
+        .in('email', emails.length ? emails : ['no-emails-found']);
       
-      if (studentNamesError) {
+      console.log('student_names 쿼리 결과:', {
+        count: studentNames?.length || 0,
+        error: studentNamesError ? studentNamesError.message : '없음'
+      });
+      
+      if (studentNamesError && studentNamesError.code !== 'PGRST116') {
         console.error('student_names 테이블 조회 오류:', studentNamesError);
       }
       
@@ -142,26 +179,8 @@ export default function TeacherDashboard() {
         });
       }
       
-      // User 테이블 참조 대신 auth.users의 메타데이터 참조로 변경 (필요한 경우)
-      // 오류 처리와 함께 빈 배열 처리 추가
-      const userNameMap: Record<string, string> = {};
-      if (profiles && profiles.length > 0) {
-        const ids = profiles.map(p => p.user_id as string);
-        
-        try {
-          // 서비스 역할이 있는 경우 메타데이터 접근 가능 (없으면 생략)
-          if (supabase && ids.length > 0) {
-            // 사용자 메타데이터 가져오기는 클라이언트에서는 제한적이므로 로깅만 처리
-            console.log('사용자 메타데이터 접근은 서버 측에서만 가능합니다.');
-            console.log('대신 profiles 및 student_names 테이블에서 사용자 정보를 활용합니다.');
-          }
-        } catch (metaError) {
-          console.error('사용자 메타데이터 접근 오류:', metaError);
-        }
-      }
-      
       // 사용자 데이터 포맷팅
-      const formattedStudents = profiles.map(profile => {
+      const formattedStudents = studentProfiles.map(profile => {
         let displayName = "";
         let displayInfo = "";
         
