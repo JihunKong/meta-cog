@@ -1,4 +1,7 @@
-import { getSupabaseClient, getSupabaseAdminClient } from '@/lib/supabase';
+'use client';
+
+import { getSupabaseClient } from '@/lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 // 사용자 타입 정의
 interface User {
@@ -25,13 +28,6 @@ export async function signInWithEmail(email: string, password: string) {
     
     if (data?.user) {
       console.log('로그인 성공:', data.user.id);
-      
-      // 프로필 확인 및 생성
-      try {
-        await ensureProfile(data.user);
-      } catch (profileError) {
-        console.error('프로필 처리 중 오류:', profileError);
-      }
     }
     
     return { data, error };
@@ -41,25 +37,25 @@ export async function signInWithEmail(email: string, password: string) {
   }
 }
 
-// 새 계정 생성 함수
+// 새 계정 생성 함수 (클라이언트에서 처리)
 export async function signUpWithEmail(email: string, password: string, role: string) {
   const supabase = getSupabaseClient();
-  const supabaseAdmin = getSupabaseAdminClient();
   
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { role } } });
-  if (error || !data.user) return { data, error };
+  const { data, error } = await supabase.auth.signUp({ 
+    email, 
+    password, 
+    options: { 
+      data: { role } 
+    } 
+  });
   
-  // 프로필 생성 (RLS 우회를 위해 supabaseAdmin 사용)
-  await supabaseAdmin.from('profiles').upsert({ user_id: data.user.id, email, role });
   return { data, error };
 }
 
-// 사용자 권한 확인 함수
-export async function getUserRole() {
+// 사용자 권한 확인 함수 (클라이언트에서 처리)
+export async function getUserRole(): Promise<string | null> {
   try {
     const supabase = getSupabaseClient();
-    const supabaseAdmin = getSupabaseAdminClient();
-    
     const { data } = await supabase.auth.getUser();
     const user = data.user;
     
@@ -77,7 +73,6 @@ export async function getUserRole() {
       
       // 메타데이터에서 유효한 역할을 찾았으면 반환
       if (metaRole) {
-        await ensureProfile(user); // 프로필 동기화 보장
         return metaRole;
       }
     }
@@ -91,7 +86,6 @@ export async function getUserRole() {
     
     if (error) {
       console.error('프로필 조회 오류:', error.message);
-      await ensureProfile(user); // 프로필 생성 시도
       return 'student'; // 기본값
     }
     
@@ -102,7 +96,6 @@ export async function getUserRole() {
     
     // 3. 프로필이 없거나 역할이 없는 경우 기본값 반환
     console.log('역할을 찾을 수 없어 기본값 student 사용');
-    await ensureProfile(user); // 프로필 생성 시도
     return 'student';
   } catch (error) {
     console.error('역할 확인 중 예외 발생:', error);
@@ -125,29 +118,10 @@ function normalizeRole(role: string | undefined | null): string | null {
   return null;
 }
 
-// 메타데이터 역할을 프로필 테이블에 동기화하는 함수
-async function syncRoleToProfile(userId: string, role: UserRole, email?: string): Promise<void> {
-  try {
-    const supabaseAdmin = getSupabaseAdminClient();
-    
-    await supabaseAdmin.from('profiles').upsert({
-      user_id: userId,
-      role,
-      email,
-      updated_at: new Date().toISOString()
-    });
-    console.log('프로필 역할 동기화 완료:', role);
-  } catch (error) {
-    console.error('프로필 역할 동기화 오류:', error);
-    throw error;
-  }
-}
-
-// 사용자 표시 이름 가져오기 함수
+// 사용자 표시 이름 가져오기 함수 (클라이언트에서 실행)
 export async function getUserName(): Promise<string | null> {
   try {
     const supabase = getSupabaseClient();
-    const supabaseAdmin = getSupabaseAdminClient();
     
     // 현재 로그인한 사용자 정보 가져오기
     const { data: { user } } = await supabase.auth.getUser();
@@ -156,8 +130,8 @@ export async function getUserName(): Promise<string | null> {
     // 이메일을 기본 이름으로 사용
     const defaultName = user.email || user.id;
     
-    // student_names 테이블에서 이름 조회 시도 (RLS 우회용 서비스 키 사용)
-    const { data: studentData, error: studentError } = await supabaseAdmin
+    // student_names 테이블에서 이름 조회 시도
+    const { data: studentData, error: studentError } = await supabase
       .from('student_names')
       .select('display_name')
       .eq('user_id', user.id)
@@ -175,60 +149,6 @@ export async function getUserName(): Promise<string | null> {
   } catch (error) {
     console.error("사용자 이름 조회 오류:", error);
     return null;
-  }
-}
-
-// 로그인/회원가입 후 profiles row가 없으면 자동 생성
-export async function ensureProfile(user: User) {
-  if (!user || !user.email) {
-    console.log('유효하지 않은 사용자 정보');
-    return;
-  }
-  
-  try {
-    const supabase = getSupabaseClient();
-    const supabaseAdmin = getSupabaseAdminClient();
-    
-    // 프로필 존재 여부 확인 (RLS 우회를 위해 supabaseAdmin 사용)
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('user_id, role')
-      .eq('user_id', user.id)
-      .single();
-    
-    // 프로필이 없으면 생성 (RLS 우회를 위해 supabaseAdmin 사용)
-    if (!profile) {
-      // 메타데이터에서 역할 확인 (없으면 student)
-      const { data } = await supabase.auth.getUser();
-      const metaRole = data.user?.user_metadata?.role || 'student';
-      const normalizedRole = normalizeRole(metaRole) || 'student';
-      
-      console.log(`프로필 생성 - 사용자 ID: ${user.id}, 역할: ${normalizedRole}`);
-      
-      await supabaseAdmin.from('profiles').insert({
-        user_id: user.id,
-        email: user.email,
-        role: normalizedRole,
-      });
-    } else {
-      // 사용자의 메타데이터를 확인하기 위해 auth API 호출
-      const { data } = await supabase.auth.getUser();
-      if (data.user?.user_metadata?.role) {
-        const metaRole = data.user.user_metadata.role;
-        const normalizedMetaRole = normalizeRole(metaRole);
-        
-        // 프로필의 역할과 메타데이터의 역할이 다른 경우 동기화
-        if (normalizedMetaRole && profile.role !== normalizedMetaRole) {
-          console.log(`프로필 역할 업데이트 - 이전: ${profile.role}, 새로운: ${normalizedMetaRole}`);
-          await supabaseAdmin.from('profiles').update({
-            role: normalizedMetaRole,
-            updated_at: new Date().toISOString()
-          }).eq('user_id', user.id);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('프로필 확인/생성 중 예외 발생:', error);
   }
 }
 
