@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminServerClient } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 
+// 이 라우트는 항상 동적으로 처리됨을 명시
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   console.log('GET /api/students 요청 받음');
 
