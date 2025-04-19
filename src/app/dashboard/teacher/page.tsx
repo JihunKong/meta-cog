@@ -45,12 +45,56 @@ export default function TeacherDashboard() {
         setLoading(true);
         console.log('교사 대시보드 - 인증 확인 시작...');
         
+        // 직접 프로필 테이블 쿼리 (추가적인 신뢰성을 위해)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('사용자 인증 정보가 없습니다');
+          if (mounted) {
+            setError('로그인이 필요합니다. 다시 로그인해주세요.');
+            setLoading(false);
+          }
+          return;
+        }
+        
+        console.log('교사 대시보드 - 사용자 ID 확인:', user.id);
+        
+        // 역할을 직접 프로필 테이블에서 확인
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('직접 프로필 조회 오류:', profileError);
+          // 오류가 발생해도 getUserRole()으로 다시 시도합니다
+        } else if (profile && profile.role) {
+          console.log('직접 조회한 사용자 역할:', profile.role);
+          
+          // 역할이 teacher 또는 TEACHER가 아니면 리디렉션
+          if (typeof profile.role === 'string' && 
+              profile.role.toLowerCase() !== 'teacher') {
+            console.log('교사 역할이 아님 (직접 조회):', profile.role);
+            // 리디렉션은 아래 getUserRole() 결과로 수행
+          } else {
+            // teacher 역할 확인됨
+            if (mounted) setRole('teacher');
+            console.log('교사 역할 확인됨 (직접 조회)');
+          }
+        }
+        
+        // 기존 방식(getUserRole)으로도 확인 (백업)
         const r = await getUserRole();
         
         // 컴포넌트가 언마운트된 경우 상태 업데이트 하지 않음
         if (!mounted) return;
         
-        console.log('교사 대시보드 - 사용자 역할:', r, typeof r);
+        console.log('교사 대시보드 - getUserRole 결과:', r, typeof r);
+        
+        // 직접 조회와 getUserRole() 결과가 다를 경우 로그
+        if (profile && profile.role && r !== String(profile.role).toLowerCase()) {
+          console.warn('역할 불일치: 직접 조회=', profile.role, 'getUserRole()=', r);
+        }
         
         // 소문자 'teacher'로 비교 (반환값이 enum으로 소문자로 변경됨)
         if (r !== "teacher") {
