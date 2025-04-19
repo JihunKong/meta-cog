@@ -87,6 +87,118 @@ export async function getTeacherStudents(teacherId: string) {
 }
 
 /**
+ * 현재 로그인한 교사의 학생 목록을 조회하는 함수
+ * 교사가 아닌 경우 빈 배열 반환
+ * @returns 학생 프로필 정보 배열
+ */
+export async function loadStudentData() {
+  try {
+    console.log('학생 데이터 로딩 시작...');
+    const supabase = getSupabaseClient();
+    
+    // 메타데이터에서, 현재 사용자 역할 확인
+    const { data: { user } } = await supabase.auth.getUser();
+    const role = user?.user_metadata?.role;
+    
+    // 교사인 경우에만 학생 데이터 로드
+    if (role === 'teacher') {
+      // 방법 1: teacher_student_relations 테이블 활용
+      const { data: relations, error: relationsError } = await supabase
+        .from('teacher_student_relations')
+        .select('student_id')
+        .eq('teacher_id', user.id);
+      
+      if (relationsError) {
+        console.error('교사-학생 관계 조회 오류:', relationsError);
+        
+        // 방법 2: 테이블이 없거나 권한 문제가 있으면 직접 학생 조회
+        const { data: students, error: studentsError } = await supabase
+          .from('profiles')
+          .select('user_id, email, role, created_at')
+          .eq('role', 'student');
+          
+        if (studentsError) {
+          console.error('학생 프로필 직접 조회 오류:', studentsError);
+          return [];
+        }
+        
+        // 학생 이름 정보 조회
+        const studentIds = students?.map((s: StudentProfile) => s.user_id) || [];
+        const { data: studentNames, error: namesError } = await supabase
+          .from('student_names')
+          .select('user_id, display_name')
+          .in('user_id', studentIds);
+          
+        if (namesError) {
+          console.error('학생 이름 직접 조회 오류:', namesError);
+        }
+        
+        // 이름 정보 병합
+        const studentsWithNames = students?.map((profile: StudentProfile) => {
+          const nameInfo = studentNames?.find((n: StudentName) => n.user_id === profile.user_id);
+          return {
+            ...profile,
+            display_name: nameInfo?.display_name || profile.email
+          };
+        });
+        
+        console.log(`학생 데이터 직접 로드 완료: ${studentsWithNames?.length || 0} 명`);
+        return studentsWithNames || [];
+      }
+      
+      // 연결된 학생이 있는지 확인
+      if (!relations || relations.length === 0) {
+        console.log('연결된 학생이 없습니다.');
+        return [];
+      }
+      
+      // 학생 ID 목록 추출
+      const studentIds = relations.map((relation: StudentRelation) => relation.student_id);
+      
+      // 학생 프로필 조회
+      const { data: students, error: studentsError } = await supabase
+        .from('profiles')
+        .select('user_id, email, role, created_at')
+        .in('user_id', studentIds);
+      
+      if (studentsError) {
+        console.error('학생 프로필 조회 오류:', studentsError);
+        return [];
+      }
+      
+      // 학생 이름 정보 조회
+      const { data: studentNames, error: namesError } = await supabase
+        .from('student_names')
+        .select('user_id, display_name')
+        .in('user_id', studentIds);
+        
+      if (namesError) {
+        console.error('학생 이름 조회 오류:', namesError);
+      }
+      
+      // 이름 정보 병합
+      const studentsWithNames = students?.map((profile: StudentProfile) => {
+        const nameInfo = studentNames?.find((n: StudentName) => n.user_id === profile.user_id);
+        return {
+          ...profile,
+          display_name: nameInfo?.display_name || profile.email
+        };
+      });
+      
+      console.log(`학생 데이터 로드 완료: ${studentsWithNames?.length || 0} 명`);
+      return studentsWithNames || [];
+    } else {
+      // 교사가 아닌 경우 빈 배열 반환
+      console.log('교사 권한이 없어 학생 데이터를 로드할 수 없습니다.');
+      return [];
+    }
+  } catch (error) {
+    console.error('학생 데이터 로딩 오류:', error);
+    return [];
+  }
+}
+
+/**
  * 학생을 교사와 연결하는 함수
  * @param teacherId 교사 ID
  * @param studentId 학생 ID
