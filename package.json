@@ -1,0 +1,41 @@
+{
+  "name": "meta-cog",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "migrate-to-firebase": "node scripts/migrate-to-firebase.js",
+    "setup-firebase-db": "node scripts/setup-firebase-db.js",
+    "create-test-users": "node scripts/create-test-users.js"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.14.17",
+    "@mui/material": "^5.15.14",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "autoprefixer": "^10.4.21",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
+    "firebase": "^11.6.0",
+    "firebase-admin": "^13.3.0",
+    "next": "14.0.4",
+    "postcss": "^8.5.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.15.2"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.10.5",
+    "@types/node": "^20.10.5",
+    "@types/react": "18.2.45",
+    "@types/react-dom": "18.2.18",
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.0.4",
+    "typescript": "5.3.3"
+  }
+}

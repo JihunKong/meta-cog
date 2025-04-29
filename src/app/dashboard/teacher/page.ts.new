@@ -1,0 +1,50 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Modal, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { getFirebaseInstance } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
+interface Student {
+  user_id: string;
+  email: string;
+  display_name: string;
+  last_login: string;
+}
+
+interface Goal {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  created_at?: any;
+  updated_at?: any;
+}
+
+interface Session {
+  id: string;
+  date: any;
+  percent: number;
+  reflection: string;
+}
+
+interface Reflection {
+  id: string;
+  content: string;
+  created_at: any;
+}
+
+export default function TeacherDashboard() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentGoals, setStudentGoals] = useState<Goal[]>([]);
+  const [goalLoading, setGoalLoading] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // 목표 추가 다이얼로그 상태

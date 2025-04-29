@@ -1,0 +1,822 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Modal, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem } from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { getFirebaseInstance } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
+interface Student {
+  user_id: string;
+  email: string;
+  display_name: string;
+  last_login: string;
+}
+
+interface Goal {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  created_at?: any;
+  updated_at?: any;
+}
+
+interface Session {
+  id: string;
+  date: any;
+  percent: number;
+  reflection: string;
+}
+
+interface Reflection {
+  id: string;
+  content: string;
+  created_at: any;
+}
+
+export default function TeacherDashboard() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentGoals, setStudentGoals] = useState<Goal[]>([]);
+  const [goalLoading, setGoalLoading] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // 목표 추가 다이얼로그 상태
+  const [addGoalOpen, setAddGoalOpen] = useState(false);
+  const [newGoal, setNewGoal] = useState({ subject: '', description: '', status: '진행 중' });
+  const [addGoalLoading, setAddGoalLoading] = useState(false);
+  const [addGoalError, setAddGoalError] = useState<string | null>(null);
+  // 목표 수정 다이얼로그 상태
+  const [editGoalOpen, setEditGoalOpen] = useState(false);
+  const [editGoal, setEditGoal] = useState<Goal | null>(null);
+  const [editGoalValues, setEditGoalValues] = useState({ subject: '', description: '', status: '진행 중' });
+  const [editGoalLoading, setEditGoalLoading] = useState(false);
+  const [editGoalError, setEditGoalError] = useState<string | null>(null);
+  // 목표 삭제 확인 다이얼로그
+  const [deleteGoalOpen, setDeleteGoalOpen] = useState(false);
+  const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
+  const [deleteGoalLoading, setDeleteGoalLoading] = useState(false);
+  const [deleteGoalError, setDeleteGoalError] = useState<string | null>(null);
+
+  // 목표 상세(세션/리플렉션) 상태
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [goalDetailOpen, setGoalDetailOpen] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [reflections, setReflections] = useState<Reflection[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  // 세션 추가 다이얼로그 상태
+  const [addSessionOpen, setAddSessionOpen] = useState(false);
+  const [newSession, setNewSession] = useState({ date: '', percent: 0, reflection: '' });
+  const [addSessionLoading, setAddSessionLoading] = useState(false);
+  const [addSessionError, setAddSessionError] = useState<string | null>(null);
+  // 세션 수정 다이얼로그
+  const [editSessionOpen, setEditSessionOpen] = useState(false);
+  const [editSession, setEditSession] = useState<Session | null>(null);
+  const [editSessionValues, setEditSessionValues] = useState({ date: '', percent: 0, reflection: '' });
+  const [editSessionLoading, setEditSessionLoading] = useState(false);
+  const [editSessionError, setEditSessionError] = useState<string | null>(null);
+  // 세션 삭제 다이얼로그
+  const [deleteSessionOpen, setDeleteSessionOpen] = useState(false);
+  const [deleteSession, setDeleteSession] = useState<Session | null>(null);
+  const [deleteSessionLoading, setDeleteSessionLoading] = useState(false);
+  const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
+  // 리플렉션 추가 다이얼로그
+  const [addReflectionOpen, setAddReflectionOpen] = useState(false);
+  const [newReflection, setNewReflection] = useState({ content: '' });
+  const [addReflectionLoading, setAddReflectionLoading] = useState(false);
+  const [addReflectionError, setAddReflectionError] = useState<string | null>(null);
+  // 리플렉션 수정/삭제 다이얼로그
+  const [editReflectionOpen, setEditReflectionOpen] = useState(false);
+  const [editReflection, setEditReflection] = useState<Reflection | null>(null);
+  const [editReflectionValue, setEditReflectionValue] = useState('');
+  const [editReflectionLoading, setEditReflectionLoading] = useState(false);
+  const [editReflectionError, setEditReflectionError] = useState<string | null>(null);
+  const [deleteReflectionOpen, setDeleteReflectionOpen] = useState(false);
+  const [deleteReflection, setDeleteReflection] = useState<Reflection | null>(null);
+  const [deleteReflectionLoading, setDeleteReflectionLoading] = useState(false);
+  const [deleteReflectionError, setDeleteReflectionError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+    async function checkAuth() {
+      try {
+        setLoading(true);
+        const r = await getUserRole();
+        if (!mounted) return;
+        if (!r || r !== "teacher") {
+          setError("교사 권한이 없습니다. 다시 로그인해주세요.");
+          setLoading(false);
+          router.replace("/login");
+          return;
+        }
+        setRole(r);
+        fetchStudentData();
+      } catch (err) {
+        setError("인증에 실패했습니다. 다시 로그인해주세요.");
+        setLoading(false);
+      }
+    }
+    checkAuth();
+    return () => { mounted = false; };
+  }, [router]);
+
+  async function fetchStudentData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("role", "==", "student"));
+      const querySnapshot = await getDocs(q);
+      const formattedStudents: Student[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        formattedStudents.push({
+          user_id: doc.id,
+          email: data.email || "이메일 없음",
+          display_name: data.name || (data.email ? data.email.split('@')[0] : "이름 없음"),
+          last_login: data.last_login ? new Date(data.last_login.toDate()).toLocaleDateString() : "-"
+        });
+      });
+      setStudents(formattedStudents);
+    } catch (err) {
+      setError("학생 데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={40} />
+        <Typography sx={{ mt: 2 }}>학생 데이터 로딩 중...</Typography>
+      </Box>
+    );
+  }
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error" variant="h6">{error}</Typography>
+      </Box>
+    );
+  }
+
+  // 학생 클릭 시 목표 목록 조회
+  const handleStudentClick = async (student: Student) => {
+    setSelectedStudent(student);
+    setModalOpen(true);
+    setGoalLoading(true);
+    setGoalError(null);
+    setStudentGoals([]);
+    try {
+      const { db } = getFirebaseInstance();
+      // users/{user_id}/goals 서브컬렉션에서 목표 조회
+      const goalsRef = collection(db, `users/${student.user_id}/goals`);
+      const q = query(goalsRef);
+      const querySnapshot = await getDocs(q);
+      const goals: Goal[] = [];
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        goals.push({
+          id: doc.id,
+          subject: data.subject || '',
+          description: data.description || '',
+          status: data.status || '',
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        });
+      });
+      setStudentGoals(goals);
+    } catch (err) {
+      setGoalError('목표 데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setGoalLoading(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setSelectedStudent(null);
+    setStudentGoals([]);
+    setGoalError(null);
+  };
+
+  // 목표 추가 버튼 클릭
+  const handleAddGoalOpen = () => {
+    setAddGoalOpen(true);
+    setNewGoal({ subject: '', description: '', status: '진행 중' });
+    setAddGoalError(null);
+  };
+  const handleAddGoalClose = () => {
+    setAddGoalOpen(false);
+    setAddGoalError(null);
+  };
+  // 목표 추가 실제 저장
+  const handleAddGoalSave = async () => {
+    if (!selectedStudent) return;
+    if (!newGoal.subject.trim()) {
+      setAddGoalError('과목명을 입력하세요.');
+      return;
+    }
+    setAddGoalLoading(true);
+    setAddGoalError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const goalsRef = collection(db, `users/${selectedStudent.user_id}/goals`);
+      const now = new Date();
+      // Firestore add 타입 에러 방지: addDoc 사용
+      // import { addDoc } from "firebase/firestore"; 필요
+      const { addDoc } = await import("firebase/firestore");
+      await addDoc(goalsRef, {
+        subject: newGoal.subject,
+        description: newGoal.description,
+        status: newGoal.status,
+        created_at: now,
+        updated_at: now
+      });
+      setAddGoalOpen(false);
+      setNewGoal({ subject: '', description: '', status: '진행 중' });
+      // 목표 목록 새로고침
+      await handleStudentClick(selectedStudent);
+    } catch (err) {
+      setAddGoalError('목표 저장 중 오류가 발생했습니다.');
+    } finally {
+      setAddGoalLoading(false);
+    }
+  };
+
+  // 목표 클릭 시 세션/리플렉션 상세 조회
+  const handleGoalClick = async (goal: Goal) => {
+    if (!selectedStudent) return;
+    setSelectedGoal(goal);
+    setGoalDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError(null);
+    setSessions([]);
+    setReflections([]);
+    try {
+      const { db } = getFirebaseInstance();
+      // 세션 목록 조회
+      const sessionsRef = collection(db, `users/${selectedStudent.user_id}/goals/${goal.id}/sessions`);
+      const sessionSnap = await getDocs(sessionsRef);
+      const sessionList: Session[] = [];
+      sessionSnap.forEach(doc => {
+        const data = doc.data();
+        sessionList.push({
+          id: doc.id,
+          date: data.date,
+          percent: data.percent,
+          reflection: data.reflection || ''
+        });
+      });
+      setSessions(sessionList);
+      // 리플렉션 목록 조회
+      const reflectionsRef = collection(db, `users/${selectedStudent.user_id}/goals/${goal.id}/reflections`);
+      const reflectionSnap = await getDocs(reflectionsRef);
+      const reflectionList: Reflection[] = [];
+      reflectionSnap.forEach(doc => {
+        const data = doc.data();
+        reflectionList.push({
+          id: doc.id,
+          content: data.content,
+          created_at: data.created_at
+        });
+      });
+      setReflections(reflectionList);
+    } catch (err) {
+      setDetailError('세션/리플렉션 데이터를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleGoalDetailClose = () => {
+    setGoalDetailOpen(false);
+    setSelectedGoal(null);
+    setSessions([]);
+    <Box p={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>교사 대시보드</Typography>
+        <LogoutButton />
+      </Box>
+      <Box mb={2}>
+        <input
+          type="text"
+          placeholder="학생 이름 또는 이메일 검색"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: 8, width: 280, border: '1px solid #ccc', borderRadius: 4 }}
+        />
+      </Box>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>학생 목록</Typography>
+          <List>
+            {students
+              .filter(stu => 
+                stu.display_name.toLowerCase().includes(search.toLowerCase()) || 
+                stu.email.toLowerCase().includes(search.toLowerCase())
+              )
+              .map(stu => (
+                <ListItem button key={stu.user_id} onClick={() => handleStudentClick(stu)}>
+                  <ListItemText 
+                    primary={stu.display_name}
+                    secondary={`${stu.email} / 최근 활동: ${stu.last_login}`}
+                  />
+                </ListItem>
+              ))}
+          </List>
+        </CardContent>
+      </Card>
+    </Box>
+    {/* 학생 목표 모달 */}
+    <Modal open={modalOpen} onClose={handleModalClose}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 24, p: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">{selectedStudent?.display_name}의 목표 목록</Typography>
+          <Box>
+            <Button variant="contained" size="small" onClick={handleAddGoalOpen} sx={{ mr: 1 }}>목표 추가</Button>
+            <IconButton onClick={handleModalClose}><CloseIcon /></IconButton>
+          </Box>
+        </Box>
+        {goalLoading ? (
+          <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight={120}>
+            <CircularProgress size={30} />
+            <Typography sx={{ mt: 1 }}>목표 로딩 중...</Typography>
+          </Box>
+        ) : goalError ? (
+          <Typography color="error">{goalError}</Typography>
+        ) : studentGoals.length === 0 ? (
+          <Typography>등록된 목표가 없습니다.</Typography>
+        ) : (
+          <List>
+            {studentGoals.map(goal => (
+              <ListItem button key={goal.id} onClick={() => handleGoalClick(goal)}
+                secondaryAction={
+                  <>
+                    <IconButton edge="end" aria-label="edit" onClick={e => { e.stopPropagation(); handleEditGoalOpen(goal); }} size="small"><EditIcon fontSize="small" /></IconButton>
+                    <IconButton edge="end" aria-label="delete" onClick={e => { e.stopPropagation(); handleDeleteGoalOpen(goal); }} size="small"><DeleteIcon fontSize="small" /></IconButton>
+                  </>
+                }
+              >
+                <ListItemText primary={goal.subject} secondary={goal.description} />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+    </Modal>
+    {/* 세션 추가 다이얼로그 */}
+    <Dialog open={addSessionOpen} onClose={() => setAddSessionOpen(false)}>
+      <DialogTitle>세션 추가</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          label="날짜"
+          type="date"
+          fullWidth
+          InputLabelProps={{ shrink: true }}
+          value={newSession.date}
+          onChange={e => setNewSession(s => ({ ...s, date: e.target.value }))}
+        />
+        <TextField
+          margin="dense"
+          label="달성률(%)"
+          type="number"
+          fullWidth
+          value={newSession.percent}
+          onChange={e => setNewSession(s => ({ ...s, percent: Number(e.target.value) }))}
+        />
+        <TextField
+          margin="dense"
+          label="반성문"
+          fullWidth
+          multiline
+          minRows={2}
+          value={newSession.reflection}
+          onChange={e => setNewSession(s => ({ ...s, reflection: e.target.value }))}
+        />
+        {addSessionError && <Typography color="error" sx={{ mt: 1 }}>{addSessionError}</Typography>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setAddSessionOpen(false)}>취소</Button>
+        <Button onClick={handleAddSessionSave} variant="contained" disabled={addSessionLoading}>{addSessionLoading ? '저장중...' : '저장'}</Button>
+      </DialogActions>
+    </Dialog>
+    {/* 리플렉션 추가 다이얼로그 */}
+    <Dialog open={addReflectionOpen} onClose={() => setAddReflectionOpen(false)}>
+      <DialogTitle>리플렉션 추가</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          label="리플렉션 내용"
+          fullWidth
+          multiline
+          minRows={3}
+          value={newReflection.content}
+          onChange={e => setNewReflection({ content: e.target.value })}
+        />
+        {addReflectionError && <Typography color="error" sx={{ mt: 1 }}>{addReflectionError}</Typography>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setAddReflectionOpen(false)}>취소</Button>
+        <Button onClick={handleAddReflectionSave} variant="contained" disabled={addReflectionLoading}>{addReflectionLoading ? '저장중...' : '저장'}</Button>
+      </DialogActions>
+    </Dialog>
+    {/* 세션 수정 다이얼로그 */}
+    <Dialog open={editSessionOpen} onClose={handleEditSessionClose}>
+      <DialogTitle>세션 수정</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          label="날짜"
+          type="date"
+          fullWidth
+          InputLabelProps={{ shrink: true }}
+          value={editSessionValues.date}
+          onChange={e => setEditSessionValues(s => ({ ...s, date: e.target.value }))}
+        />
+        <TextField
+          margin="dense"
+          label="달성률(%)"
+          type="number"
+          fullWidth
+          value={editSessionValues.percent}
+          onChange={e => setEditSessionValues(s => ({ ...s, percent: Number(e.target.value) }))}
+        />
+        <TextField
+          margin="dense"
+          label="반성문"
+          fullWidth
+          multiline
+          minRows={2}
+          value={editSessionValues.reflection}
+          onChange={e => setEditSessionValues(s => ({ ...s, reflection: e.target.value }))}
+        />
+        {editSessionError && <Typography color="error" sx={{ mt: 1 }}>{editSessionError}</Typography>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleEditSessionClose}>취소</Button>
+        <Button onClick={handleEditSessionSave} variant="contained" disabled={editSessionLoading}>{editSessionLoading ? '저장중...' : '저장'}</Button>
+      </DialogActions>
+    </Dialog>
+    {/* 세션 삭제 다이얼로그 */}
+    <Dialog open={deleteSessionOpen} onClose={handleDeleteSessionClose}>
+      <DialogTitle>세션 삭제</DialogTitle>
+      <DialogContent>
+        <Typography>정말로 이 세션을 삭제하시겠습니까?</Typography>
+        <Typography sx={{ mt: 2, fontWeight: 600 }}>{deleteSession && (deleteSession.date ? (deleteSession.date.toDate ? deleteSession.date.toDate().toLocaleDateString() : deleteSession.date) : '-')}</Typography>
+        {deleteSessionError && <Typography color="error" sx={{ mt: 1 }}>{deleteSessionError}</Typography>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleDeleteSessionClose}>취소</Button>
+        <Button onClick={handleDeleteSessionConfirm} variant="contained" color="error" disabled={deleteSessionLoading}>{deleteSessionLoading ? '삭제중...' : '삭제'}</Button>
+      </DialogActions>
+    </Dialog>
+    {/* 목표 상세(세션/리플렉션) 모달 */}
+    <Modal open={goalDetailOpen} onClose={handleGoalDetailClose}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 480, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 24, p: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">목표 상세</Typography>
+          <IconButton onClick={handleGoalDetailClose}><CloseIcon /></IconButton>
+        </Box>
+        {selectedGoal && (
+          <Box mb={2}>
+            <Typography variant="subtitle1"><b>과목:</b> {selectedGoal.subject}</Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}><b>설명:</b> {selectedGoal.description}</Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}><b>상태:</b> {selectedGoal.status}</Typography>
+          </Box>
+        )}
+        {detailLoading ? (
+          <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" minHeight={100}>
+            <CircularProgress size={28} />
+            <Typography sx={{ mt: 1 }}>세션/리플렉션 로딩 중...</Typography>
+          </Box>
+        ) : detailError ? (
+          <Typography color="error">{detailError}</Typography>
+        ) : (
+          <>
+            <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">세션 목록</Typography>
+              <Button variant="contained" size="small" onClick={() => setAddSessionOpen(true)}>세션 추가</Button>
+            </Box>
+            {sessions.length === 0 ? (
+              <Typography sx={{ fontSize: 14 }}>등록된 세션이 없습니다.</Typography>
+            ) : (
+              <List dense>
+                {sessions.map(session => (
+                  <ListItem key={session.id}
+                    secondaryAction={
+                      <>
+                        <IconButton edge="end" aria-label="edit" onClick={e => { e.stopPropagation(); handleEditSessionOpen(session); }} size="small"><EditIcon fontSize="small" /></IconButton>
+                        <IconButton edge="end" aria-label="delete" onClick={e => { e.stopPropagation(); handleDeleteSessionOpen(session); }} size="small"><DeleteIcon fontSize="small" /></IconButton>
+                      </>
+                    }
+                  >
+                    <ListItemText
+                      primary={`날짜: ${session.date ? (session.date.toDate ? session.date.toDate().toLocaleDateString() : session.date) : '-'}`}
+                      secondary={
+                        <>
+                          <span>달성률: {session.percent}%</span><br />
+                          <span>반성문: {session.reflection || '-'}</span>
+                        </>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">리플렉션 목록</Typography>
+              <Button variant="contained" size="small" onClick={() => setAddReflectionOpen(true)}>리플렉션 추가</Button>
+            </Box>
+            {reflections.length === 0 ? (
+              <Typography sx={{ fontSize: 14 }}>등록된 리플렉션이 없습니다.</Typography>
+            ) : (
+              <List dense>
+                {reflections.map(ref => (
+                  <ListItem key={ref.id}
+                    secondaryAction={
+                      <>
+                        <IconButton edge="end" aria-label="edit" onClick={e => { e.stopPropagation(); handleEditReflectionOpen(ref); }} size="small"><EditIcon fontSize="small" /></IconButton>
+                        <IconButton edge="end" aria-label="delete" onClick={e => { e.stopPropagation(); handleDeleteReflectionOpen(ref); }} size="small"><DeleteIcon fontSize="small" /></IconButton>
+                      </>
+                    }
+                  >
+                    <ListItemText
+                      primary={ref.content}
+                      secondary={`작성일: ${ref.created_at ? (ref.created_at.toDate ? ref.created_at.toDate().toLocaleDateString() : ref.created_at) : '-'}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </>
+        )}
+      </Box>
+    </Modal>
+  );
+
+  // 리플렉션 수정 다이얼로그 열기
+  function handleEditReflectionOpen(ref: Reflection) {
+    setEditReflection(ref);
+    setEditReflectionValue(ref.content);
+    setEditReflectionError(null);
+    setEditReflectionOpen(true);
+  }
+  function handleEditReflectionClose() {
+    setEditReflectionOpen(false);
+    setEditReflection(null);
+    setEditReflectionError(null);
+  }
+  // 리플렉션 수정 저장
+  async function handleEditReflectionSave() {
+    if (!selectedStudent || !selectedGoal || !editReflection) return;
+    if (!editReflectionValue.trim()) {
+      setEditReflectionError('내용을 입력하세요.');
+      return;
+    }
+    setEditReflectionLoading(true);
+    setEditReflectionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const reflectionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/reflections/${editReflection.id}`);
+      await updateDoc(reflectionDoc, {
+        content: editReflectionValue
+      });
+      setEditReflectionOpen(false);
+      setEditReflection(null);
+      // 리플렉션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setEditReflectionError('리플렉션 수정 중 오류가 발생했습니다.');
+    } finally {
+      setEditReflectionLoading(false);
+    }
+  }
+
+  // 리플렉션 삭제 다이얼로그 열기
+  function handleDeleteReflectionOpen(ref: Reflection) {
+    setDeleteReflection(ref);
+    setDeleteReflectionError(null);
+    setDeleteReflectionOpen(true);
+  }
+  function handleDeleteReflectionClose() {
+    setDeleteReflectionOpen(false);
+    setDeleteReflection(null);
+    setDeleteReflectionError(null);
+  }
+  // 리플렉션 삭제 실행
+  async function handleDeleteReflectionConfirm() {
+    if (!selectedStudent || !selectedGoal || !deleteReflection) return;
+    setDeleteReflectionLoading(true);
+    setDeleteReflectionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const reflectionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/reflections/${deleteReflection.id}`);
+      await deleteDoc(reflectionDoc);
+      setDeleteReflectionOpen(false);
+      setDeleteReflection(null);
+      // 리플렉션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setDeleteReflectionError('리플렉션 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleteReflectionLoading(false);
+    }
+  }
+
+  // 리플렉션 추가 저장 함수
+  async function handleAddReflectionSave() {
+    if (!selectedStudent || !selectedGoal) return;
+    if (!newReflection.content.trim()) {
+      setAddReflectionError('내용을 입력하세요.');
+      return;
+    }
+    setAddReflectionLoading(true);
+    setAddReflectionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { addDoc, collection: fsCollection } = await import('firebase/firestore');
+      const reflectionsRef = fsCollection(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/reflections`);
+      await addDoc(reflectionsRef, {
+        content: newReflection.content,
+        created_at: new Date()
+      });
+      setAddReflectionOpen(false);
+      setNewReflection({ content: '' });
+      // 리플렉션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setAddReflectionError('리플렉션 저장 중 오류가 발생했습니다.');
+    } finally {
+      setAddReflectionLoading(false);
+    }
+  }
+
+  // 세션 수정 다이얼로그 열기
+  function handleEditSessionOpen(session: Session) {
+    setEditSession(session);
+    setEditSessionValues({
+      date: session.date && session.date.toDate ? session.date.toDate().toISOString().slice(0, 10) : (typeof session.date === 'string' ? session.date : ''),
+      percent: session.percent,
+      reflection: session.reflection
+    });
+    setEditSessionError(null);
+    setEditSessionOpen(true);
+  }
+  function handleEditSessionClose() {
+    setEditSessionOpen(false);
+    setEditSession(null);
+    setEditSessionError(null);
+  }
+  // 세션 수정 저장
+  async function handleEditSessionSave() {
+    if (!selectedStudent || !selectedGoal || !editSession) return;
+    if (!editSessionValues.date) {
+      setEditSessionError('날짜를 입력하세요.');
+      return;
+    }
+    setEditSessionLoading(true);
+    setEditSessionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const sessionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/sessions/${editSession.id}`);
+      await updateDoc(sessionDoc, {
+        date: new Date(editSessionValues.date),
+        percent: editSessionValues.percent,
+        reflection: editSessionValues.reflection
+      });
+      setEditSessionOpen(false);
+      setEditSession(null);
+      // 세션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setEditSessionError('세션 수정 중 오류가 발생했습니다.');
+    } finally {
+      setEditSessionLoading(false);
+    }
+  }
+
+  // 세션 삭제 다이얼로그 열기
+  function handleDeleteSessionOpen(session: Session) {
+    setDeleteSession(session);
+    setDeleteSessionError(null);
+    setDeleteSessionOpen(true);
+  }
+  function handleDeleteSessionClose() {
+    setDeleteSessionOpen(false);
+    setDeleteSession(null);
+    setDeleteSessionError(null);
+  }
+  // 세션 삭제 실행
+  async function handleDeleteSessionConfirm() {
+    if (!selectedStudent || !selectedGoal || !deleteSession) return;
+    setDeleteSessionLoading(true);
+    setDeleteSessionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const sessionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/sessions/${deleteSession.id}`);
+      await deleteDoc(sessionDoc);
+      setDeleteSessionOpen(false);
+      setDeleteSession(null);
+      // 세션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setDeleteSessionError('세션 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleteSessionLoading(false);
+    }
+  }
+  
+  // 리플렉션 수정 다이얼로그 열기
+  function handleEditReflectionOpen(ref: Reflection) {
+    setEditReflection(ref);
+    setEditReflectionValue(ref.content);
+    setEditReflectionError(null);
+    setEditReflectionOpen(true);
+  }
+  function handleEditReflectionClose() {
+    setEditReflectionOpen(false);
+    setEditReflection(null);
+    setEditReflectionError(null);
+  }
+  // 리플렉션 수정 저장
+  async function handleEditReflectionSave() {
+    if (!selectedStudent || !selectedGoal || !editReflection) return;
+    if (!editReflectionValue.trim()) {
+      setEditReflectionError('리플렉션 내용을 입력해주세요.');
+      return;
+    }
+    setEditReflectionLoading(true);
+    setEditReflectionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const reflectionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/reflections/${editReflection.id}`);
+      await updateDoc(reflectionDoc, {
+        content: editReflectionValue.trim()
+      });
+      setEditReflectionOpen(false);
+      setEditReflection(null);
+      // 리플렉션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setEditReflectionError('리플렉션 수정 중 오류가 발생했습니다.');
+    } finally {
+      setEditReflectionLoading(false);
+    }
+  }
+  
+  // 리플렉션 삭제 다이얼로그 열기
+  function handleDeleteReflectionOpen(ref: Reflection) {
+    setDeleteReflection(ref);
+    setDeleteReflectionError(null);
+    setDeleteReflectionOpen(true);
+  }
+  function handleDeleteReflectionClose() {
+    setDeleteReflectionOpen(false);
+    setDeleteReflection(null);
+    setDeleteReflectionError(null);
+  }
+  // 리플렉션 삭제 실행
+  async function handleDeleteReflectionConfirm() {
+    if (!selectedStudent || !selectedGoal || !deleteReflection) return;
+    setDeleteReflectionLoading(true);
+    setDeleteReflectionError(null);
+    try {
+      const { db } = getFirebaseInstance();
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const reflectionDoc = doc(db, `users/${selectedStudent.user_id}/goals/${selectedGoal.id}/reflections/${deleteReflection.id}`);
+      await deleteDoc(reflectionDoc);
+      setDeleteReflectionOpen(false);
+      setDeleteReflection(null);
+      // 리플렉션 목록 새로고침
+      await handleGoalClick(selectedGoal);
+    } catch (err) {
+      setDeleteReflectionError('리플렉션 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleteReflectionLoading(false);
+    }
+  }
+}

@@ -1,0 +1,557 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getFirebaseInstance } from "@/lib/firebase";
+import { getUserRole, getUserName } from "@/lib/auth";
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  orderBy, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  deleteDoc,
+  addDoc,
+  updateDoc,
+  serverTimestamp
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getFirebaseInstance } from "@/lib/firebase";
+import { getUserRole, getUserName } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+import {
+  Box, Container, Typography, Button, Dialog, DialogTitle, DialogContent,
+  DialogActions, FormControl, InputLabel, Select, TextField, MenuItem, CircularProgress, Alert, Tab, Tabs
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import SessionManager from "@/components/student/session/SessionManager";
+import CalendarView from "@/components/student/CalendarView";
+import StatsView from "@/components/student/StatsView";
+import AIAdviceView from "@/components/student/AIAdviceView";
+
+interface Session {
+  id: string;
+  user_id: string;
+  subject: string;
+  description: string;
+  percent: number;
+  reflection: string;
+  created_at: string;
+  goal_progress_id?: string;
+  progress_created_at?: string;
+}
+
+const SUBJECTS = ["국어", "영어", "수학", "과학", "사회"];
+
+export default function StudentDashboard() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newSessionData, setNewSessionData] = useState({
+    subject: SUBJECTS[0],
+    description: ""
+  });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>("");
+
+  // 사용자 이름 로딩 (User row 없으면 자동 생성)
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const name = await getUserName();
+      if (name) setUserName(name);
+    };
+    fetchUserName();
+  }, []);
+
+  // 통계 데이터
+  const [statsData, setStatsData] = useState({
+    recentPerformance: [] as { date: string; value: number }[],
+    subjectPerformance: [] as { subject: string; average: number }[],
+    weekdayFrequency: [] as { day: string; count: number }[]
+  });
+
+  // 이제 메타데이터를 데이터베이스에 저장하므로 로컬 스토리지 사용 중단
+
+  // 사용자 권한 확인
+  useEffect(() => {
+    let mounted = true; // 컴포넌트 마운트 상태 추적
+    
+    const checkRole = async () => {
+      try {
+        const role = await getUserRole();
+        
+        // 컴포넌트가 언마운트된 경우 상태 업데이트 중단
+        if (!mounted) return;
+        
+        console.log('학생 대시보드 - 역할 확인:', role, typeof role);
+        
+        // 소문자로 비교 (enum 타입 대응)
+        if (role !== "student") {
+          router.replace("/login");
+          return;
+        }
+        // student 역할인 경우만 상태 업데이트
+        setUserRole(role);
+        setLoading(false);
+      } catch (error) {
+        console.error("권한 확인 오류:", error);
+        router.replace("/login");
+      }
+    };
+    
+    checkRole();
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // 세션 데이터 로드 (학생만)
+  useEffect(() => {
+    if (userRole === "student") {
+      const getFilteredSessions = () => {
+        return sessions;
+      };
+      
+      const getAuthSession = async () => {
+        const { auth } = getFirebaseInstance();
+        return auth.currentUser;
+      };
+      
+      const getCurrentUserId = async () => {
+        const { auth } = getFirebaseInstance();
+        return auth.currentUser?.uid;
+      };
+      
+      const getCurrentUser = async () => {
+        const { auth } = getFirebaseInstance();
+        return auth.currentUser;
+      };
+      
+      const fetchSessions = async () => {
+        try {
+          const { auth, db } = getFirebaseInstance();
+          const user = await getAuthSession();
+          if (!user) {
+            console.error("사용자 정보가 없습니다.");
+            router.push('/login');
+            return;
+          }
+          
+          console.log("세션 데이터 요청 중 - 사용자 ID:", user.uid);
+          
+          // 세션 데이터 초기화 (중복 방지)
+          setSessions([]);
+          
+          try {
+            // Firestore에서 직접 세션 데이터 가져오기
+            const sessionsRef = collection(db, 'sessions');
+            const sessionQuery = query(
+              sessionsRef,
+              where('user_id', '==', user.uid),
+              orderBy('created_at', 'desc')
+            );
+            
+            const querySnapshot = await getDocs(sessionQuery);
+            
+            if (querySnapshot.empty) {
+              console.log("세션 데이터가 없습니다.");
+              return;
+            }
+            
+            // 세션 데이터 배열 준비
+            const sessionsData: Session[] = [];
+            
+            console.log("Firestore 세션 데이터:", {
+              count: querySnapshot.size,
+              sampleId: querySnapshot.size > 0 ? querySnapshot.docs[0].id : null
+            });
+            
+            // 각 세션 문서 처리
+            for (const docSnapshot of querySnapshot.docs) {
+              const sessionData = docSnapshot.data();
+              
+              // 진행 상황 데이터 가져오기
+              let latestProgress = null;
+              try {
+                const progressRef = collection(db, 'sessions', docSnapshot.id, 'goal_progress');
+                const progressQuery = query(progressRef, orderBy('created_at', 'desc'), where('user_id', '==', user.uid));
+                const progressSnapshot = await getDocs(progressQuery);
+                
+                if (!progressSnapshot.empty) {
+                  // 가장 최근 진행 상황 가져오기 (이미 내림차순으로 정렬됨)
+                  latestProgress = progressSnapshot.docs[0].data();
+                }
+              } catch (progressError) {
+                console.error('진행 상황 데이터 로드 오류:', progressError);
+              }
+              
+              // 세션 데이터 구성
+              sessionsData.push({
+                id: docSnapshot.id,
+                user_id: sessionData.user_id,
+                subject: sessionData.subject,
+                description: sessionData.description,
+                percent: latestProgress?.percent ?? 0,
+                reflection: latestProgress?.reflection ?? '',
+                created_at: sessionData.created_at,
+                goal_progress_id: latestProgress?.id,
+                progress_created_at: latestProgress?.created_at
+              });
+            }
+            
+            console.log(`${sessionsData.length}개의 세션 데이터 로드됨`);
+            setSessions(sessionsData);
+            
+            // 이미 Firestore 쿼리에서 정렬되어 있으므로 추가 정렬 불필요
+          } catch (apiError) {
+            console.error("세션 API 호출 오류:", apiError);
+            throw apiError;
+          }
+        } catch (error) {
+          console.error("세션 데이터 로드 오류:", error);
+        }
+      };
+      
+      fetchSessions();
+    }
+  }, [userRole]);
+
+  // 통계 데이터 계산
+  useEffect(() => {
+    if (sessions.length > 0) {
+      calculateStats();
+    }
+  }, [sessions]);
+
+      }
+    } catch (error) {
+      console.error("세션 데이터 로드 오류:", error);
+    }
+  };
+
+  // 통계 데이터 계산
+  const calculateStats = () => {
+    if (sessions.length === 0) return;
+    
+    // 최근 성과 데이터 (최근 10개 세션)
+    const recentPerformance = sessions
+      .slice(0, 10)
+      .map(session => ({
+        date: new Date(session.created_at).toLocaleDateString(),
+        value: session.percent
+      }));
+    
+    // 과목별 평균 성과
+    const subjectGroups: {[key: string]: number[]} = {};
+    sessions.forEach(session => {
+      if (!subjectGroups[session.subject]) {
+        subjectGroups[session.subject] = [];
+      }
+      subjectGroups[session.subject].push(session.percent);
+    });
+    
+    const subjectPerformance = Object.entries(subjectGroups).map(([subject, values]) => ({
+      subject,
+      average: values.reduce((sum, val) => sum + val, 0) / values.length
+    }));
+    
+    // 요일별 학습 빈도
+    const weekdayCounts: {[key: string]: number} = {
+      '일': 0, '월': 0, '화': 0, '수': 0, '목': 0, '금': 0, '토': 0
+    };
+    
+    const weekdayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    
+    sessions.forEach(session => {
+      const date = new Date(session.created_at);
+      const weekday = weekdayNames[date.getDay()];
+      weekdayCounts[weekday]++;
+    });
+    
+    const weekdayFrequency = Object.entries(weekdayCounts).map(([day, count]) => ({
+      day,
+      count
+    }));
+    
+    setStatsData({
+      recentPerformance,
+      subjectPerformance,
+      weekdayFrequency
+    });
+  };
+
+
+  
+  // 새 세션 추가 핸들러
+  const handleAddSession = async () => {
+    setIsSubmitting(true);
+    try {
+      // 현재 사용자 ID 가져오기
+      const user = getFirebaseInstance().auth.currentUser;
+      if (!user) {
+        console.error("사용자 정보를 가져올 수 없습니다.");
+        return;
+      }
+      
+      // 세션 데이터 로깅
+      console.log("추가할 세션 데이터:", {
+        user_id: user.uid,
+        subject: newSessionData.subject,
+        description: newSessionData.description
+      });
+      
+      // 세션 생성 또는 업데이트
+      const saveSession = async () => {
+        setIsSubmitting(true);
+        try {
+          const { db } = getFirebaseInstance();
+          // 현재 로그인한 사용자 가져오기
+          const user = getFirebaseInstance().auth.currentUser;
+          if (!user) {
+            setError("사용자 정보가 없습니다.");
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // 세션 데이터 준비
+          const sessionData = {
+            subject: newSessionData.subject,
+            description: newSessionData.description,
+            user_id: user.uid,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          let sessionId;
+          
+          if (editId) {
+            // 기존 세션 업데이트
+            const sessionRef = doc(db, 'sessions', editId);
+            await setDoc(sessionRef, {
+              ...sessionData,
+              updated_at: new Date().toISOString()
+            }, { merge: true });
+            sessionId = editId;
+          } else {
+            // 새 세션 생성
+            const sessionsRef = collection(db, 'sessions');
+            const newSessionRef = doc(sessionsRef);
+            await setDoc(newSessionRef, sessionData);
+            sessionId = newSessionRef.id;
+          }
+          
+          console.log("세션 추가 성공!");
+          
+          // 대화상자 닫기
+          handleDialogClose();
+          
+          // 세션 목록 새로고침
+          await fetchSessions();
+        } catch (error) {
+          console.error('세션 저장 오류:', error);
+          setError('세션을 저장하는 중 오류가 발생했습니다.');
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+      
+      saveSession();
+    } catch (error) {
+      console.error("세션 추가 오류:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 세션 삭제 핸들러
+  const handleDeleteSession = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      console.log('세션 삭제 시작:', id);
+      
+      // 1. 먼저 해당 목표와 연결된 모든 진행 데이터 찾기
+      const { data: progressData, error: fetchError } = await supabase
+        .from('goal_progress')
+        .select('id')
+        .eq('smart_goal_id', id);
+        
+      if (fetchError) {
+        console.error('연결된 progress 데이터 조회 오류:', fetchError);
+      } else {
+        console.log(`${progressData?.length || 0}개의 연결된 progress 항목 발견`);
+        
+        // 2. 각 진행 데이터 삭제
+        if (progressData && progressData.length > 0) {
+          for (const progress of progressData) {
+            console.log('progress 삭제:', progress.id);
+            
+            const { error: deleteProgressError } = await supabase
+              .from('goal_progress')
+              .delete()
+              .eq('id', progress.id);
+              
+            if (deleteProgressError) {
+              console.error('progress 삭제 실패:', deleteProgressError);
+            }
+          }
+        }
+      }
+      
+      // 3. 목표 데이터 삭제
+      console.log('smart_goal 삭제:', id);
+      const { error } = await supabase
+        .from('smart_goals')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('smart_goal 삭제 실패:', error);
+        throw error;
+      }
+
+      console.log('세션 삭제 완료');
+      
+      // 로컬 상태 업데이트
+      setSessions(sessions.filter(s => s.id !== id));
+    } catch (error: any) {
+      console.error("세션 삭제 오류:", error);
+      alert(`세션 삭제 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 세션 업데이트 핸들러
+  const handleUpdateSession = async (session: Session) => {
+    try {
+      setLoading(true);
+      // 기본 세션 정보 업데이트
+      const { error } = await supabase
+        .from('smart_goals')
+        .update({
+          subject: session.subject,
+          description: session.description
+        })
+        .eq('id', session.id);
+
+      if (error) throw error;
+
+      // 로컬 상태만 업데이트 (데이터베이스는 이미 업데이트 됨)
+      setSessions(sessions.map(s => s.id === session.id ? session : s));
+
+      setEditId(null);
+    } catch (error) {
+      console.error("세션 업데이트 오류:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 대화상자 핸들러
+  const handleDialogOpen = () => {
+    setNewSessionData({
+      subject: SUBJECTS[0],
+      description: ""
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  // 로딩 상태이거나 역할이 student가 아닔
+  if (loading || !userRole || userRole !== "student") {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box>
+          <Typography variant="h4" component="h1">학생 대시보드</Typography>
+          {userName && (
+            <Typography variant="subtitle1" sx={{ mt: 1 }}>
+              {userName}님! 환영합니다.
+            </Typography>
+          )}
+        </Box>
+        <LogoutButton />
+      </Box>
+
+      <Box sx={{ width: '100%', mb: 3 }}>
+        <Tabs value={activeTab} onChange={handleTabChange} centered>
+          <Tab label="학습 세션 관리" />
+          <Tab label="달력 뷰" />
+          <Tab label="통계 및 분석" />
+          <Tab label="AI 어드바이스" />
+        </Tabs>
+      </Box>
+
+      {/* 탭 1: 학습 세션 목록 */}
+      {activeTab === 0 && (
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">일자별 학습 기록</Typography>
+  
+          </Box>
+
+          <SessionManager 
+            sessions={sessions} 
+            setSessions={setSessions}
+          />
+        </Box>
+      )}
+
+      {/* 탭 2: 달력 뷰 */}
+      {activeTab === 1 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>일자별 학습 활동</Typography>
+          <CalendarView sessions={sessions} />
+        </Box>
+      )}
+
+      {/* 탭 3: 통계 및 분석 */}
+      {activeTab === 2 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>학습 통계 및 분석</Typography>
+          {sessions.length === 0 ? (
+            <Alert severity="info" sx={{ my: 2 }}>
+              아직 등록된 학습 세션이 없습니다. 학습 세션을 추가해보세요.
+            </Alert>
+          ) : (
+            <StatsView statsData={statsData} />
+          )}
+        </Box>
+      )}
+
+      {/* 탭 4: AI 어드바이스 */}
+      {activeTab === 3 && (
+        <Box>
+          <Typography variant="h6" gutterBottom>AI 학습 조언</Typography>
+          <AIAdviceView sessions={sessions} />
+        </Box>
+      )}
+    </Container>
+  );
+}

@@ -1,0 +1,47 @@
+'use client';
+
+/// <reference types="@supabase/supabase-js" />
+
+import { createBrowserClient } from '@supabase/ssr';
+
+// 싱글톤 인스턴스를 저장할 변수들
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null;
+let supabaseAdminInstance: ReturnType<typeof createBrowserClient> | null = null;
+
+// 환경 변수에서 Supabase 설정 가져오기
+// Firebase로 마이그레이션 중인 상태이므로 임시 값 설정
+const supabaseUrl = 'https://dummy-project.supabase.co';
+const supabaseAnonKey = 'dummy-key';
+
+// 더미 Supabase 클라이언트 생성 (마이그레이션 임시 지원용)
+export function createSupabaseClient() {
+  // 실제 Supabase 호출은 Firebase로 대체될 예정이지만 임시로 인터페이스 유지
+  const dummyClient = {
+    from: () => ({
+      select: () => Promise.resolve({ data: [], error: null }),
+      insert: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+      update: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }),
+      delete: () => ({ eq: () => Promise.resolve({ data: [], error: null }) })
+    }),
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signOut: () => Promise.resolve({ error: null })
+    }
+  };
+  
+  return dummyClient as any;
+}
+
+// 일반 사용자용 클라이언트 (RLS가 적용됨) - 싱글톤 패턴
+export const getSupabaseClient = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createSupabaseClient();
+  }
+  return supabaseInstance;
+};
+
+// 기존 코드와의 호환성을 위한 직접 내보내기
+export const supabase = getSupabaseClient();
+
+// 서비스 작업 키는 클라이언트에서 사용하지 않음
+// Admin 작업은 서버 컴포넌트에서만 createSupabaseAdminServerClient()를 통해 사용해야 함

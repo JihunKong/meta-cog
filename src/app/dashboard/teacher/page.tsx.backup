@@ -1,0 +1,687 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Card, CardContent, List, ListItem, ListItemText, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Button as MuiButton } from "@mui/material";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { supabase } from "@/lib/supabase";
+
+interface Student {
+  user_id: string;
+  email: string;
+  display_name: string;
+  last_login: string;
+}
+
+import { useRouter } from "next/navigation";
+import { getUserRole } from "@/lib/auth";
+import LogoutButton from "@/components/LogoutButton";
+
+export default function TeacherDashboard() {
+  const [students, setStudents] = useState<Student[]>([]);
+  // [설명] 검색어를 저장하는 state입니다. 사용자가 입력창에 값을 입력하면 이 값이 바뀝니다.
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Student | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // 학생별 목표/세션/반성문 데이터
+  const [studentGoals, setStudentGoals] = useState<Record<string, any[]>>({});
+  const [studentSessions, setStudentSessions] = useState<Record<string, any[]>>({});
+  const [studentReflections, setStudentReflections] = useState<Record<string, any[]>>({});
+  // 목표별 달성률 변화 차트 모달 상태
+  const [openGoalChartId, setOpenGoalChartId] = useState<string | null>(null);
+  // 교사 코멘트: { targetType, targetId, teacher, comment, created_at }
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({}); // key: targetType-targetId
+  const teacherName = "이교사"; // 임시 - 실제 로그인 교사 이름 사용
+  
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  // 교사 역할 확인 및 데이터 로딩
+  useEffect(() => {
+    let mounted = true; // 컴포넌트 마운트 상태 추적
+
+    async function checkAuth() {
+      try {
+        setLoading(true);
+        console.log('교사 대시보드 - 인증 확인 시작...');
+        
+        // 직접 프로필 테이블 쿼리 (추가적인 신뢰성을 위해)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.error('사용자 인증 정보가 없습니다');
+          if (mounted) {
+            setError('로그인이 필요합니다. 다시 로그인해주세요.');
+            setLoading(false);
+          }
+          return;
+        }
+        
+        console.log('교사 대시보드 - 사용자 ID 확인:', user.id);
+        
+        // 역할을 직접 프로필 테이블에서 확인
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (profileError) {
+          console.error('직접 프로필 조회 오류:', profileError);
+          // 오류가 발생해도 getUserRole()으로 다시 시도합니다
+        } else if (profile && profile.role) {
+          console.log('직접 조회한 사용자 역할:', profile.role);
+          
+          // 역할이 teacher 또는 TEACHER가 아니면 리디렉션
+          if (typeof profile.role === 'string' && 
+              profile.role.toLowerCase() !== 'teacher') {
+            if (mounted) {
+              setError('교사 권한이 없습니다. 다시 로그인해주세요.');
+              setLoading(false);
+              router.replace('/login');
+            }
+            return;
+          } else {
+            // teacher 역할 확인됨
+            if (mounted) setRole('teacher');
+            console.log('교사 역할 확인됨 (직접 조회)');
+          }
+        }
+        
+        // 기존 방식(getUserRole)으로도 확인 (백업)
+        const r = await getUserRole();
+        
+        // 컴포넌트가 언마운트된 경우 상태 업데이트 하지 않음
+        if (!mounted) return;
+        
+        console.log('교사 대시보드 - getUserRole 결과:', r, typeof r);
+        
+        // 직접 조회와 getUserRole() 결과가 다를 경우 로그
+        if (profile && profile.role && r !== String(profile.role).toLowerCase()) {
+          console.warn('역할 불일치: 직접 조회=', profile.role, 'getUserRole()=', r);
+        }
+        
+        // 소문자 'teacher'로 비교 (반환값이 enum으로 소문자로 변경됨)
+        if (r !== "teacher") {
+          console.log('역할 불일치: 교사 대시보드에서 ' + r + ' 역할로 리디렉션');
+          // 즉시 리디렉션 실행 - replace 사용으로 히스토리 없이 이동
+          router.replace("/login");
+          return;
+        }
+        
+        // teacher 역할인 경우만 상태 업데이트
+        setRole(r);
+        console.log('교사 역할 확인 완료 - 학생 데이터 로딩 시작');
+        
+        // TEACHER 권한이 있으면 학생 데이터 가져오기
+        fetchStudentData();
+      } catch (err) {
+        console.error('인증 확인 오류:', err);
+        if (mounted) {
+          setError('인증에 실패했습니다. 다시 로그인해주세요.');
+          setLoading(false);
+        }
+      }
+    }
+    
+    checkAuth();
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  // 전체 요약 통계
+  const [summary, setSummary] = useState<{goalCount:number, sessionCount:number, reflectionCount:number, avgPercent:number} | null>(null);
+  
+  // 코멘트 등록 함수
+  const handleAddComment = (targetType: string, targetId: string) => {
+    const key = `${targetType}-${targetId}`;
+    const text = commentInputs[key]?.trim();
+    if (!text) return;
+    setComments(prev => [
+      ...prev,
+      { targetType, targetId, teacher: teacherName, comment: text, created_at: new Date().toISOString() }
+    ]);
+    setCommentInputs(inputs => ({ ...inputs, [key]: "" }));
+  };
+
+  // 학생 데이터 가져오기
+  async function fetchStudentData() {
+    setLoading(true);
+    setError(null);
+    console.log('학생 데이터 로딩 시작...');
+    
+    try {
+      // 먼저 profiles 테이블에서 role 값들의 종류를 확인 (디버깅용)
+      const { data: roleData } = await supabase
+        .from('profiles')
+        .select('role')
+        .order('role');
+      
+      console.log('존재하는 role 값들:', roleData?.map(r => r.role));
+      
+      // Supabase에서 student 역할을 가진 사용자 가져오기 (대소문자 구분 없이 검색)
+      // role이 'student'이거나 'STUDENT' 모두 가져오도록 ILIKE 사용
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, email, created_at, role')
+        .or('role.ilike.%student%,role.eq.student');
+
+      console.log('프로필 쿼리 결과:', { 
+        count: profiles?.length || 0, 
+        error: profilesError ? '에러 있음' : '없음',
+        firstFew: profiles?.slice(0, 3)
+      });
+
+      if (profilesError) {
+        console.error('프로필 조회 오류:', profilesError);
+        throw new Error("학생 정보를 가져올 수 없습니다: " + profilesError.message);
+      }
+      
+      // role이 student 또는 STUDENT인 프로필만 필터링
+      const studentProfiles = profiles.filter(p => 
+        p.role && (typeof p.role === 'string' && 
+          (p.role.toLowerCase() === 'student' || p.role === 'STUDENT'))
+      );
+      
+      console.log('필터링된 학생 프로필:', { 
+        count: studentProfiles.length,
+        allRoles: profiles.map(p => p.role)
+      });
+      
+      // student_names 테이블에서 학생 이름 정보 가져오기
+      const emails = studentProfiles.filter(p => p.email).map(p => p.email as string);
+      
+      console.log('학생 이메일 목록:', { 
+        count: emails.length, 
+        examples: emails.slice(0, 3)
+      });
+      
+      const { data: studentNames, error: studentNamesError } = await supabase
+        .from('student_names')
+        .select('email, display_name, grade, class, student_number')
+        .in('email', emails.length ? emails : ['no-emails-found']);
+      
+      console.log('student_names 쿼리 결과:', {
+        count: studentNames?.length || 0,
+        error: studentNamesError ? studentNamesError.message : '없음'
+      });
+      
+      if (studentNamesError && studentNamesError.code !== 'PGRST116') {
+        console.error('student_names 테이블 조회 오류:', studentNamesError);
+      }
+      
+      // 학생 이름 매핑 생성
+      const studentNamesMap: Record<string, {displayName: string, grade?: string, class?: string, studentNumber?: string}> = {};
+      if (studentNames && studentNames.length > 0) {
+        studentNames.forEach(student => {
+          if (student.email) {
+            studentNamesMap[student.email as string] = {
+              displayName: student.display_name as string,
+              grade: student.grade as string,
+              class: student.class as string,
+              studentNumber: student.student_number as string
+            };
+          }
+        });
+      }
+      
+      // 사용자 데이터 포맷팅
+      const formattedStudents = studentProfiles.map(profile => {
+        let displayName = "";
+        let displayInfo = "";
+        
+        // 1. student_names 테이블에서 이름 찾기 (우선순위 1)
+        if (profile.email && studentNamesMap[profile.email as string]) {
+          const studentInfo = studentNamesMap[profile.email as string];
+          displayName = studentInfo.displayName;
+          
+          // 학년/반/번호 정보가 있으면 부가 정보로 추가
+          if (studentInfo.grade && studentInfo.class && studentInfo.studentNumber) {
+            displayInfo = `${studentInfo.grade}${studentInfo.class}-${studentInfo.studentNumber}`;
+          }
+        }
+        
+        // 2. 이메일에서 추출 (최후 수단)
+        if (!displayName && profile.email) {
+          displayName = (profile.email as string).split('@')[0];
+        }
+        
+        // 최종 이름 결정
+        const finalName = displayName || "이름 없음";
+        const finalDisplayName = displayInfo ? `${finalName} (${displayInfo})` : finalName;
+        
+        return {
+          user_id: profile.user_id as string,
+          email: profile.email as string || "이메일 없음",
+          display_name: finalDisplayName,
+          last_login: new Date(profile.created_at as string).toLocaleDateString() || "-"
+        };
+      });
+      
+      console.log('학생 데이터 로드 완료:', formattedStudents.length, '명');
+      setStudents(formattedStudents);
+      
+      // 학생 목표 가져오기
+      await fetchStudentGoals(formattedStudents);
+    } catch (err) {
+      console.error('학생 데이터 로딩 오류:', err);
+      setError("학생 데이터를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  
+  // 학생 목표 데이터 가져오기
+  async function fetchStudentGoals(studentsList: Student[]) {
+    try {
+      console.log('학생 목표 가져오기 시작...');
+      const goalsData: Record<string, any[]> = {};
+      
+      // 각 학생별로 목표 가져오기
+      for (const student of studentsList) {
+        console.log(`학생 ${student.display_name}(${student.user_id}) 목표 조회 중...`);
+        const { data: goals, error } = await supabase
+          .from('smart_goals')
+          .select('id, subject, description, created_at')
+          .eq('user_id', student.user_id);
+          
+        if (error) {
+          console.error(`학생 ${student.user_id} 목표 조회 오류:`, error);
+          continue;
+        }
+        
+        if (goals && goals.length > 0) {
+          console.log(`학생 ${student.display_name}의 목표 ${goals.length}개 발견`);
+          goalsData[student.user_id] = goals;
+        } else {
+          console.log(`학생 ${student.display_name}의 목표 없음`);
+        }
+      }
+      
+      setStudentGoals(goalsData);
+      
+      // 목표 정보가 있을 경우 세션 데이터도 가져오기
+      await fetchSessionsAndReflections(goalsData);
+    } catch (error) {
+      console.error('학생 목표 데이터 조회 오류:', error);
+    }
+  }
+  
+  // 세션 및 반성문 데이터 가져오기
+  async function fetchSessionsAndReflections(goalsData: Record<string, any[]>) {
+    try {
+      // 학생별 목표 정보가 있을 경우에만 세션 가져오기
+      if (Object.keys(goalsData).length > 0) {
+        const sessionsData: Record<string, any[]> = {};
+        const reflectionsData: Record<string, any[]> = {};
+        
+        // 각 학생의 목표마다 세션 가져오기
+        for (const studentId in goalsData) {
+          // 반성문 데이터를 위한 배열 초기화
+          reflectionsData[studentId] = [];
+          
+          const goals = goalsData[studentId] || [];
+          for (const goal of goals) {
+            const { data: sessions, error } = await supabase
+              .from('goal_sessions')
+              .select('id, smart_goal_id, created_at, percent, reflection')
+              .eq('smart_goal_id', goal.id);
+              
+            if (error) {
+              console.error(`목표 ${goal.id} 세션 조회 오류:`, error);
+              continue;
+            }
+            
+            if (sessions && sessions.length > 0) {
+              sessionsData[goal.id] = sessions;
+              
+              // 반성문이 있는 세션만 반성문 데이터로 추가
+              const validReflections = sessions
+                .filter(s => s.reflection && (s.reflection as string).trim() !== '')
+                .map(session => ({
+                  id: session.id,
+                  goalId: goal.id,
+                  date: new Date(session.created_at as string).toLocaleDateString(),
+                  text: session.reflection as string
+                }));
+                
+              if (validReflections.length > 0) {
+                reflectionsData[studentId].push(...validReflections);
+              }
+            }
+          }
+        }
+        
+        setStudentSessions(sessionsData);
+        setStudentReflections(reflectionsData);
+        
+        // 전체 통계 계산
+        calculateSummaryStats(goalsData, sessionsData);
+      }
+    } catch (error) {
+      console.error('세션 및 반성문 데이터 조회 오류:', error);
+    }
+  }
+  
+  // 전체 통계 계산
+  function calculateSummaryStats(goalsData: Record<string, any[]>, sessionsData: Record<string, any[]>) {
+    try {
+      let totalGoals = 0;
+      let totalSessions = 0;
+      let totalReflections = 0;
+      let totalPercent = 0;
+      let percentCount = 0;
+      
+      // 모든 학생의 목표 수 합산
+      for (const studentId in goalsData) {
+        const goals = goalsData[studentId];
+        totalGoals += goals.length;
+        
+        // 각 목표의 세션 수 합산
+        for (const goal of goals) {
+          const sessions = sessionsData[goal.id] || [];
+          totalSessions += sessions.length;
+          
+          // 반성문이 있는 세션 수 합산
+          totalReflections += sessions.filter(s => s.reflection && s.reflection.trim() !== '').length;
+          
+          // 목표 달성률 평균 계산
+          for (const session of sessions) {
+            if (session.percent !== undefined && session.percent !== null) {
+              totalPercent += session.percent;
+              percentCount++;
+            }
+          }
+        }
+      }
+      
+      // 평균 달성률 계산
+      const avgPercent = percentCount > 0 ? Math.round(totalPercent / percentCount) : 0;
+      
+      // 통계 요약 정보 업데이트
+      setSummary({
+        goalCount: totalGoals,
+        sessionCount: totalSessions,
+        reflectionCount: totalReflections,
+        avgPercent
+      });
+      
+    } catch (error) {
+      console.error('통계 계산 오류:', error);
+    }
+  }
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress size={40} />
+        <Typography sx={{ mt: 2 }}>학생 데이터 로딩 중...</Typography>
+      </Box>
+    );
+  }
+  
+  // 오류 상태
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="error" variant="h6">
+          {error}
+        </Typography>
+        <MuiButton 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/login')}
+        >
+          로그인으로 이동
+        </MuiButton>
+      </Box>
+    );
+  }
+
+  // 역할이 교사가 아니면 접근 불가
+  if (role !== "teacher") {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography color="warning.main" variant="h6">
+          교사 권한이 없습니다.
+        </Typography>
+        <MuiButton 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.replace('/dashboard')}
+        >
+          대시보드로 이동
+        </MuiButton>
+      </Box>
+    );
+  }
+
+  // 교사 역할인 경우만 대시보드 렌더링
+  return (
+    <Box p={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>교사 대시보드</Typography>
+        <LogoutButton />
+      </Box>
+      
+      {/* [설명] 학생 이름 또는 이메일로 검색할 수 있는 입력창입니다. */}
+      <Box mb={2}>
+        <input
+          type="text"
+          placeholder="학생 이름 또는 이메일 검색"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ padding: 8, width: 280, border: '1px solid #ccc', borderRadius: 4 }}
+        />
+      </Box>
+      
+      <Typography variant="subtitle1" gutterBottom>전체 학생 목록 및 요약 통계</Typography>
+      
+      {/* 전체 학생 요약 통계 */}
+      {summary && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="h6">전체 학생 요약 통계</Typography>
+            <Typography>목표 수: {summary.goalCount} / 세션 수: {summary.sessionCount} / 반성문 수: {summary.reflectionCount}</Typography>
+            <Typography>평균 달성률: {summary.avgPercent}%</Typography>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* 학생 목록 */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>학생 목록</Typography>
+          <List>
+            {students
+              .filter(stu => 
+                stu.display_name.toLowerCase().includes(search.toLowerCase()) || 
+                stu.email.toLowerCase().includes(search.toLowerCase())
+              )
+              .map(stu => (
+                <ListItem 
+                  key={stu.user_id} 
+                  button 
+                  onClick={() => setSelected(stu)}
+                  sx={{ 
+                    bgcolor: selected?.user_id === stu.user_id ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    borderRadius: 1
+                  }}
+                >
+                  <ListItemText 
+                    primary={stu.display_name}
+                    secondary={`${stu.email} / 최근 활동: ${stu.last_login}`}
+                  />
+                </ListItem>
+              ))}
+          </List>
+        </CardContent>
+      </Card>
+      
+      {/* 선택된 학생 상세 정보 */}
+      {selected && (
+        <Box>
+          <Typography variant="h5">{selected.display_name}님의 학습 현황</Typography>
+          
+          {/* 목표 목록 */}
+          <Card sx={{ mt: 2, mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>학습 목표</Typography>
+              {studentGoals[selected.user_id] ? (
+                <List>
+                  {studentGoals[selected.user_id].map(goal => (
+                    <ListItem key={goal.id}>
+                      <ListItemText 
+                        primary={goal.subject}
+                        secondary={goal.description}
+                      />
+                      
+                      {/* 목표 세션 및 달성률 정보 */}
+                      {studentSessions[goal.id] && (
+                        <Box>
+                          <Typography variant="body2">
+                            세션 수: {studentSessions[goal.id].length} / 
+                            최근 달성률: {studentSessions[goal.id][studentSessions[goal.id].length - 1]?.percent || 0}%
+                          </Typography>
+                          <MuiButton 
+                            size="small" 
+                            variant="outlined"
+                            onClick={() => setOpenGoalChartId(goal.id)}
+                          >
+                            달성률 추이 확인
+                          </MuiButton>
+                          
+                          {/* 목표별 코멘트 영역 */}
+                          <Box mt={1}>
+                            {comments
+                              .filter(c => c.targetType === 'goal' && c.targetId === goal.id)
+                              .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())
+                              .map((c, idx) => (
+                                <Box key={idx} sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mb: 0.5 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                    {c.teacher} ({new Date(c.created_at).toLocaleString()})
+                                  </Typography>
+                                  <Typography variant="body2">{c.comment}</Typography>
+                                </Box>
+                              ))}
+                            
+                            {/* 코멘트 입력 영역 */}
+                            <Box display="flex" mt={1}>
+                              <input
+                                style={{ flex: 1, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
+                                placeholder="목표에 대한 코멘트"
+                                value={commentInputs[`goal-${goal.id}`] || ''}
+                                onChange={e => setCommentInputs(inputs => ({ ...inputs, [`goal-${goal.id}`]: e.target.value }))}
+                              />
+                              <MuiButton size="small" onClick={() => handleAddComment('goal', goal.id)}>
+                                추가
+                              </MuiButton>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="textSecondary">등록된 목표가 없습니다.</Typography>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* 반성문 목록 */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>학습 반성문</Typography>
+              {studentReflections[selected.user_id] && studentReflections[selected.user_id].length > 0 ? (
+                <List>
+                  {studentReflections[selected.user_id].map(ref => (
+                    <ListItem key={ref.id}>
+                      <ListItemText 
+                        primary={`${ref.date} 작성`}
+                        secondary={ref.text}
+                      />
+                      
+                      {/* 반성문별 코멘트 영역 */}
+                      <Box ml={2}>
+                        {comments
+                          .filter(c => c.targetType === 'reflection' && c.targetId === ref.id)
+                          .sort((c1, c2) => new Date(c2.created_at).getTime() - new Date(c1.created_at).getTime())
+                          .map((c, idx) => (
+                            <Box key={idx} sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mb: 0.5 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                {c.teacher} ({new Date(c.created_at).toLocaleString()})
+                              </Typography>
+                              <Typography variant="body2">{c.comment}</Typography>
+                            </Box>
+                          ))}
+                        
+                        {/* 코멘트 입력 영역 */}
+                        <Box display="flex" mt={1}>
+                          <input
+                            style={{ flex: 1, padding: 4, border: '1px solid #ccc', borderRadius: 4 }}
+                            placeholder="반성문에 대한 코멘트"
+                            value={commentInputs[`reflection-${ref.id}`] || ''}
+                            onChange={e => setCommentInputs(inputs => ({ ...inputs, [`reflection-${ref.id}`]: e.target.value }))}
+                          />
+                          <MuiButton size="small" onClick={() => handleAddComment('reflection', ref.id)}>
+                            추가
+                          </MuiButton>
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography color="textSecondary">작성된 반성문이 없습니다.</Typography>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* 달성률 차트 모달 */}
+          <Dialog open={!!openGoalChartId} onClose={() => setOpenGoalChartId(null)} maxWidth="md">
+            <DialogTitle>
+              목표 달성률 추이
+            </DialogTitle>
+            <DialogContent>
+              {openGoalChartId && studentSessions[openGoalChartId] && (
+                <Box width={600} height={300}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={studentSessions[openGoalChartId].map((s, idx) => ({
+                        name: `세션 ${idx + 1}`,
+                        date: new Date(s.created_at).toLocaleDateString(),
+                        percent: s.percent || 0
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="percent" stroke="#8884d8" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <MuiButton onClick={() => setOpenGoalChartId(null)}>
+                닫기
+              </MuiButton>
+            </DialogActions>
+          </Dialog>
+          
+          {/* 학생 상세 화면 닫기 버튼 */}
+          <Box display="flex" justifyContent="center" mt={2}>
+            <MuiButton onClick={() => setSelected(null)}>
+              학생 목록으로 돌아가기
+            </MuiButton>
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
+}
