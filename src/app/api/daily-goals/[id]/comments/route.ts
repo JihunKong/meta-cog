@@ -26,10 +26,10 @@ export async function GET(
       );
     }
 
+    // 임시로 orderBy 제거 (인덱스 문제 해결 전까지)
     const commentsSnapshot = await firestore
       .collection('dailyGoalComments')
       .where('goalId', '==', goalId)
-      .orderBy('createdAt', 'asc')
       .get();
 
     const comments = await Promise.all(commentsSnapshot.docs.map(async (doc) => {
@@ -49,16 +49,40 @@ export async function GET(
         createdAt: commentData.createdAt?.toDate?.() || commentData.createdAt
       };
     }));
+    
+    // 수동으로 날짜순 정렬
+    comments.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateA - dateB;
+    });
 
     return NextResponse.json({
       success: true,
       comments
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('댓글 조회 오류:', error);
+    console.error('에러 상세:', error.message);
+    console.error('에러 스택:', error.stack);
+    
+    // Firestore 인덱스 오류 체크
+    if (error.code === 9) {
+      return NextResponse.json(
+        { 
+          error: '댓글 정렬을 위한 데이터베이스 인덱스가 필요합니다.',
+          details: 'Firestore 인덱스를 생성해주세요: goalId (ASC), createdAt (ASC)'
+        },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: '댓글을 불러오는 중 오류가 발생했습니다.' },
+      { 
+        error: '댓글을 불러오는 중 오류가 발생했습니다.',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
