@@ -18,6 +18,9 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TimerIcon from '@mui/icons-material/Timer';
 import PublicIcon from '@mui/icons-material/Public';
 import LockIcon from '@mui/icons-material/Lock';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { Menu } from '@mui/material';
 
 interface GoalCardProps {
   goal: {
@@ -51,6 +54,7 @@ interface GoalCardProps {
   onSupport?: (goalId: string, message?: string) => Promise<void>;
   onUpdate?: (goalId: string, updateData: any) => Promise<void>;
   onComment?: (goalId: string) => void;
+  onDelete?: (goalId: string) => Promise<void>;
   isOwner?: boolean;
   compact?: boolean;
 }
@@ -77,6 +81,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   onSupport,
   onUpdate,
   onComment,
+  onDelete,
   isOwner = false,
   compact = false
 }) => {
@@ -89,6 +94,8 @@ const GoalCard: React.FC<GoalCardProps> = ({
   const [achievementRate, setAchievementRate] = useState(100);
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSupported, setIsSupported] = useState(
     goal.supports?.some(s => s.supporter?.id === currentUserId) || false
   );
@@ -131,6 +138,18 @@ const GoalCard: React.FC<GoalCardProps> = ({
       setAchievementRate(100);
     } catch (error) {
       console.error('목표 업데이트 실패:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    try {
+      await onDelete(goal.id);
+      setDeleteDialogOpen(false);
+      setMenuAnchorEl(null);
+    } catch (error) {
+      console.error('목표 삭제 실패:', error);
     }
   };
 
@@ -249,6 +268,17 @@ const GoalCard: React.FC<GoalCardProps> = ({
                 </Typography>
               )}
             </Box>
+            
+            {/* 메뉴 버튼 (소유자만) */}
+            {isOwner && onDelete && (
+              <IconButton
+                size="small"
+                onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+                sx={{ mt: -1 }}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            )}
           </Box>
 
           {/* 목표 정보 */}
@@ -500,6 +530,63 @@ const GoalCard: React.FC<GoalCardProps> = ({
             disabled={!newComment.trim()}
           >
             댓글 작성
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 메뉴 */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={() => setMenuAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={() => {
+          setMenuAnchorEl(null);
+          setDeleteDialogOpen(true);
+        }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          삭제하기
+        </MenuItem>
+      </Menu>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>🗑️ 목표 삭제</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            정말로 이 목표를 삭제하시겠습니까?
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            "{goal.title}"
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            삭제된 목표는 복구할 수 없으며, 관련된 모든 데이터(응원, 댓글, 업데이트 기록)도 함께 삭제됩니다.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            취소
+          </Button>
+          <Button 
+            onClick={handleDelete} 
+            variant="contained"
+            color="error"
+            startIcon={<DeleteIcon />}
+          >
+            삭제하기
           </Button>
         </DialogActions>
       </Dialog>

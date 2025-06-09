@@ -262,6 +262,28 @@ const GoalsFeed: React.FC<GoalsFeedProps> = ({ currentUserId, userRole }) => {
     }
   };
 
+  // 목표 삭제
+  const handleDelete = async (goalId: string) => {
+    try {
+      const response = await fetch(`/api/goals/declarations/${goalId}?userId=${currentUserId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '삭제 중 오류가 발생했습니다.');
+      }
+
+      // 로컬 상태에서 제거
+      setGoals(prev => prev.filter(goal => goal.id !== goalId));
+
+    } catch (error: any) {
+      console.error('삭제 실패:', error);
+      throw error;
+    }
+  };
+
   // 효과
   useEffect(() => {
     loadGoals(true);
@@ -432,6 +454,7 @@ const GoalsFeed: React.FC<GoalsFeedProps> = ({ currentUserId, userRole }) => {
               isOwner={goal.author.id === currentUserId}
               onSupport={handleSupport}
               onUpdate={handleUpdate}
+              onDelete={handleDelete}
               onComment={(goalId) => {
                 // TODO: 댓글 다이얼로그 열기
                 console.log('댓글 클릭:', goalId);
