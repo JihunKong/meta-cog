@@ -52,8 +52,22 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
   const loadLeaderboardData = async () => {
     setLoading(true);
     try {
-      // 1차: 공개 리더보드 API 호출 (교사가 생성한 실제 데이터)
-      console.log('공개 리더보드 API 시도');
+      // 1차: 자동 집계 리더보드 API 호출 (최우선 - 실제 데이터)
+      console.log('자동 집계 리더보드 API 시도');
+      const autoResponse = await fetch(`/api/auto-leaderboard?period=${activeTab}&userId=${currentUserId}`);
+      
+      if (autoResponse.ok) {
+        const autoData = await autoResponse.json();
+        if (autoData.success) {
+          setLeaderboardData(autoData.leaderboard || []);
+          setMyRank(autoData.myRank || null);
+          console.log('자동 집계 리더보드 성공', autoData.isGenerated ? '(실제 데이터)' : '(생성 중)');
+          return;
+        }
+      }
+      
+      console.log('자동 집계 실패, 공개 리더보드 API 시도');
+      // 2차: 공개 리더보드 API 호출 (교사가 생성한 실제 데이터)
       const publicResponse = await fetch(`/api/public-leaderboard?period=${activeTab}&userId=${currentUserId}`);
       
       if (publicResponse.ok) {
@@ -67,7 +81,7 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
       }
       
       console.log('공개 리더보드 실패, 간단한 API 시도');
-      // 2차: 간단한 리더보드 API 호출 (임시 데이터)
+      // 3차: 간단한 리더보드 API 호출 (임시 데이터)
       const simpleResponse = await fetch(`/api/leaderboard-simple?period=${activeTab}&userId=${currentUserId}`);
       
       if (simpleResponse.ok) {
@@ -80,21 +94,7 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
         }
       }
       
-      console.log('간단한 리더보드 실패, 집계 API 시도');
-      // 3차: 집계된 리더보드 API 호출
-      const aggregatedResponse = await fetch(`/api/leaderboard-aggregated?period=${activeTab}&userId=${currentUserId}`);
-      
-      if (aggregatedResponse.ok) {
-        const aggregatedData = await aggregatedResponse.json();
-        if (aggregatedData.success) {
-          setLeaderboardData(aggregatedData.leaderboard || []);
-          setMyRank(aggregatedData.myRank || null);
-          console.log('집계 리더보드 성공');
-          return;
-        }
-      }
-      
-      console.log('집계 리더보드 실패, 기존 API 시도');
+      console.log('간단한 리더보드 실패, 기존 API 시도');
       // 4차: 기존 API로 폴백
       const fallbackResponse = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
       if (fallbackResponse.ok) {

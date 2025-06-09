@@ -37,6 +37,7 @@ console.log("Admin Function: Auth 인스턴스 초기화 완료");
 
 // 필요한 함수를 src/index.js 에서 가져옴
 const {createUserByAdmin} = require("./src/index");
+const {generateLeaderboard} = require("./src/leaderboard-aggregator");
 
 /**
  * 관리자가 호출하여 사용자를 생성하는 Callable Function
@@ -204,5 +205,90 @@ exports.testFunction = functions.https.onCall(async (data, context) => {
       success: false,
       error: error.message
     };
+  }
+});
+
+/**
+ * 스케줄된 리더보드 자동 집계 함수
+ * 매일 오전 1시에 자동 실행
+ */
+exports.scheduledLeaderboardUpdate = functions.pubsub
+  .schedule('0 1 * * *') // 매일 오전 1시 (UTC)
+  .timeZone('Asia/Seoul') // 한국 시간
+  .onRun(async (context) => {
+    console.log('⏰ 스케줄된 리더보드 업데이트 시작:', new Date().toISOString());
+    
+    try {
+      const result = await generateLeaderboard();
+      console.log('✅ 스케줄된 리더보드 업데이트 완료:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ 스케줄된 리더보드 업데이트 실패:', error);
+      throw error;
+    }
+  });
+
+/**
+ * 수동 리더보드 집계 함수 (HTTP 호출 가능)
+ * 교사나 관리자가 즉시 리더보드를 업데이트할 때 사용
+ */
+exports.updateLeaderboard = functions.https.onCall(async (data, context) => {
+  console.log('🔧 수동 리더보드 업데이트 요청');
+  
+  // 인증된 사용자만 접근 가능
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      '리더보드 업데이트 권한이 없습니다.'
+    );
+  }
+  
+  try {
+    const result = await generateLeaderboard();
+    console.log('✅ 수동 리더보드 업데이트 완료:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ 수동 리더보드 업데이트 실패:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      `리더보드 업데이트 실패: ${error.message}`
+    );
+  }
+});
+
+/**
+ * 즉시 리더보드 집계 함수 (HTTP 트리거)
+ * API 엔드포인트로 직접 호출 가능
+ */
+exports.generateLeaderboardNow = functions.https.onRequest(async (req, res) => {
+  // CORS 헤더 설정
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+  
+  console.log('🚀 즉시 리더보드 생성 요청');
+  
+  try {
+    const result = await generateLeaderboard();
+    console.log('✅ 즉시 리더보드 생성 완료:', result);
+    
+    res.status(200).json({
+      success: true,
+      ...result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ 즉시 리더보드 생성 실패:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
