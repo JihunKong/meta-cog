@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta-Cog - 메타인지 학습 플랫폼</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 60px;
+            padding: 100px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 1s ease-out 0.2s;
+            animation-fill-mode: both;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: 500;
+            transition: transform 0.3s, box-shadow 0.3s;
+            animation: fadeInUp 1s ease-out 0.4s;
+            animation-fill-mode: both;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        /* Screenshots Section */
+        .screenshots {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .screenshot-card:hover {
+            transform: scale(1.05);
+        }
+
+        .screenshot-img {
+            width: 100%;
+            height: 250px;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #666;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screenshot-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        .screenshot-info {
+            padding: 1.5rem;
+        }
+
+        .screenshot-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        /* User Types Section */
+        .user-types {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .user-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .user-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+
+        .user-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        .user-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        /* Footer */
+        .footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .footer-links a:hover {
+            opacity: 0.8;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .features-grid,
+            .screenshot-grid,
+            .user-cards {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav-container">
+            <div class="logo">🎯 Meta-Cog</div>
+            <ul class="nav-links">
+                <li><a href="#features">주요 기능</a></li>
+                <li><a href="#screenshots">화면 소개</a></li>
+                <li><a href="#users">사용자별 안내</a></li>
+                <li><a href="#contact">문의하기</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>메타인지 학습의 새로운 시작</h1>
+            <p>학생들의 자기주도 학습을 돕고, 교사와 학부모가 함께하는 스마트 교육 플랫폼</p>
+            <a href="#" class="cta-button">무료로 시작하기</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">주요 기능</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">목표 선언 광장</h3>
+                    <p>매일 학습 목표를 선언하고 친구들과 공유하며 서로 응원해요</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">개인 학습 대시보드</h3>
+                    <p>나의 학습 진행 상황을 한눈에 확인하고 AI 조언을 받아보세요</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏆</div>
+                    <h3 class="feature-title">리더보드 시스템</h3>
+                    <p>건전한 경쟁을 통해 학습 동기를 높이고 성취감을 느껴보세요</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👨‍🏫</div>
+                    <h3 class="feature-title">교사 관리 도구</h3>
+                    <p>학급 전체의 학습 현황을 모니터링하고 맞춤형 피드백을 제공하세요</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3 class="feature-title">실시간 소통</h3>
+                    <p>댓글과 응원 메시지로 서로를 격려하며 함께 성장해요</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">모바일 최적화</h3>
+                    <p>언제 어디서나 편리하게 학습 관리가 가능해요</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="screenshots" id="screenshots">
+        <div class="container">
+            <h2 class="section-title">화면 소개</h2>
+            <div class="screenshot-grid">
+                <div class="screenshot-card">
+                    <div class="screenshot-img">
+                        <img src="public/screenshots/login-screen.png" alt="로그인 화면" onerror="this.style.display='none'; this.parentElement.innerHTML='로그인 화면';">
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">간편한 로그인</h3>
+                        <p>이메일로 간단하게 로그인하고 학습을 시작하세요</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <div class="screenshot-img">
+                        <img src="public/screenshots/student-dashboard.png" alt="학생 대시보드" onerror="this.style.display='none'; this.parentElement.innerHTML='학생 대시보드';">
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">학생 대시보드</h3>
+                        <p>오늘의 학습 현황과 목표 달성률을 확인하세요</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <div class="screenshot-img">
+                        <img src="public/screenshots/goals-plaza.png" alt="목표 선언 광장" onerror="this.style.display='none'; this.parentElement.innerHTML='목표 선언 광장';">
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">목표 선언 광장</h3>
+                        <p>일일 목표를 작성하고 친구들과 공유하세요</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <div class="screenshot-img">
+                        <img src="public/screenshots/leaderboard.png" alt="리더보드" onerror="this.style.display='none'; this.parentElement.innerHTML='리더보드';">
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">리더보드</h3>
+                        <p>실시간 순위를 확인하고 동기부여를 받으세요</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <div class="screenshot-img">
+                        <img src="public/screenshots/ai-advice.png" alt="AI 학습 조언" onerror="this.style.display='none'; this.parentElement.innerHTML='AI 학습 조언';">
+                    </div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">AI 학습 조언</h3>
+                        <p>개인별 학습 패턴을 분석하고 맞춤형 조언을 받으세요</p>
+                    </div>
+                </div>
+                <div class="screenshot-card">
+                    <div class="screenshot-img">세션 기록</div>
+                    <div class="screenshot-info">
+                        <h3 class="screenshot-title">학습 세션 기록</h3>
+                        <p>매일의 학습 시간과 내용을 체계적으로 관리하세요</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- User Types Section -->
+    <section class="user-types" id="users">
+        <div class="container">
+            <h2 class="section-title">사용자별 안내</h2>
+            <div class="user-cards">
+                <div class="user-card">
+                    <div class="user-icon">👨‍🎓</div>
+                    <h3 class="user-title">학생</h3>
+                    <ul style="text-align: left; list-style: none; padding: 0;">
+                        <li>✓ 일일 학습 목표 설정</li>
+                        <li>✓ 학습 세션 기록 및 관리</li>
+                        <li>✓ 친구들과 함께 성장</li>
+                        <li>✓ AI 학습 조언 받기</li>
+                        <li>✓ 리더보드 경쟁 참여</li>
+                    </ul>
+                </div>
+                <div class="user-card">
+                    <div class="user-icon">👩‍🏫</div>
+                    <h3 class="user-title">교사</h3>
+                    <ul style="text-align: left; list-style: none; padding: 0;">
+                        <li>✓ 학급 전체 현황 모니터링</li>
+                        <li>✓ 개별 학생 학습 분석</li>
+                        <li>✓ 맞춤형 피드백 제공</li>
+                        <li>✓ 학습 보고서 생성</li>
+                        <li>✓ 공지사항 관리</li>
+                    </ul>
+                </div>
+                <div class="user-card">
+                    <div class="user-icon">👨‍💼</div>
+                    <h3 class="user-title">관리자</h3>
+                    <ul style="text-align: left; list-style: none; padding: 0;">
+                        <li>✓ 시스템 전체 관리</li>
+                        <li>✓ 사용자 권한 설정</li>
+                        <li>✓ 데이터 통계 분석</li>
+                        <li>✓ 플랫폼 설정 관리</li>
+                        <li>✓ 보안 정책 수립</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer-links">
+                <a href="TERMS_OF_SERVICE.md">이용약관</a>
+                <a href="PRIVACY_POLICY.md">개인정보처리방침</a>
+                <a href="ABOUT_US.md">About Us</a>
+            </div>
+            <p>&copy; 2024 Meta-Cog by Tech-Bridge. All rights reserved.</p>
+            <p>문의: jihun.kong@jne.go.kr | 전화: 061-260-0836 (전남과학고등학교)</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all feature cards and screenshot cards
+        document.querySelectorAll('.feature-card, .screenshot-card, .user-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
