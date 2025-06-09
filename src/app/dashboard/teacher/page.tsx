@@ -19,6 +19,7 @@ import FeedbackDialog from "./components/FeedbackDialog";
 import StudentListGrid from "./components/StudentListGrid";
 import StudentStatsSummary from "./components/StudentStatsSummary";
 import StudentLeaderboard from "./components/StudentLeaderboard";
+import ImprovedStudentLeaderboard from "./components/ImprovedStudentLeaderboard";
 import StudentDetailsModal from "./components/StudentDetailsModal";
 
 // 타입 가져오기
@@ -263,8 +264,8 @@ export default function TeacherDashboard() {
           {/* 전체 통계 요약 */}
           <StudentStatsSummary students={students} studentStats={studentStats} />
           
-          {/* 리더보드 */}
-          <StudentLeaderboard students={students} studentStats={studentStats} topN={5} />
+          {/* 개선된 리더보드 */}
+          <ImprovedStudentLeaderboard students={students} studentStats={studentStats} topN={5} />
 
           {/* 학생 검색 */}
           <Box mb={2}>

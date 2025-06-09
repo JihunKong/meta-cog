@@ -18,6 +18,8 @@ import SessionManager from "@/components/student/session/SessionManager";
 import CalendarView from "@/components/student/CalendarView";
 import StatsView from "@/components/student/StatsView";
 import AIAdviceView from "@/components/student/AIAdviceView";
+import StudentLeaderboard from "@/components/student/StudentLeaderboard";
+import GoalsFeed from "@/components/goals/GoalsFeed";
 
 interface Session {
   id: string;
@@ -48,6 +50,7 @@ export default function StudentDashboard() {
   });
   const [editId, setEditId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userId, setUserId] = useState<string>("");
   const [error, setError] = useState<string>("");
 
   // 통계 데이터
@@ -77,6 +80,13 @@ export default function StudentDashboard() {
   useEffect(() => {
     const checkUserRole = async () => {
       try {
+        const { auth } = getFirebaseInstance();
+        const user = auth.currentUser;
+        
+        if (user) {
+          setUserId(user.uid);
+        }
+        
         const role = await getUserRole();
         setUserRole(role);
         
@@ -370,6 +380,8 @@ export default function StudentDashboard() {
           <Tab label="캘린더" />
           <Tab label="통계" />
           <Tab label="AI 조언" />
+          <Tab label="🏆 리더보드" />
+          <Tab label="🎯 목표 선언" />
         </Tabs>
       </Box>
 
@@ -387,6 +399,18 @@ export default function StudentDashboard() {
       {activeTab === 1 && <CalendarView sessions={sessions} />}
       {activeTab === 2 && <StatsView statsData={statsData} />}
       {activeTab === 3 && <AIAdviceView sessions={sessions} />}
+      {activeTab === 4 && (
+        <StudentLeaderboard 
+          currentUserId={userId} 
+          userRole={userRole}
+        />
+      )}
+      {activeTab === 5 && (
+        <GoalsFeed 
+          currentUserId={userId} 
+          userRole={userRole}
+        />
+      )}
 
       <Dialog open={isDialogOpen} onClose={handleDialogClose}>
         <DialogTitle>{editId ? "학습 세션 수정" : "새 학습 세션 추가"}</DialogTitle>
