@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 interface RouteParams {
   params: {
@@ -10,7 +10,7 @@ interface RouteParams {
 // 특정 목표 선언 조회
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { id } = params;
 
     const doc = await firestore.collection('goalDeclarations').doc(id).get();
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // 목표 선언 수정
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { id } = params;
     const body = await request.json();
 
@@ -193,7 +193,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // 목표 선언 삭제
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { id } = params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

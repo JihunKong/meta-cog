@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 목표 응원하기
 export async function POST(request: NextRequest) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const body = await request.json();
     
     const {
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 // 목표의 응원 목록 조회
 export async function GET(request: NextRequest) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { searchParams } = new URL(request.url);
     
     const goalId = searchParams.get('goalId');
@@ -184,7 +184,7 @@ async function createSupportNotification(
   isAnonymous: boolean
 ) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     
     // 응원자 정보 조회
     let supporterName = '익명의 사용자';
@@ -215,7 +215,7 @@ async function createSupportNotification(
 // 응원자 통계 업데이트
 async function updateSupporterStats(supporterId: string, supportType: string) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const statsRef = firestore.collection('userSupportStats').doc(supporterId);
     
     const statsDoc = await statsRef.get();

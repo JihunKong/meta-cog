@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 간단한 목표 목록 조회 (권한 문제 해결용)
 export async function GET(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
 
     // 현재 사용자 정보 조회
     const userDoc = await firestore.collection('users').doc(userId).get();

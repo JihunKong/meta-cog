@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 목표 선언 생성
 export async function POST(request: NextRequest) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const body = await request.json();
     
     const {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     console.log('목표 선언 GET API 시작');
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');
@@ -183,7 +183,7 @@ function getDefaultUnit(targetType: string): string {
 // 사용자 목표 통계 업데이트
 async function updateUserGoalStats(userId: string, action: 'declared' | 'completed' | 'failed') {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const userStatsRef = firestore.collection('userGoalStats').doc(userId);
     
     const statsDoc = await userStatsRef.get();

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 공개 목표 목록 조회
 export async function GET(request: NextRequest) {
   try {
     console.log('공개 목표 API 시작');
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 // 공개 목표에 반응 추가 (조회수, 응원 등)
 export async function POST(request: NextRequest) {
   try {
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const body = await request.json();
     
     const {
