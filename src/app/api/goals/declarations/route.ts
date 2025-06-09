@@ -90,73 +90,102 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = firestore.collection('goalDeclarations');
+    let goals = [];
 
-    // 필터 적용
-    switch (filter) {
-      case 'my':
-        if (!userId) {
-          return NextResponse.json({ error: '사용자 ID가 필요합니다.' }, { status: 400 });
-        }
-        query = query.where('userId', '==', userId);
-        break;
-      case 'public':
-        query = query.where('isPublic', '==', true);
-        break;
-      case 'friends':
-        // TODO: 친구 관계 구현 후 친구들의 목표만 조회
-        query = query.where('isPublic', '==', true);
-        break;
-      default:
-        // all: 공개 목표 + 내 목표
-        if (userId) {
-          // 복합 쿼리는 Firestore에서 제한이 있으므로 별도 처리 필요
-          query = query.where('isPublic', '==', true);
-        } else {
-          query = query.where('isPublic', '==', true);
-        }
-    }
-
-    // 추가 필터
-    if (subject) {
-      query = query.where('subject', '==', subject);
-    }
-    if (status) {
-      query = query.where('status', '==', status);
-    }
-
-    // 정렬 및 페이징
-    query = query.orderBy('declaredAt', 'desc')
-                 .limit(limit)
-                 .offset(offset);
-
-    const snapshot = await query.get();
-    const goals = await Promise.all(snapshot.docs.map(async (doc) => {
-      const data = doc.data();
+    // 복합 인덱스 문제를 피하기 위해 간단한 쿼리 사용
+    if (filter === 'my') {
+      if (!userId) {
+        return NextResponse.json({ error: '사용자 ID가 필요합니다.' }, { status: 400 });
+      }
+      // 내 목표만 조회
+      const myQuery = firestore.collection('goalDeclarations')
+        .where('userId', '==', userId)
+        .orderBy('declaredAt', 'desc')
+        .limit(limit);
       
+      const mySnapshot = await myQuery.get();
+      goals = mySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+    } else {
+      // 모든 공개 목표 조회 (정렬 없이)
+      let publicQuery = firestore.collection('goalDeclarations')
+        .where('isPublic', '==', true);
+
+      // 추가 필터 적용
+      if (subject) {
+        publicQuery = publicQuery.where('subject', '==', subject);
+      }
+      if (status) {
+        publicQuery = publicQuery.where('status', '==', status);
+      }
+
+      const publicSnapshot = await publicQuery.get();
+      let publicGoals = publicSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // 클라이언트 사이드에서 정렬
+      publicGoals.sort((a, b) => {
+        const dateA = a.declaredAt?.toDate?.() || new Date(a.declaredAt);
+        const dateB = b.declaredAt?.toDate?.() || new Date(b.declaredAt);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      // 내 목표도 함께 보여주기 (all 필터의 경우)
+      if (filter === 'all' && userId) {
+        const myQuery = firestore.collection('goalDeclarations')
+          .where('userId', '==', userId);
+        
+        const mySnapshot = await myQuery.get();
+        const myGoals = mySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // 중복 제거 후 합치기
+        const allGoals = [...publicGoals];
+        myGoals.forEach(myGoal => {
+          if (!allGoals.find(goal => goal.id === myGoal.id)) {
+            allGoals.push(myGoal);
+          }
+        });
+        
+        // 다시 정렬
+        allGoals.sort((a, b) => {
+          const dateA = a.declaredAt?.toDate?.() || new Date(a.declaredAt);
+          const dateB = b.declaredAt?.toDate?.() || new Date(b.declaredAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        goals = allGoals;
+      } else {
+        goals = publicGoals;
+      }
+      
+      // 페이징 적용
+      goals = goals.slice(offset, offset + limit);
+    }
+
+    // 작성자 정보 추가
+    const finalGoals = await Promise.all(goals.map(async (goalData) => {
       // 작성자 정보 조회
-      const userDoc = await firestore.collection('users').doc(data.userId).get();
+      const userDoc = await firestore.collection('users').doc(goalData.userId).get();
       const userData = userDoc.data();
       
       return {
-        id: doc.id,
-        ...data,
+        id: goalData.id,
+        ...goalData,
         author: {
-          id: data.userId,
+          id: goalData.userId,
           name: userData?.name || '익명',
           school: userData?.school || ''
         },
-        declaredAt: data.declaredAt?.toDate?.() || data.declaredAt,
-        targetDate: data.targetDate?.toDate?.() || data.targetDate,
-        deadlineTime: data.deadlineTime?.toDate?.() || data.deadlineTime,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        declaredAt: goalData.declaredAt?.toDate?.() || goalData.declaredAt,
+        targetDate: goalData.targetDate?.toDate?.() || goalData.targetDate,
+        deadlineTime: goalData.deadlineTime?.toDate?.() || goalData.deadlineTime,
+        updatedAt: goalData.updatedAt?.toDate?.() || goalData.updatedAt
       };
     }));
 
     return NextResponse.json({
       success: true,
-      goals,
-      hasMore: snapshot.docs.length === limit
+      goals: finalGoals,
+      hasMore: goals.length === limit
     });
 
   } catch (error) {
