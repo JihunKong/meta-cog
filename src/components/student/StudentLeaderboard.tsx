@@ -52,8 +52,22 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
   const loadLeaderboardData = async () => {
     setLoading(true);
     try {
-      // 1차: 간단한 리더보드 API 호출 (가장 안전)
-      console.log('간단한 리더보드 API 시도');
+      // 1차: 공개 리더보드 API 호출 (교사가 생성한 실제 데이터)
+      console.log('공개 리더보드 API 시도');
+      const publicResponse = await fetch(`/api/public-leaderboard?period=${activeTab}&userId=${currentUserId}`);
+      
+      if (publicResponse.ok) {
+        const publicData = await publicResponse.json();
+        if (publicData.success) {
+          setLeaderboardData(publicData.leaderboard || []);
+          setMyRank(publicData.myRank || null);
+          console.log('공개 리더보드 성공', publicData.isGenerated ? '(실제 데이터)' : '(생성 대기)');
+          return;
+        }
+      }
+      
+      console.log('공개 리더보드 실패, 간단한 API 시도');
+      // 2차: 간단한 리더보드 API 호출 (임시 데이터)
       const simpleResponse = await fetch(`/api/leaderboard-simple?period=${activeTab}&userId=${currentUserId}`);
       
       if (simpleResponse.ok) {
@@ -61,13 +75,13 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
         if (simpleData.success) {
           setLeaderboardData(simpleData.leaderboard || []);
           setMyRank(simpleData.myRank || null);
-          console.log('간단한 리더보드 성공');
+          console.log('간단한 리더보드 성공 (임시 데이터)');
           return;
         }
       }
       
       console.log('간단한 리더보드 실패, 집계 API 시도');
-      // 2차: 집계된 리더보드 API 호출
+      // 3차: 집계된 리더보드 API 호출
       const aggregatedResponse = await fetch(`/api/leaderboard-aggregated?period=${activeTab}&userId=${currentUserId}`);
       
       if (aggregatedResponse.ok) {
@@ -81,7 +95,7 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
       }
       
       console.log('집계 리더보드 실패, 기존 API 시도');
-      // 3차: 기존 API로 폴백
+      // 4차: 기존 API로 폴백
       const fallbackResponse = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
       if (fallbackResponse.ok) {
         const fallbackData = await fallbackResponse.json();

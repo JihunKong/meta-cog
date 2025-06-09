@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Modal, CircularProgress, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, List, ListItem, ListItemText, ListItemButton, ListItemIcon, Card, CardContent, MenuItem, Alert } from "@mui/material";
+import { Box, Typography, Modal, CircularProgress, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Button, IconButton, List, ListItem, ListItemText, ListItemButton, ListItemIcon, Card, CardContent, MenuItem, Alert, Snackbar } from "@mui/material";
 import { getFirebaseInstance } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Add from '@mui/icons-material/Add';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 
 // 컴포넌트 가져오기
 import StudentList from "./components/StudentList";
@@ -47,6 +48,11 @@ export default function TeacherDashboard() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  
+  // 리더보드 생성 관련 상태
+  const [leaderboardGenerating, setLeaderboardGenerating] = useState(false);
+  const [leaderboardMessage, setLeaderboardMessage] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   // ------------------------------------------
 
   // 학생 데이터 및 세션/목표 데이터 동시 로드 (API 호출 방식으로 변경)
@@ -245,11 +251,74 @@ export default function TeacherDashboard() {
     }
   };
 
+  // 리더보드 생성 함수
+  const handleGenerateLeaderboard = async () => {
+    setLeaderboardGenerating(true);
+    setLeaderboardMessage(null);
+    
+    try {
+      const { user } = getFirebaseInstance();
+      const currentUser = user;
+      
+      if (!currentUser) {
+        throw new Error('로그인되어 있지 않습니다.');
+      }
+      
+      console.log('리더보드 생성 요청 시작');
+      
+      const response = await fetch('/api/admin/generate-public-leaderboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requesterId: currentUser.uid
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || '리더보드 생성 중 오류가 발생했습니다.');
+      }
+      
+      setLeaderboardMessage(`리더보드가 성공적으로 생성되었습니다. (${data.totalGenerated}개)`);
+      setSnackbarOpen(true);
+      console.log('리더보드 생성 완료:', data);
+      
+    } catch (error: any) {
+      console.error('리더보드 생성 오류:', error);
+      setLeaderboardMessage(error.message || '리더보드 생성 중 오류가 발생했습니다.');
+      setSnackbarOpen(true);
+    } finally {
+      setLeaderboardGenerating(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4">교사 대시보드</Typography>
-        <LogoutButton />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<LeaderboardIcon />}
+            onClick={handleGenerateLeaderboard}
+            disabled={leaderboardGenerating}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {leaderboardGenerating ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                생성 중...
+              </>
+            ) : (
+              '리더보드 생성'
+            )}
+          </Button>
+          <LogoutButton />
+        </Box>
       </Box>
       
       {/* 로딩 및 에러 처리 */}
@@ -309,6 +378,15 @@ export default function TeacherDashboard() {
         onSave={handleFeedbackSave}
         loading={feedbackLoading}
         error={feedbackError}
+      />
+
+      {/* 리더보드 생성 결과 스낵바 */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={leaderboardMessage}
+        severity={leaderboardMessage?.includes('성공') ? 'success' : 'error'}
       />
     </Box>
   );
