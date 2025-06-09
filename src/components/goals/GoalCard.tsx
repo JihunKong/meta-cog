@@ -85,6 +85,10 @@ const GoalCard: React.FC<GoalCardProps> = ({
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [updateAmount, setUpdateAmount] = useState(0);
   const [updateMessage, setUpdateMessage] = useState('');
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [achievementRate, setAchievementRate] = useState(100);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [newComment, setNewComment] = useState('');
   const [isSupported, setIsSupported] = useState(
     goal.supports?.some(s => s.supporter?.id === currentUserId) || false
   );
@@ -93,6 +97,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
   const subjectColor = SUBJECT_COLORS[goal.subject] || '#6c757d';
   const isExpired = new Date() > goal.targetDate && goal.status !== 'COMPLETED';
   const daysLeft = Math.ceil((goal.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const canComplete = new Date() >= goal.targetDate || goal.progress >= 100;
 
   const handleSupport = async () => {
     if (!onSupport) return;
@@ -114,13 +119,16 @@ const GoalCard: React.FC<GoalCardProps> = ({
       const updateData = {
         updateType,
         progressAmount: updateType === 'PROGRESS' ? updateAmount : 0,
+        achievementRate: updateType === 'COMPLETE' ? achievementRate : undefined,
         message: updateMessage.trim()
       };
       
       await onUpdate(goal.id, updateData);
       setUpdateDialogOpen(false);
+      setCompletionDialogOpen(false);
       setUpdateAmount(0);
       setUpdateMessage('');
+      setAchievementRate(100);
     } catch (error) {
       console.error('목표 업데이트 실패:', error);
     }
@@ -305,11 +313,9 @@ const GoalCard: React.FC<GoalCardProps> = ({
               </Button>
             )}
             
-            {onComment && (
-              <Button size="small" startIcon={<CommentIcon />} onClick={() => onComment(goal.id)}>
-                댓글 {goal.commentCount > 0 && goal.commentCount}
-              </Button>
-            )}
+            <Button size="small" startIcon={<CommentIcon />} onClick={() => setCommentDialogOpen(true)}>
+              댓글 {goal.commentCount > 0 && goal.commentCount}
+            </Button>
           </Box>
 
           {/* 오너 액션 */}
@@ -341,8 +347,9 @@ const GoalCard: React.FC<GoalCardProps> = ({
                     size="small"
                     variant="contained"
                     startIcon={<CheckCircleIcon />}
-                    onClick={() => handleUpdate('COMPLETE')}
+                    onClick={() => setCompletionDialogOpen(true)}
                     color="success"
+                    disabled={!canComplete}
                   >
                     완료!
                   </Button>
@@ -409,6 +416,90 @@ const GoalCard: React.FC<GoalCardProps> = ({
             disabled={updateAmount <= 0}
           >
             업데이트
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 완료 다이얼로그 */}
+      <Dialog open={completionDialogOpen} onClose={() => setCompletionDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>🎉 목표 완료하기</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            "{goal.title}" 목표를 완료하셨나요? 달성률을 입력해주세요.
+          </Typography>
+          
+          <TextField
+            fullWidth
+            type="number"
+            label="달성률 (%)"
+            value={achievementRate}
+            onChange={(e) => setAchievementRate(Math.max(0, Math.min(100, Number(e.target.value))))}
+            sx={{ mb: 2 }}
+            inputProps={{ min: 0, max: 100 }}
+            helperText={`목표: ${goal.targetAmount} ${goal.targetUnit}, 현재: ${goal.actualAmount} ${goal.targetUnit}`}
+          />
+          
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="완료 소감"
+            placeholder="목표를 달성한 소감을 적어주세요!"
+            value={updateMessage}
+            onChange={(e) => setUpdateMessage(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCompletionDialogOpen(false)}>취소</Button>
+          <Button 
+            onClick={() => handleUpdate('COMPLETE')} 
+            variant="contained"
+            color="success"
+          >
+            완료하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 댓글 다이얼로그 */}
+      <Dialog open={commentDialogOpen} onClose={() => setCommentDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>💬 댓글</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            "{goal.title}" 목표에 댓글을 남겨보세요!
+          </Typography>
+          
+          {/* 기존 댓글 목록 (임시) */}
+          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              댓글 기능이 곧 활성화됩니다! 🚧
+            </Typography>
+          </Box>
+          
+          {/* 새 댓글 입력 */}
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            placeholder="댓글을 작성해주세요..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            variant="outlined"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCommentDialogOpen(false)}>취소</Button>
+          <Button 
+            onClick={() => {
+              // TODO: 댓글 API 구현
+              console.log('댓글 작성:', newComment);
+              setNewComment('');
+              setCommentDialogOpen(false);
+            }} 
+            variant="contained"
+            disabled={!newComment.trim()}
+          >
+            댓글 작성
           </Button>
         </DialogActions>
       </Dialog>

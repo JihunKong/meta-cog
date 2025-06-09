@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       isPublic,
       motivation: motivation?.trim() || '',
       reward: reward?.trim() || '',
-      status: 'DECLARED',
+      status: 'IN_PROGRESS',
       progress: 0,
       actualAmount: 0,
       declaredAt: new Date(),
@@ -129,15 +129,16 @@ export async function GET(request: NextRequest) {
         return dateB.getTime() - dateA.getTime();
       });
 
-      // 내 목표도 함께 보여주기 (all 필터의 경우)
+      // 필터에 따른 처리
       if (filter === 'all' && userId) {
+        // 모든 공개 목표 + 내 목표 (공개/비공개 무관)
         const myQuery = firestore.collection('goalDeclarations')
           .where('userId', '==', userId);
         
         const mySnapshot = await myQuery.get();
         const myGoals = mySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // 중복 제거 후 합치기
+        // 중복 제거 후 합치기 (내 목표가 공개인 경우 중복될 수 있음)
         const allGoals = [...publicGoals];
         myGoals.forEach(myGoal => {
           if (!allGoals.find(goal => goal.id === myGoal.id)) {
@@ -153,7 +154,11 @@ export async function GET(request: NextRequest) {
         });
         
         goals = allGoals;
+      } else if (filter === 'public') {
+        // 공개 목표만
+        goals = publicGoals;
       } else {
+        // friends나 기타 필터의 경우 공개 목표만
         goals = publicGoals;
       }
       

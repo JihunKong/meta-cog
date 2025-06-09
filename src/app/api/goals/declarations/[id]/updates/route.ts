@@ -17,6 +17,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const {
       userId,
       progressAmount,
+      achievementRate, // 달성률 (%)
       message,
       mood,
       difficultyFelt,
@@ -60,8 +61,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         updateType = 'COMPLETE';
       }
     } else if (updateType === 'COMPLETE') {
-      newActualAmount = goalData.targetAmount;
-      newProgress = 100;
+      // 달성률이 제공된 경우 사용, 아니면 100%로 처리
+      newProgress = achievementRate !== undefined ? achievementRate : 100;
+      newActualAmount = Math.round((goalData.targetAmount * newProgress) / 100);
       newStatus = 'COMPLETED';
     } else if (updateType === 'ABANDON') {
       newStatus = 'ABANDONED';
