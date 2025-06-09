@@ -153,19 +153,24 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
   // 댓글 로드
   const loadComments = async (goalId: string) => {
     try {
+      console.log('댓글 로딩 시작:', goalId);
       const response = await fetch(`/api/daily-goals/${goalId}/comments`);
       const data = await response.json();
+      
+      console.log('댓글 API 응답:', response.status, data);
 
       if (response.ok && data.success) {
         const commentsList = data.comments.map((comment: any) => ({
           ...comment,
           createdAt: new Date(comment.createdAt)
         }));
+        console.log('처리된 댓글 목록:', commentsList);
         setComments(prev => ({
           ...prev,
           [goalId]: commentsList
         }));
       } else {
+        console.log('댓글 로딩 실패 또는 빈 결과:', data);
         setComments(prev => ({
           ...prev,
           [goalId]: []
@@ -211,13 +216,19 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
 
   // 댓글 토글
   const toggleComments = (goalId: string) => {
+    console.log('댓글 토글:', goalId, '현재 expanded:', expandedGoalId);
+    console.log('현재 comments 상태:', comments);
+    
     if (expandedGoalId === goalId) {
       setExpandedGoalId(null);
     } else {
       setExpandedGoalId(goalId);
       // 댓글이 이미 로드되어 있지 않다면 로드
       if (!comments[goalId]) {
+        console.log('댓글 로딩 필요, 로딩 시작...');
         loadComments(goalId);
+      } else {
+        console.log('기존 댓글 사용:', comments[goalId]);
       }
     }
   };
@@ -358,6 +369,11 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                 {/* 댓글 섹션 (토글) */}
                 {expandedGoalId === goal.id && (
                   <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                    {/* 디버깅 정보 */}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      DEBUG - Goal ID: {goal.id}, Comments: {comments[goal.id] ? comments[goal.id].length : 'undefined'}
+                    </Typography>
+                    
                     {/* 댓글 목록 */}
                     <Box sx={{ mb: 2, maxHeight: 300, overflowY: 'auto' }}>
                       {comments[goal.id] && comments[goal.id].length > 0 ? (
