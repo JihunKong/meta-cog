@@ -73,7 +73,7 @@ const GoalDetails: React.FC<GoalDetailsProps> = ({
                   <Card sx={{ width: '100%', mb: 1 }}>
                     <CardContent>
                       <Typography variant="subtitle1">
-                        {new Date(session.date?.toDate()).toLocaleDateString()} 
+                        {session.date && session.date.toDate ? new Date(session.date.toDate()).toLocaleDateString() : '날짜 없음'} 
                         - {session.duration}분
                       </Typography>
                       <Typography variant="body2">{session.notes}</Typography>
@@ -98,7 +98,7 @@ const GoalDetails: React.FC<GoalDetailsProps> = ({
                     <CardContent>
                       <Typography variant="body1">{reflection.content}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {new Date(reflection.created_at?.toDate()).toLocaleString()}
+                        {reflection.created_at && reflection.created_at.toDate ? new Date(reflection.created_at.toDate()).toLocaleString() : '날짜 없음'}
                       </Typography>
                       
                       {reflection.teacher_feedback && (

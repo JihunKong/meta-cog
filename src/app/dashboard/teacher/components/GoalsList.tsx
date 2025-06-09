@@ -69,7 +69,7 @@ const GoalsList: React.FC<GoalsListProps> = ({
                       <Typography variant="h6">{goal.title}</Typography>
                       <Typography variant="body2">{goal.description}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        생성일: {new Date(goal.created_at?.toDate()).toLocaleDateString()}
+                        생성일: {goal.created_at && goal.created_at.toDate ? new Date(goal.created_at.toDate()).toLocaleDateString() : '날짜 없음'}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
                         상태: {goal.status === 'active' ? '진행 중' : '완료'}

@@ -34,6 +34,23 @@ const formatFirestoreTimestamp = (timestamp: any): string => {
   }
 };
 
+// 안전한 날짜 비교 함수
+const getTimestampValue = (timestamp: any): number => {
+  if (!timestamp) return 0;
+  try {
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().getTime();
+    }
+    if (timestamp instanceof Date) return timestamp.getTime();
+    if (typeof timestamp === 'string') return new Date(timestamp).getTime();
+    if (typeof timestamp === 'number') return timestamp;
+    return 0;
+  } catch (error) {
+    console.error('타임스탬프 변환 오류:', error);
+    return 0;
+  }
+};
+
 const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   open,
   onClose,
@@ -99,7 +116,7 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         {sessions.length > 0 ? (
           <Paper variant="outlined" sx={{ maxHeight: 400, overflowY: 'auto' }}>
             <List dense>
-              {sessions.sort((a, b) => b.created_at?.toDate() - a.created_at?.toDate()).map((session, index) => (
+              {sessions.sort((a, b) => getTimestampValue(b.created_at) - getTimestampValue(a.created_at)).map((session, index) => (
                 <React.Fragment key={session.id || index}>
                   <ListItem sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', py: 2 }}>
                     <ListItemText
