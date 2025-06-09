@@ -19,7 +19,7 @@ import CalendarView from "@/components/student/CalendarView";
 import StatsView from "@/components/student/StatsView";
 import AIAdviceView from "@/components/student/AIAdviceView";
 import StudentLeaderboard from "@/components/student/StudentLeaderboard";
-import GoalsFeed from "@/components/goals/GoalsFeed";
+import NewDailyGoalsFeed from "@/components/goals/NewDailyGoalsFeed";
 
 interface Session {
   id: string;
@@ -406,7 +406,7 @@ export default function StudentDashboard() {
         />
       )}
       {activeTab === 5 && (
-        <GoalsFeed 
+        <NewDailyGoalsFeed 
           currentUserId={userId} 
           userRole={userRole}
         />

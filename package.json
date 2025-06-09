@@ -24,6 +24,7 @@
     "@mui/icons-material": "^5.14.17",
     "@mui/material": "^5.15.14",
     "@mui/x-date-pickers": "^8.5.1",
+    "@playwright/test": "^1.52.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "autoprefixer": "^10.4.21",
