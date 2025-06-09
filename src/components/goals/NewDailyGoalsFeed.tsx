@@ -124,6 +124,100 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
     }
   };
 
+  // 응원하기
+  const handleSupport = async (goalId: string) => {
+    try {
+      const response = await fetch('/api/daily-goals/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goalId,
+          userId: currentUserId
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '응원 중 오류가 발생했습니다.');
+      }
+
+      // 로컬 상태 업데이트
+      setGoals(prev => prev.map(goal => 
+        goal.id === goalId 
+          ? { 
+              ...goal, 
+              supportCount: goal.isSupported ? goal.supportCount - 1 : goal.supportCount + 1,
+              isSupported: !goal.isSupported
+            }
+          : goal
+      ));
+
+    } catch (error: any) {
+      console.error('응원 실패:', error);
+      setError(error.message);
+    }
+  };
+
+  // 댓글 로드
+  const loadComments = async (goalId: string) => {
+    try {
+      const response = await fetch(`/api/daily-goals/${goalId}/comments`);
+      const data = await response.json();
+
+      if (response.ok) {
+        const commentsList = data.comments.map((comment: any) => ({
+          ...comment,
+          createdAt: new Date(comment.createdAt)
+        }));
+        setComments(commentsList);
+      }
+    } catch (error) {
+      console.error('댓글 로딩 실패:', error);
+    }
+  };
+
+  // 댓글 작성
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || !selectedGoal) return;
+
+    try {
+      const response = await fetch(`/api/daily-goals/${selectedGoal.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          content: newComment.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '댓글 작성 중 오류가 발생했습니다.');
+      }
+
+      setNewComment('');
+      loadComments(selectedGoal.id);
+      
+      // 댓글 수 업데이트
+      setGoals(prev => prev.map(goal => 
+        goal.id === selectedGoal.id 
+          ? { ...goal, commentCount: goal.commentCount + 1 }
+          : goal
+      ));
+
+    } catch (error: any) {
+      console.error('댓글 작성 실패:', error);
+      setError(error.message);
+    }
+  };
+
+  // 댓글 다이얼로그 열기
+  const openCommentsDialog = (goal: DailyGoal) => {
+    setSelectedGoal(goal);
+    setCommentsDialogOpen(true);
+    loadComments(goal.id);
+  };
+
   // Enter 키 처리
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -182,11 +276,6 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
         </Box>
       </Paper>
 
-      {/* 성공 메시지 */}
-      <Alert severity="success" sx={{ mb: 3 }}>
-        🎉 새로운 DailyGoalsFeed 컴포넌트가 성공적으로 로딩되었습니다! 
-        기존의 복잡한 폼이 아닌 간단한 목표 선언 형태로 변경되었습니다.
-      </Alert>
 
       {/* 에러 메시지 */}
       {error && (
@@ -250,6 +339,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                     startIcon={goal.isSupported ? <FavoriteIcon /> : <FavoriteBorderIcon />}
                     color={goal.isSupported ? "error" : "inherit"}
                     variant={goal.isSupported ? "contained" : "outlined"}
+                    onClick={() => handleSupport(goal.id)}
                   >
                     응원 {goal.supportCount > 0 && goal.supportCount}
                   </Button>
@@ -258,6 +348,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                     size="small"
                     startIcon={<CommentIcon />}
                     variant="outlined"
+                    onClick={() => openCommentsDialog(goal)}
                   >
                     댓글 {goal.commentCount > 0 && goal.commentCount}
                   </Button>
@@ -267,6 +358,96 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
           ))}
         </Box>
       )}
+
+      {/* 댓글 다이얼로그 */}
+      <Dialog 
+        open={commentsDialogOpen} 
+        onClose={() => setCommentsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          💬 댓글
+          {selectedGoal && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {selectedGoal.author.name}의 목표
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent>
+          {/* 목표 내용 */}
+          {selectedGoal && (
+            <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+              <Typography variant="body2">
+                🎯 {selectedGoal.content}
+              </Typography>
+            </Paper>
+          )}
+
+          {/* 댓글 목록 */}
+          <List>
+            {comments.length === 0 ? (
+              <ListItem>
+                <ListItemText
+                  primary="아직 댓글이 없어요"
+                  secondary="첫 번째 댓글을 남겨보세요!"
+                />
+              </ListItem>
+            ) : (
+              comments.map((comment, index) => (
+                <React.Fragment key={comment.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemAvatar>
+                      <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                        {comment.author.name[0]}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="subtitle2">
+                            {comment.author.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDistanceToNow(comment.createdAt, { addSuffix: true, locale: ko })}
+                          </Typography>
+                        </Box>
+                      }
+                      secondary={comment.content}
+                    />
+                  </ListItem>
+                  {index < comments.length - 1 && <Divider variant="inset" component="li" />}
+                </React.Fragment>
+              ))
+            )}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="응원 댓글을 남겨보세요..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSubmitComment();
+                }
+              }}
+            />
+            <Button 
+              onClick={handleSubmitComment}
+              disabled={!newComment.trim()}
+              variant="contained"
+              size="small"
+            >
+              작성
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
