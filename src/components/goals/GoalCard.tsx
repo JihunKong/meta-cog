@@ -228,7 +228,7 @@ const GoalCard: React.FC<GoalCardProps> = ({
             sx={{
               position: 'absolute',
               top: -10,
-              right: 16,
+              right: isOwner && onDelete ? 60 : 16, // 메뉴가 있으면 오른쪽으로 이동
               bgcolor: statusInfo.color,
               color: 'white',
               '&:hover': { bgcolor: statusInfo.color }
@@ -237,6 +237,23 @@ const GoalCard: React.FC<GoalCardProps> = ({
             {statusInfo.icon}
           </Fab>
         </Zoom>
+
+        {/* 메뉴 버튼 (소유자만) */}
+        {isOwner && onDelete && (
+          <IconButton
+            size="small"
+            onClick={(e) => setMenuAnchorEl(e.currentTarget)}
+            sx={{ 
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              bgcolor: 'rgba(0,0,0,0.1)',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.2)' }
+            }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+        )}
 
         <CardContent>
           {/* 헤더 */}
@@ -267,17 +284,6 @@ const GoalCard: React.FC<GoalCardProps> = ({
                 </Typography>
               )}
             </Box>
-            
-            {/* 메뉴 버튼 (소유자만) */}
-            {isOwner && onDelete && (
-              <IconButton
-                size="small"
-                onClick={(e) => setMenuAnchorEl(e.currentTarget)}
-                sx={{ mt: -1 }}
-              >
-                <MoreVertIcon />
-              </IconButton>
-            )}
           </Box>
 
           {/* 목표 정보 */}

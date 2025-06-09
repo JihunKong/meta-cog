@@ -157,8 +157,11 @@ export async function GET(request: NextRequest) {
       } else if (filter === 'public') {
         // 공개 목표만
         goals = publicGoals;
+      } else if (filter === 'friends') {
+        // 친구 목표 (현재는 다른 사람의 공개 목표만)
+        goals = publicGoals.filter(goal => goal.userId !== userId);
       } else {
-        // friends나 기타 필터의 경우 공개 목표만
+        // 기타 필터의 경우 공개 목표만
         goals = publicGoals;
       }
       
