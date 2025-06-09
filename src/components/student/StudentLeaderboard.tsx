@@ -52,14 +52,31 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
   const loadLeaderboardData = async () => {
     setLoading(true);
     try {
-      // API 호출로 리더보드 데이터 가져오기
-      const response = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
+      // 집계된 리더보드 API 호출
+      const response = await fetch(`/api/leaderboard-aggregated?period=${activeTab}&userId=${currentUserId}`);
       const data = await response.json();
       
-      setLeaderboardData(data.leaderboard || []);
-      setMyRank(data.myRank || null);
+      if (data.success) {
+        setLeaderboardData(data.leaderboard || []);
+        setMyRank(data.myRank || null);
+        
+        // 실시간 데이터인 경우 사용자에게 알림
+        if (data.isRealTime && data.message) {
+          console.log('리더보드 준비 중:', data.message);
+        }
+      } else {
+        console.error('리더보드 API 오류:', data.error);
+        // 기존 API로 폴백
+        const fallbackResponse = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
+        const fallbackData = await fallbackResponse.json();
+        setLeaderboardData(fallbackData.leaderboard || []);
+        setMyRank(fallbackData.myRank || null);
+      }
     } catch (error) {
       console.error('리더보드 데이터 로딩 실패:', error);
+      // 에러 발생시 빈 데이터로 설정
+      setLeaderboardData([]);
+      setMyRank(null);
     } finally {
       setLoading(false);
     }
