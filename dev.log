@@ -9,3 +9,9 @@
  ✓ Ready in 1151ms
  ○ Compiling / ...
  ✓ Compiled / in 954ms (453 modules)
+ ✓ Compiled in 68ms (206 modules)
+ ○ Compiling /showcase ...
+ ✓ Compiled /showcase in 843ms (1220 modules)
+ ✓ Compiled /favicon.ico in 73ms (650 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 987ms (1592 modules)
