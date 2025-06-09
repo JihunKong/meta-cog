@@ -4,7 +4,7 @@ import { getFirebaseInstance } from '@/lib/firebase';
 // 목표 선언 생성
 export async function POST(request: NextRequest) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const body = await request.json();
     
     const {
@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
 // 목표 선언 목록 조회 (공개 목표 + 내 목표)
 export async function GET(request: NextRequest) {
   try {
-    const { firestore } = getFirebaseInstance();
+    console.log('목표 선언 GET API 시작');
+    const { db: firestore } = getFirebaseInstance();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');
@@ -182,7 +183,7 @@ function getDefaultUnit(targetType: string): string {
 // 사용자 목표 통계 업데이트
 async function updateUserGoalStats(userId: string, action: 'declared' | 'completed' | 'failed') {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const userStatsRef = firestore.collection('userGoalStats').doc(userId);
     
     const statsDoc = await userStatsRef.get();

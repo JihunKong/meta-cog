@@ -10,7 +10,7 @@ interface RouteParams {
 // 목표 진행 상황 업데이트
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const { id: goalId } = params;
     const body = await request.json();
 
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 // 목표 업데이트 기록 조회
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const { id: goalId } = params;
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -202,7 +202,7 @@ function getUpdateMessage(updateType: string, progress: number): string {
 // 사용자 목표 통계 업데이트
 async function updateUserGoalStats(userId: string, action: 'completed' | 'failed') {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const userStatsRef = firestore.collection('userGoalStats').doc(userId);
     
     const statsDoc = await userStatsRef.get();
@@ -236,7 +236,7 @@ async function updateUserGoalStats(userId: string, action: 'completed' | 'failed
 // 목표 달성 축하 이벤트 생성
 async function createCompletionCelebration(userId: string, goalId: string, goalData: any) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     
     // 축하 알림 생성
     const celebrationData = {

@@ -43,7 +43,7 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
   const [infoDialogOpen, setInfoDialogOpen] = useState(false);
 
   // 탭 레이블
-  const tabLabels = ['전체', '이번 주', '이번 달', '내 반'];
+  const tabLabels = ['전체', '이번 주', '이번 달', '내 학교'];
 
   useEffect(() => {
     loadLeaderboardData();
