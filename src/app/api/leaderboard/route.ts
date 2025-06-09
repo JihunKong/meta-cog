@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 개선된 점수 계산 함수들을 import
 import { calculateImprovedScore } from '@/lib/leaderboard-scoring';
@@ -8,7 +8,7 @@ import { calculateImprovedScore } from '@/lib/leaderboard-scoring';
 export async function GET(request: NextRequest) {
   try {
     console.log('리더보드 API 시작');
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');

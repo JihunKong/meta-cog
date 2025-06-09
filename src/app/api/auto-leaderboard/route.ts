@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseInstance } from '@/lib/firebase';
+import { getFirebaseAdminFirestore } from '@/lib/firebase-admin';
 
 // 자동 집계된 리더보드 조회 (모든 사용자 접근 가능)
 export async function GET(request: NextRequest) {
   try {
     console.log('자동 집계 리더보드 조회 API 시작');
-    const { db: firestore } = getFirebaseInstance();
+    const firestore = getFirebaseAdminFirestore();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');
