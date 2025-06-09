@@ -161,18 +161,26 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
   // 댓글 로드
   const loadComments = async (goalId: string) => {
     try {
+      console.log('댓글 로딩 시작:', goalId);
       const response = await fetch(`/api/daily-goals/${goalId}/comments`);
       const data = await response.json();
+      
+      console.log('댓글 API 응답:', data);
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         const commentsList = data.comments.map((comment: any) => ({
           ...comment,
           createdAt: new Date(comment.createdAt)
         }));
+        console.log('로딩된 댓글 목록:', commentsList);
         setComments(commentsList);
+      } else {
+        console.error('댓글 로딩 실패:', data.error || '알 수 없는 오류');
+        setComments([]);
       }
     } catch (error) {
       console.error('댓글 로딩 실패:', error);
+      setComments([]);
     }
   };
 
@@ -214,6 +222,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
   // 댓글 다이얼로그 열기
   const openCommentsDialog = (goal: DailyGoal) => {
     setSelectedGoal(goal);
+    setComments([]); // 기존 댓글 초기화
     setCommentsDialogOpen(true);
     loadComments(goal.id);
   };
@@ -232,22 +241,19 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
 
   return (
     <Container maxWidth="md" sx={{ py: 3 }}>
-      {/* 확실한 구분을 위한 큰 헤더 */}
-      <Box sx={{ mb: 4, textAlign: 'center', bgcolor: 'primary.main', color: 'white', p: 3, borderRadius: 2 }}>
-        <Typography variant="h3" sx={{ mb: 1, fontWeight: 'bold' }}>
-          ✨ NEW 목표 선언 광장 ✨
+      {/* 헤더 */}
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography variant="h4" sx={{ mb: 1 }}>
+          🎯 목표 선언 광장
         </Typography>
-        <Typography variant="h6" color="inherit">
-          새로운 일일 목표 선언 시스템이 적용되었습니다!
-        </Typography>
-        <Typography variant="body1" color="inherit" sx={{ mt: 1 }}>
-          간단하게 오늘의 목표를 선언하고 친구들과 응원하세요!
+        <Typography variant="body1" color="text.secondary">
+          오늘의 목표를 선언하고 친구들과 함께 응원해요!
         </Typography>
       </Box>
 
       {/* 목표 입력 폼 */}
-      <Paper sx={{ p: 3, mb: 4, border: '2px solid', borderColor: 'success.main' }}>
-        <Typography variant="h6" sx={{ mb: 2, color: 'success.main' }}>
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
           🎯 오늘의 목표 선언하기
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
@@ -258,7 +264,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
             placeholder="오늘의 목표를 간단히 적어보세요! (예: 수학 문제집 20문제 풀기, 영어 단어 50개 암기)"
             value={goalInput}
             onChange={(e) => setGoalInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             disabled={submitting}
             sx={{ flex: 1 }}
             variant="outlined"
@@ -303,11 +309,11 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
         </Paper>
       ) : (
         <Box>
-          <Typography variant="h5" sx={{ mb: 3, color: 'primary.main' }}>
+          <Typography variant="h5" sx={{ mb: 3 }}>
             📋 선언된 목표들 ({goals.length}개)
           </Typography>
           {goals.map((goal) => (
-            <Card key={goal.id} sx={{ mb: 3, border: '1px solid', borderColor: 'primary.light' }}>
+            <Card key={goal.id} sx={{ mb: 3 }}>
               <CardContent>
                 {/* 헤더 */}
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
@@ -328,8 +334,8 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                 </Box>
 
                 {/* 목표 내용 */}
-                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6, bgcolor: 'grey.50', p: 2, borderRadius: 1 }}>
-                  🎯 {goal.content}
+                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.6 }}>
+                  {goal.content}
                 </Typography>
 
                 {/* 액션 버튼들 */}
@@ -379,7 +385,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
           {selectedGoal && (
             <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
               <Typography variant="body2">
-                🎯 {selectedGoal.content}
+                {selectedGoal.content}
               </Typography>
             </Paper>
           )}
@@ -430,7 +436,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
               placeholder="응원 댓글을 남겨보세요..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   handleSubmitComment();
