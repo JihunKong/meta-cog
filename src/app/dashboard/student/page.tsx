@@ -365,7 +365,7 @@ export default function StudentDashboard() {
         <Typography variant="h4" component="h1">
           {userName}님의 학습 대시보드
         </Typography>
-        <LogoutButton />
+        <LogoutButton variant="icon" size="large" />
       </Box>
 
       {error && (

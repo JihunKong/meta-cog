@@ -250,7 +250,7 @@ export default function TeacherDashboard() {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4">교사 대시보드</Typography>
-        <LogoutButton />
+        <LogoutButton variant="icon" size="large" />
       </Box>
       
       {/* 로딩 및 에러 처리 */}

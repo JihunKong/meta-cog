@@ -305,7 +305,7 @@ const handleAddUserWithRole = async (role: 'student'|'teacher') => {
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>관리자 대시보드</Typography>
-        <LogoutButton />
+        <LogoutButton variant="icon" size="large" />
       </Box>
       
       {/* 전체 사용자 목록 및 역할 - Firestore list 권한 미지원으로 삭제됨 */}
