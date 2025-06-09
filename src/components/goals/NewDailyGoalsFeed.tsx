@@ -190,6 +190,7 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
     if (!newComment.trim()) return;
 
     try {
+      console.log('댓글 작성 시작:', goalId, newComment.trim());
       const response = await fetch(`/api/daily-goals/${goalId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,17 +200,75 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
         })
       });
 
+      const result = await response.json();
+      console.log('댓글 작성 응답:', response.status, result);
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '댓글 작성 중 오류가 발생했습니다.');
+        throw new Error(result.error || '댓글 작성 중 오류가 발생했습니다.');
       }
 
       setNewComment('');
+      console.log('댓글 작성 성공, 새로고침 시작...');
       // 댓글 목록 새로고침
-      loadComments(goalId);
+      await loadComments(goalId);
 
     } catch (error: any) {
       console.error('댓글 작성 실패:', error);
+      setError(error.message);
+    }
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = async (goalId: string, commentId: string) => {
+    if (!window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/daily-goals/${goalId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '댓글 삭제 중 오류가 발생했습니다.');
+      }
+
+      // 댓글 목록 새로고침
+      await loadComments(goalId);
+      
+      // 목표 목록도 새로고침하여 댓글 수 업데이트
+      await loadGoals();
+
+    } catch (error: any) {
+      console.error('댓글 삭제 실패:', error);
+      setError(error.message);
+    }
+  };
+
+  // 목표 삭제
+  const handleDeleteGoal = async (goalId: string) => {
+    if (!window.confirm('정말로 이 목표를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/daily-goals/${goalId}?userId=${currentUserId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '목표 삭제 중 오류가 발생했습니다.');
+      }
+
+      // 로컬 상태에서 제거
+      setGoals(prev => prev.filter(goal => goal.id !== goalId));
+
+    } catch (error: any) {
+      console.error('목표 삭제 실패:', error);
       setError(error.message);
     }
   };
@@ -383,13 +442,25 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                               {comment.author.name[0]}
                             </Avatar>
                             <Box sx={{ flex: 1 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                  {comment.author.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatDistanceToNow(comment.createdAt, { addSuffix: true, locale: ko })}
-                                </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                    {comment.author.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {formatDistanceToNow(comment.createdAt, { addSuffix: true, locale: ko })}
+                                  </Typography>
+                                </Box>
+                                {comment.userId === currentUserId && (
+                                  <Button
+                                    size="small"
+                                    color="error"
+                                    onClick={() => handleDeleteComment(goal.id, comment.id)}
+                                    sx={{ minWidth: 'auto', p: 0.5 }}
+                                  >
+                                    삭제
+                                  </Button>
+                                )}
                               </Box>
                               <Typography variant="body2" color="text.primary">
                                 {comment.content}
