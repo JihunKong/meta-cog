@@ -99,11 +99,21 @@ const GoalsFeed: React.FC<GoalsFeedProps> = ({ currentUserId, userRole }) => {
         params.append('status', statusMap[selectedStatus]);
       }
 
-      const response = await fetch(`/api/goals/declarations?${params}`);
-      const data = await response.json();
+      // 1차: 간단한 목표 API 시도
+      let response = await fetch(`/api/goals-simple?${params}`);
+      let data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || '목표를 불러오는 중 오류가 발생했습니다.');
+      if (!response.ok || !data.success) {
+        console.log('간단한 목표 API 실패, 기존 API 시도');
+        // 2차: 기존 API로 폴백
+        response = await fetch(`/api/goals/declarations?${params}`);
+        data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || '목표를 불러오는 중 오류가 발생했습니다.');
+        }
+      } else {
+        console.log('간단한 목표 API 성공');
       }
 
       const newGoals = data.goals.map((goal: any) => ({

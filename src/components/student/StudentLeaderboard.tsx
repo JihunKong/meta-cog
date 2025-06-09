@@ -52,31 +52,71 @@ const StudentLeaderboard: React.FC<StudentLeaderboardProps> = ({
   const loadLeaderboardData = async () => {
     setLoading(true);
     try {
-      // 집계된 리더보드 API 호출
-      const response = await fetch(`/api/leaderboard-aggregated?period=${activeTab}&userId=${currentUserId}`);
-      const data = await response.json();
+      // 1차: 간단한 리더보드 API 호출 (가장 안전)
+      console.log('간단한 리더보드 API 시도');
+      const simpleResponse = await fetch(`/api/leaderboard-simple?period=${activeTab}&userId=${currentUserId}`);
       
-      if (data.success) {
-        setLeaderboardData(data.leaderboard || []);
-        setMyRank(data.myRank || null);
-        
-        // 실시간 데이터인 경우 사용자에게 알림
-        if (data.isRealTime && data.message) {
-          console.log('리더보드 준비 중:', data.message);
+      if (simpleResponse.ok) {
+        const simpleData = await simpleResponse.json();
+        if (simpleData.success) {
+          setLeaderboardData(simpleData.leaderboard || []);
+          setMyRank(simpleData.myRank || null);
+          console.log('간단한 리더보드 성공');
+          return;
         }
-      } else {
-        console.error('리더보드 API 오류:', data.error);
-        // 기존 API로 폴백
-        const fallbackResponse = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
+      }
+      
+      console.log('간단한 리더보드 실패, 집계 API 시도');
+      // 2차: 집계된 리더보드 API 호출
+      const aggregatedResponse = await fetch(`/api/leaderboard-aggregated?period=${activeTab}&userId=${currentUserId}`);
+      
+      if (aggregatedResponse.ok) {
+        const aggregatedData = await aggregatedResponse.json();
+        if (aggregatedData.success) {
+          setLeaderboardData(aggregatedData.leaderboard || []);
+          setMyRank(aggregatedData.myRank || null);
+          console.log('집계 리더보드 성공');
+          return;
+        }
+      }
+      
+      console.log('집계 리더보드 실패, 기존 API 시도');
+      // 3차: 기존 API로 폴백
+      const fallbackResponse = await fetch(`/api/leaderboard?period=${activeTab}&userId=${currentUserId}`);
+      if (fallbackResponse.ok) {
         const fallbackData = await fallbackResponse.json();
         setLeaderboardData(fallbackData.leaderboard || []);
         setMyRank(fallbackData.myRank || null);
+        console.log('기존 리더보드 성공');
+        return;
       }
+      
+      // 모든 API 실패시 기본 데이터
+      console.log('모든 리더보드 API 실패, 기본 데이터 사용');
+      setLeaderboardData([]);
+      setMyRank({
+        rank: 1,
+        userId: currentUserId,
+        name: '나',
+        school: '',
+        score: 0,
+        breakdown: { consistency: 0, quality: 0, engagement: 0, streak: 0 },
+        isCurrentUser: true
+      });
+      
     } catch (error) {
       console.error('리더보드 데이터 로딩 실패:', error);
-      // 에러 발생시 빈 데이터로 설정
+      // 에러 발생시 기본 데이터로 설정
       setLeaderboardData([]);
-      setMyRank(null);
+      setMyRank({
+        rank: 1,
+        userId: currentUserId,
+        name: '나',
+        school: '',
+        score: 0,
+        breakdown: { consistency: 0, quality: 0, engagement: 0, streak: 0 },
+        isCurrentUser: true
+      });
     } finally {
       setLoading(false);
     }
