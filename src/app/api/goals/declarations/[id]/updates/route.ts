@@ -16,7 +16,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const {
       userId,
-      updateType, // START, PROGRESS, COMPLETE, PAUSE, RESUME, ABANDON, EXTEND
       progressAmount,
       message,
       mood,
@@ -24,6 +23,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       evidenceUrl, // 인증 이미지 URL
       evidenceDescription
     } = body;
+    
+    let updateType = body.updateType; // START, PROGRESS, COMPLETE, PAUSE, RESUME, ABANDON, EXTEND
 
     // 목표 존재 및 권한 확인
     const goalDoc = await firestore.collection('goalDeclarations').doc(goalId).get();

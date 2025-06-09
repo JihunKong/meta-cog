@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check-env": "node scripts/check-env.js",
+    "firebase-help": "node scripts/firebase-setup-helper.js",
+    "setup-collections": "node scripts/setup-new-collections.js",
+    "final-check": "node scripts/final-check.js",
     "migrate-to-firebase": "node scripts/migrate-to-firebase.js",
     "setup-firebase-db": "node scripts/setup-firebase-db.js",
     "create-test-users": "node scripts/create-test-users.js"
@@ -16,6 +20,7 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.17",
     "@mui/material": "^5.15.14",
+    "@mui/x-date-pickers": "^8.5.1",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "autoprefixer": "^10.4.21",

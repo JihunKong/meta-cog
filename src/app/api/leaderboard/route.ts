@@ -7,7 +7,7 @@ import { calculateImprovedScore } from '@/lib/leaderboard-scoring';
 // 리더보드 조회
 export async function GET(request: NextRequest) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     const { searchParams } = new URL(request.url);
     
     const userId = searchParams.get('userId');
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 // 사용자 세션 데이터 조회
 async function getUserSessions(userId: string, startDate: Date) {
   try {
-    const { firestore } = getFirebaseInstance();
+    const { db: firestore } = getFirebaseInstance();
     
     let query = firestore
       .collection('sessions')
