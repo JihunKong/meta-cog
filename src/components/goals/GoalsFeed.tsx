@@ -83,7 +83,7 @@ const GoalsFeed: React.FC<GoalsFeedProps> = ({ currentUserId, userRole }) => {
     try {
       const params = new URLSearchParams({
         userId: currentUserId,
-        filter: activeTab === 0 ? 'public' : activeTab === 1 ? 'my' : 'friends',
+        filter: activeTab === 0 ? 'all' : activeTab === 1 ? 'my' : 'friends',
         limit: '20',
         offset: reset ? '0' : goals.length.toString()
       });
@@ -99,21 +99,24 @@ const GoalsFeed: React.FC<GoalsFeedProps> = ({ currentUserId, userRole }) => {
         params.append('status', statusMap[selectedStatus]);
       }
 
-      // 1차: 간단한 목표 API 시도
-      let response = await fetch(`/api/goals-simple?${params}`);
+      // 1차: 실제 목표 API 시도 (실제 데이터)
+      console.log('실제 목표 API 시도');
+      let response = await fetch(`/api/goals/declarations?${params}`);
       let data = await response.json();
 
       if (!response.ok || !data.success) {
-        console.log('간단한 목표 API 실패, 기존 API 시도');
-        // 2차: 기존 API로 폴백
-        response = await fetch(`/api/goals/declarations?${params}`);
+        console.log('실제 목표 API 실패, 간단한 API로 폴백');
+        // 2차: 간단한 API로 폴백 (샘플 데이터)
+        response = await fetch(`/api/goals-simple?${params}`);
         data = await response.json();
 
         if (!response.ok) {
           throw new Error(data.error || '목표를 불러오는 중 오류가 발생했습니다.');
+        } else {
+          console.log('간단한 목표 API 성공 (폴백)');
         }
       } else {
-        console.log('간단한 목표 API 성공');
+        console.log('실제 목표 API 성공');
       }
 
       const newGoals = data.goals.map((goal: any) => ({
