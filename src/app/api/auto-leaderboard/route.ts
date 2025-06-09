@@ -63,7 +63,9 @@ export async function GET(request: NextRequest) {
     let leaderboardDoc = null;
     
     for (const dateStr of possibleDates) {
-      const docId = `${periodName}_${scope}_${dateStr}`;
+      // scope가 'all'이면 'all'로, 학교이면 학교명으로 설정
+      const scopeStr = scope === 'all' ? 'all' : scope;
+      const docId = `${periodName}_${scopeStr}_${dateStr}`;
       console.log(`리더보드 문서 ID 시도: ${docId}`);
       
       const doc = await firestore.collection('leaderboard').doc(docId).get();
