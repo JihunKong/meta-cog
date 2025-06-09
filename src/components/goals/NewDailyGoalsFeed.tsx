@@ -396,6 +396,18 @@ const NewDailyGoalsFeed: React.FC<NewDailyGoalsFeedProps> = ({ currentUserId, us
                       </Typography>
                     </Box>
                   </Box>
+                  {/* 삭제 버튼 (본인의 목표일 때만 표시) */}
+                  {goal.userId === currentUserId && (
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="text"
+                      onClick={() => handleDeleteGoal(goal.id)}
+                      sx={{ minWidth: 'auto' }}
+                    >
+                      삭제
+                    </Button>
+                  )}
                 </Box>
 
                 {/* 목표 내용 */}
