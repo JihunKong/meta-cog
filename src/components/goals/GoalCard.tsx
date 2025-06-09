@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Card, CardContent, CardActions, Typography, Chip, Box, Button, 
   LinearProgress, Avatar, IconButton, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Tooltip, Fab, Zoom
+  DialogActions, TextField, Tooltip, Fab, Zoom, Menu, MenuItem
 } from '@mui/material';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -20,7 +20,6 @@ import PublicIcon from '@mui/icons-material/Public';
 import LockIcon from '@mui/icons-material/Lock';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { Menu } from '@mui/material';
 
 interface GoalCardProps {
   goal: {
